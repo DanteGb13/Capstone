@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import {MenuComponent} from './components/menu/menu.component';
 
 export const routes: Routes = [
   {
@@ -10,4 +11,9 @@ export const routes: Routes = [
     redirectTo: 'home',
     pathMatch: 'full',
   },
+  {
+    path: 'menu',
+    component: MenuComponent,
+  },
+
 ];
