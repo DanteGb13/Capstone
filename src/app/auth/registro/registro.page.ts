@@ -1,19 +1,41 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
+import { Component } from '@angular/core';
+import { IonButton } from '@ionic/angular/ion-button';
+import { IonContent } from '@ionic/angular/ion-content';
+import { IonIcon } from '@ionic/angular/ion-icon';
+import { IonInput } from '@ionic/angular/ion-input';
+import { addIcons } from 'ionicons';
+
+import {
+  arrowBackOutline,
+  personOutline,
+  callOutline,
+  mailOutline,
+  lockClosedOutline
+} from 'ionicons/icons';
 
 @Component({
   selector: 'app-registro',
   templateUrl: './registro.page.html',
   styleUrls: ['./registro.page.scss'],
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar, CommonModule, FormsModule]
+  imports: [
+    IonContent,
+    IonButton,
+    IonIcon,
+    IonInput
+  ]
 })
-export class RegistroPage implements OnInit {
+export class RegistroPage {
 
-  constructor() { }
+  constructor() {
 
-  ngOnInit() {
+    addIcons({
+      arrowBackOutline,
+      personOutline,
+      callOutline,
+      mailOutline,
+      lockClosedOutline
+    });
+
   }
 
 }

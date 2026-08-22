@@ -1,13 +1,44 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>login</ion-title>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">login</ion-title>
-    </ion-toolbar>
-  </ion-header>
+  <div class="login-container">
+    <!-- Logo y nombre -->
+    <div class="brand">
+      <ion-icon name="people-outline" class="brand-icon"></ion-icon>
+      <span class="brand-name">Siempre Cerca</span>
+    </div>
+
+    <!-- Título -->
+    <h1>Iniciar Sesión</h1>
+
+    <!-- Formulario -->
+    <div class="login-form">
+      <ion-input
+        type="email"
+        placeholder="Correo electrónico"
+        fill="outline"
+        class="login-input"
+      >
+      </ion-input>
+
+      <ion-input
+        type="password"
+        placeholder="Contraseña"
+        fill="outline"
+        class="login-input"
+      >
+      </ion-input>
+
+      <ion-button expand="block" class="login-button"> Ingresar </ion-button>
+    </div>
+
+    <!-- Registro -->
+    <div class="register-container">
+      <span>¿No tienes cuenta?</span>
+      <a>Regístrate aquí</a>
+    </div>
+
+    <!-- Recuperación de contraseña -->
+    <div class="forgot-password-container">
+      <a>¿Olvidaste tu contraseña?</a>
+    </div>
+  </div>
 </ion-content>

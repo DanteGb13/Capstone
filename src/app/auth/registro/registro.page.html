@@ -1,13 +1,127 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>registro</ion-title>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">registro</ion-title>
-    </ion-toolbar>
-  </ion-header>
+
+  <div class="register-page">
+
+    <!-- Botón volver -->
+    <div class="back-container">
+      <ion-button fill="clear" class="back-button">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </div>
+
+    <!-- Encabezado -->
+    <div class="register-header">
+      <h1>Crear cuenta</h1>
+      <p>Regístrate para comenzar a usar la app</p>
+    </div>
+
+    <!-- Formulario -->
+    <div class="register-form">
+
+      <!-- Nombre completo -->
+      <ion-input
+        type="text"
+        placeholder="Nombre completo"
+        fill="outline"
+        class="register-input">
+
+        <ion-icon
+          slot="start"
+          name="person-outline">
+        </ion-icon>
+
+      </ion-input>
+
+      <!-- Teléfono -->
+      <ion-input
+        type="tel"
+        placeholder="Teléfono de contacto"
+        fill="outline"
+        class="register-input">
+
+        <ion-icon
+          slot="start"
+          name="call-outline">
+        </ion-icon>
+
+      </ion-input>
+
+      <!-- Correo -->
+      <ion-input
+        type="email"
+        placeholder="Correo"
+        fill="outline"
+        class="register-input">
+
+        <ion-icon
+          slot="start"
+          name="mail-outline">
+        </ion-icon>
+
+      </ion-input>
+
+      <!-- Contraseña -->
+      <ion-input
+        type="password"
+        placeholder="Contraseña"
+        fill="outline"
+        class="register-input">
+
+        <ion-icon
+          slot="start"
+          name="lock-closed-outline">
+        </ion-icon>
+
+      </ion-input>
+
+      <!-- Confirmar contraseña -->
+      <ion-input
+        type="password"
+        placeholder="Confirmar Contraseña"
+        fill="outline"
+        class="register-input">
+
+        <ion-icon
+          slot="start"
+          name="lock-closed-outline">
+        </ion-icon>
+
+      </ion-input>
+
+    </div>
+
+    <!-- Tipo de cuenta -->
+    <div class="account-type">
+
+      <h2>Selecciona el tipo de cuenta: <strong>Usuario</strong></h2>
+
+      <div class="account-options">
+
+        <button class="account-option active">
+          Usuario
+        </button>
+
+        <button class="account-option">
+          Familiar
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- Botón registrarse -->
+    <ion-button
+      expand="block"
+      class="register-button">
+      Registrarse
+    </ion-button>
+
+    <!-- Ir al login -->
+    <div class="login-link">
+      <span>¿Ya tienes una cuenta?</span>
+      <a>Inicia sesión</a>
+    </div>
+
+  </div>
+
 </ion-content>

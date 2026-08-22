@@ -1,0 +1,197 @@
+ion-content {
+  --background: #ffffff;
+}
+
+.register-page {
+  min-height: 100%;
+  padding: 0 18px;
+  box-sizing: border-box;
+}
+
+/* =========================
+   BOTÓN VOLVER
+========================= */
+
+.back-container {
+  padding-top: 52px;
+}
+
+.back-button {
+  --color: #27323d;
+  --border-color: #a8bacb;
+  --border-width: 1px;
+  --border-style: solid;
+
+  width: 38px;
+  height: 38px;
+
+  --border-radius: 50%;
+
+  margin: 0;
+}
+
+.back-button ion-icon {
+  font-size: 22px;
+}
+
+
+/* =========================
+   ENCABEZADO
+========================= */
+
+.register-header {
+  margin-top: 10px;
+  margin-bottom: 17px;
+}
+
+.register-header h1 {
+  margin: 0;
+
+  font-size: 25px;
+  font-weight: 700;
+
+  color: #202a33;
+}
+
+.register-header p {
+  margin: 3px 0 0;
+
+  font-size: 13px;
+  color: #667585;
+}
+
+
+/* =========================
+   FORMULARIO
+========================= */
+
+.register-form {
+  width: 100%;
+}
+
+.register-input {
+  width: 100%;
+  height: 52px;
+
+  margin-bottom: 12px;
+
+  --background: #f1f5f8;
+
+  --border-color: #9fb4c8;
+  --border-width: 1.5px;
+  --border-style: solid;
+
+  --border-radius: 8px;
+
+  --color: #344454;
+  --placeholder-color: #68798a;
+
+  font-size: 15px;
+}
+
+.register-input ion-icon {
+  color: #657789;
+  font-size: 21px;
+}
+
+
+/* =========================
+   TIPO DE CUENTA
+========================= */
+
+.account-type {
+  margin-top: 14px;
+}
+
+.account-type h2 {
+  margin: 0 0 10px 12px;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  color: #202a33;
+}
+
+.account-type h2 strong {
+  font-weight: 700;
+}
+
+
+/* Opciones */
+
+.account-options {
+  display: flex;
+  gap: 11px;
+  width: 100%;
+}
+
+.account-option {
+  flex: 1;
+
+  height: 48px;
+
+  border: none;
+  border-radius: 25px;
+
+  background: #eee8fa;
+
+  color: #644bb1;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.account-option.active {
+  background: #6545b4;
+  color: #ffffff;
+}
+
+
+/* =========================
+   BOTÓN REGISTRARSE
+========================= */
+
+.register-button {
+  width: 100%;
+  height: 49px;
+
+  margin: 29px 0 0;
+
+  --background: #202a33;
+  --background-activated: #161e25;
+  --background-hover: #28343e;
+
+  --border-radius: 9px;
+
+  font-size: 14px;
+  font-weight: 700;
+
+  text-transform: none;
+}
+
+
+/* =========================
+   LOGIN
+========================= */
+
+.login-link {
+  margin-top: 15px;
+
+  text-align: center;
+
+  font-size: 13px;
+
+  color: #667585;
+}
+
+.login-link a {
+  margin-left: 4px;
+
+  color: #6545b4;
+
+  font-weight: 700;
+
+  text-decoration: none;
+}

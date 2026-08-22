@@ -1,19 +1,25 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
+import { Component } from '@angular/core';
+import { IonButton, IonContent, IonIcon, IonInput } from '@ionic/angular';
+import { addIcons } from 'ionicons';
+import { peopleOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-login',
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar, CommonModule, FormsModule]
+  imports: [
+    IonContent,
+    IonIcon,
+    IonInput,
+    IonButton
+  ]
 })
-export class LoginPage implements OnInit {
+export class LoginPage {
 
-  constructor() { }
-
-  ngOnInit() {
+  constructor() {
+    addIcons({
+      peopleOutline
+    });
   }
 
 }
