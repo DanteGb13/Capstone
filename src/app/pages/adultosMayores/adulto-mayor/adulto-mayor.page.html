@@ -1,161 +1,156 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>adultoMayor</ion-title>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">adultoMayor</ion-title>
-    </ion-toolbar>
-  </ion-header>
-
-
-
-
-    <div class="app-container">
+  <div class="app-container">
 
     <!-- Header -->
     <div class="header">
+      <div class="user-info">
+        <div>
+          <h1>Hola, Angel </h1>
+          <p>Tu familia te cuida</p>
+        </div>
+        <button class="avatar" type="button" (click)="abrirPerfil()">
 
-      <h1>
-        Panel de Control
-      </h1>
+          <ion-icon name="person"></ion-icon>
 
-      <div class="status">
-        <i class="bi bi-shield-check"></i>
-        Protección familiar activa las 24 horas
+        </button>
       </div>
 
+      <div class="status-card">
+        <div class="status-icon">
+          <i class="bi bi-shield-check"></i>
+        </div>
+        <div class="status-text">
+          <strong>Protección Activa 🛡️</strong>
+          <span>La familia puede ver tu ubicación.</span>
+        </div>
+      </div>
     </div>
 
+    <!-- Título -->
+    <h2 class="section-title">Acciones rápidas </h2>
 
-
-    <!-- Botones principales -->
+    <!-- Grid -->
     <div class="menu-grid">
 
+      <div class="menu-card ripple"
+        style="background: linear-gradient(135deg, #ff4d4f, #ff7875); box-shadow: 0 10px 25px rgba(255, 77, 79, 0.35); border:none">
 
-      <div class="menu-card emergency">
+        <ion-icon name="notifications"></ion-icon>
 
-        <i class="bi bi-exclamation-triangle"></i>
-
-        <h3>
-          ¡Auxilio!
-        </h3>
+        <h3>SOS</h3>
 
       </div>
 
 
+      <div class="menu-card ripple "
+        style=" background: linear-gradient(135deg, #c0793e, #977545); box-shadow: 0 10px 25px rgba(191, 199, 191, 0.35); border:none">
 
-      <div class="menu-card">
+        <ion-icon name="home"></ion-icon>
 
-        <i class="bi bi-house"></i>
-
-        <h3>
-          Estoy en<br>
-          Casa
-        </h3>
+        <h3 style="color: black;">Estoy en Casa</h3>
 
       </div>
 
 
+      <div class="menu-card ripple"
+        style="background: linear-gradient(135deg, #2196f3, #64b5f6); box-shadow: 0 10px 25px rgba(33, 150, 243, 0.35); border:none">
 
+        <ion-icon name="location"></ion-icon>
 
-      <div class="menu-card">
-
-        <i class="bi bi-share"></i>
-
-        <h3>
-          Compartir
-        </h3>
+        <h3>Mi Ubicación </h3>
 
       </div>
 
 
+      <div class="menu-card ripple"
+        style="background: linear-gradient(135deg, #ff9800, #ffb74d); box-shadow: 0 10px 25px rgba(255, 152, 0, 0.35); border:none">
 
+        <ion-icon name="share-social"></ion-icon>
 
-      <div class="menu-card">
-
-        <i class="bi bi-lock"></i>
-
-        <h3>
-          Zona<br>
-          Segura
-        </h3>
-
-      </div>
-
-      <div class="menu-card">
-
-        <i class="bi "></i>
-
-        <h3>
-          Extra 1
-        </h3>
+        <h3>Compartir </h3>
 
       </div>
 
 
+      <div class="menu-card ripple"
+        style="background: linear-gradient(135deg, #4caf50, #81c784); box-shadow: 0 10px 25px rgba(156, 39, 176, 0.35); border:none">
 
+        <ion-icon name="shield-checkmark"></ion-icon>
 
-      <div class="menu-card">
-
-        <i class="bi "></i>
-
-        <h3>Extra 2</h3>
-
-      </div>
-    </div>
-
-
-
-
-
-
-    <!-- Barra inferior -->
-    <div class="bottom-menu">
-
-
-      <div class="active">
-
-        <i class="bi bi-grid"></i>
-
-        <span>
-          Panel
-        </span>
+        <h3>Zona Segura</h3>
 
       </div>
 
 
+      <div class="menu-card ripple" style=" background: linear-gradient(135deg, rgb(198, 100, 218), rgb(175, 108, 219)); box-shadow: 0 10px 25px rgbrgba(191, 199, 191, 0.35); border:none">
 
-      <div>
+        <ion-icon name="call"></ion-icon>
 
-        <i class="bi bi-people"></i>
-
-        <span>
-          Contactos
-        </span>
+        <h3>Llamar</h3>
 
       </div>
-
-
-
-      <div>
-
-        <i class="bi bi-gear"></i>
-
-        <span>
-          Ajustes
-        </span>
-
-      </div>
-
 
     </div>
-
 
   </div>
+
+  <!-- Barra inferior -->
+  <nav class="bottom-menu">
+
+    <!--<button class="menu-item active" type="button">
+
+      <div class="icon-wrapper">
+        <ion-icon name="grid"></ion-icon>
+      </div>
+
+      <span>Inicio</span>
+
+    </button>-->
+
+
+    <button class="menu-item" type="button">
+
+      <div class="icon-wrapper">
+        <ion-icon name="people"></ion-icon>
+      </div>
+
+      <span>Contactos</span>
+
+    </button>
+
+
+
+    <!-- Botón central -->
+    <button class="menu-item menu-center" type="button">
+
+      <ion-icon name="home"></ion-icon>
+
+    </button>
+
+
+
+    <!--<button class="menu-item" type="button">
+
+      <div class="icon-wrapper">
+        <ion-icon name="notifications"></ion-icon>
+      </div>
+
+      <span>Alertas</span>
+
+    </button>-->
+
+
+
+    <button class="menu-item" type="button">
+
+      <div class="icon-wrapper">
+        <ion-icon name="settings"></ion-icon>
+      </div>
+
+      <span>Ajustes</span>
+
+    </button>
+
+
+  </nav>
 </ion-content>
-
-
