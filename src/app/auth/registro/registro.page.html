@@ -4,7 +4,7 @@
 
     <!-- Botón volver -->
     <div class="back-container">
-      <ion-button fill="clear" class="back-button">
+      <ion-button fill="clear" class="back-button" [routerLink]="['/login']">
         <ion-icon name="arrow-back-outline"></ion-icon>
       </ion-button>
     </div>
@@ -23,7 +23,8 @@
         type="text"
         placeholder="Nombre completo"
         fill="outline"
-        class="register-input">
+        class="register-input"
+        [(ngModel)]="nombreCompleto">
 
         <ion-icon
           slot="start"
@@ -37,7 +38,8 @@
         type="tel"
         placeholder="Teléfono de contacto"
         fill="outline"
-        class="register-input">
+        class="register-input"
+        [(ngModel)]="telefono">
 
         <ion-icon
           slot="start"
@@ -51,7 +53,8 @@
         type="email"
         placeholder="Correo"
         fill="outline"
-        class="register-input">
+        class="register-input"
+        [(ngModel)]="correo">
 
         <ion-icon
           slot="start"
@@ -65,7 +68,8 @@
         type="password"
         placeholder="Contraseña"
         fill="outline"
-        class="register-input">
+        class="register-input"
+        [(ngModel)]="contrasena">
 
         <ion-icon
           slot="start"
@@ -79,7 +83,8 @@
         type="password"
         placeholder="Confirmar Contraseña"
         fill="outline"
-        class="register-input">
+        class="register-input"
+        [(ngModel)]="confirmarContrasena">
 
         <ion-icon
           slot="start"
@@ -93,33 +98,79 @@
     <!-- Tipo de cuenta -->
     <div class="account-type">
 
-      <h2>Selecciona el tipo de cuenta: <strong>Usuario</strong></h2>
+      <h2>
+        Selecciona el tipo de cuenta:
+        <strong>{{ tipoCuenta }}</strong>
+      </h2>
 
       <div class="account-options">
 
-        <button class="account-option active">
+        <button
+          type="button"
+          class="account-option"
+          [class.active]="tipoCuenta === 'Usuario'"
+          (click)="seleccionarTipo('Usuario')">
+
           Usuario
+
         </button>
 
-        <button class="account-option">
+        <button
+          type="button"
+          class="account-option"
+          [class.active]="tipoCuenta === 'Familiar'"
+          (click)="seleccionarTipo('Familiar')">
+
           Familiar
+
         </button>
 
       </div>
 
     </div>
 
-    <!-- Botón registrarse -->
+    <!-- Error -->
+    @if (mensajeError) {
+
+      <p class="error-message">
+        {{ mensajeError }}
+      </p>
+
+    }
+
+    <!-- Registrarse -->
     <ion-button
       expand="block"
-      class="register-button">
-      Registrarse
+      class="register-button"
+      (click)="registrar()"
+      [disabled]="cargando">
+
+      {{ cargando ? 'Registrando...' : 'Registrarse' }}
+
     </ion-button>
 
-    <!-- Ir al login -->
+    <!-- Google -->
+    <ion-button
+      expand="block"
+      fill="outline"
+      class="google-button"
+      (click)="registrarConGoogle()"
+      [disabled]="cargando">
+
+      <ion-icon
+        name="logo-google"
+        slot="start"
+        class="google-icon">
+      </ion-icon>
+
+      Continuar con Google
+
+    </ion-button>
+
+    <!-- Login -->
     <div class="login-link">
       <span>¿Ya tienes una cuenta?</span>
-      <a>Inicia sesión</a>
+      <a [routerLink]="['/login']">Inicia sesión</a>
     </div>
 
   </div>

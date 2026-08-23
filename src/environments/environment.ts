@@ -4,8 +4,8 @@
 
 export const environment = {
   production: false,
-  supabaseUrl: 'sb_publishable_cPFykyWyh3tnl3lplVbF3Q_d50Z2YGx',
-  supabaseKey: 'sb_secret_UkEG61EKHUfZPLv_3POhJA_CrRkmVga',
+  supabaseUrl: 'https://enbbzywrrheadcqmmsbg.supabase.co',
+  supabaseKey: 'sb_publishable_cPFykyWyh3tnl3lplVbF3Q_d50Z2YGx',
 };
 /*
  * For easier debugging in development mode, you can import the following file

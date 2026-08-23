@@ -1,9 +1,19 @@
 <ion-content [fullscreen]="true">
+
   <div class="login-container">
+
     <!-- Logo y nombre -->
     <div class="brand">
-      <ion-icon name="people-outline" class="brand-icon"></ion-icon>
-      <span class="brand-name">Siempre Cerca</span>
+
+      <ion-icon
+        name="people-outline"
+        class="brand-icon">
+      </ion-icon>
+
+      <span class="brand-name">
+        Siempre Cerca
+      </span>
+
     </div>
 
     <!-- Título -->
@@ -11,34 +21,89 @@
 
     <!-- Formulario -->
     <div class="login-form">
+
+      <!-- Correo -->
       <ion-input
         type="email"
         placeholder="Correo electrónico"
         fill="outline"
         class="login-input"
-      >
+        [(ngModel)]="correo">
+
       </ion-input>
 
+      <!-- Contraseña -->
       <ion-input
         type="password"
         placeholder="Contraseña"
         fill="outline"
         class="login-input"
-      >
+        [(ngModel)]="contrasena">
+
       </ion-input>
 
-      <ion-button expand="block" class="login-button"> Ingresar </ion-button>
+      <!-- Error -->
+      @if (mensajeError) {
+
+        <p class="error-message">
+          {{ mensajeError }}
+        </p>
+
+      }
+
+      <!-- Login normal -->
+      <ion-button
+        expand="block"
+        class="login-button"
+        (click)="ingresar()"
+        [disabled]="cargando">
+
+        {{ cargando ? 'Ingresando...' : 'Ingresar' }}
+
+      </ion-button>
+
+      <!-- Login con Google -->
+      <ion-button
+        expand="block"
+        fill="outline"
+        class="google-button"
+        (click)="ingresarConGoogle()"
+        [disabled]="cargando">
+
+        <ion-icon
+          name="logo-google"
+          slot="start"
+          class="google-icon">
+        </ion-icon>
+
+        Continuar con Google
+
+      </ion-button>
+
     </div>
 
     <!-- Registro -->
     <div class="register-container">
-      <span>¿No tienes cuenta?</span>
-      <a>Regístrate aquí</a>
+
+      <span>
+        ¿No tienes cuenta?
+      </span>
+
+      <a [routerLink]="['/registro']">
+        Regístrate aquí
+      </a>
+
     </div>
 
     <!-- Recuperación de contraseña -->
     <div class="forgot-password-container">
-      <a>¿Olvidaste tu contraseña?</a>
+
+      <a>
+        ¿Olvidaste tu contraseña?
+      </a>
+
     </div>
+
   </div>
+
 </ion-content>
