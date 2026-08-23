@@ -79,11 +79,6 @@ export class registro {
       tipoCuenta
     );
 
-    console.log(
-      'Tipo de cuenta seleccionado:',
-      tipoCuenta
-    );
-
     const { data, error } =
       await supabase.auth.signInWithOAuth({
 

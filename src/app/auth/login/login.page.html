@@ -4,16 +4,8 @@
 
     <!-- Logo y nombre -->
     <div class="brand">
-
-      <ion-icon
-        name="people-outline"
-        class="brand-icon">
-      </ion-icon>
-
-      <span class="brand-name">
-        Siempre Cerca
-      </span>
-
+      <ion-icon name="people-outline" class="brand-icon"></ion-icon>
+      <span class="brand-name">Siempre Cerca</span>
     </div>
 
     <!-- Título -->
@@ -23,32 +15,49 @@
     <div class="login-form">
 
       <!-- Correo -->
-      <ion-input
-        type="email"
-        placeholder="Correo electrónico"
-        fill="outline"
-        class="login-input"
-        [(ngModel)]="correo">
-
-      </ion-input>
+      <div class="input-group">
+        <ion-input
+          type="email"
+          placeholder="Correo electrónico"
+          fill="outline"
+          class="login-input"
+          [class.has-error]="errores.correo"
+          [(ngModel)]="correo"
+          (ionInput)="validarCorreo()"
+          (ionBlur)="validarCorreo()">
+          <ion-icon slot="start" name="mail-outline"></ion-icon>
+        </ion-input>
+        @if (errores.correo) {
+          <span class="field-error">{{ errores.correo }}</span>
+        }
+      </div>
 
       <!-- Contraseña -->
-      <ion-input
-        type="password"
-        placeholder="Contraseña"
-        fill="outline"
-        class="login-input"
-        [(ngModel)]="contrasena">
+      <div class="input-group">
+        <ion-input
+          type="password"
+          placeholder="Contraseña"
+          fill="outline"
+          class="login-input"
+          [class.has-error]="errores.contrasena"
+          [(ngModel)]="contrasena"
+          (ionInput)="validarContrasena()"
+          (ionBlur)="validarContrasena()">
+          <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
+        </ion-input>
+        @if (errores.contrasena) {
+          <span class="field-error">{{ errores.contrasena }}</span>
+        }
+      </div>
 
-      </ion-input>
-
-      <!-- Error -->
+      <!-- Alerta de Error Destacada -->
       @if (mensajeError) {
-
-        <p class="error-message">
-          {{ mensajeError }}
-        </p>
-
+        <div class="alert-box">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <p class="error-message">
+            {{ mensajeError }}
+          </p>
+        </div>
       }
 
       <!-- Login normal -->
@@ -57,9 +66,7 @@
         class="login-button"
         (click)="ingresar()"
         [disabled]="cargando">
-
         {{ cargando ? 'Ingresando...' : 'Ingresar' }}
-
       </ion-button>
 
       <!-- Login con Google -->
@@ -69,39 +76,25 @@
         class="google-button"
         (click)="ingresarConGoogle()"
         [disabled]="cargando">
-
         <ion-icon
           name="logo-google"
           slot="start"
           class="google-icon">
         </ion-icon>
-
         Continuar con Google
-
       </ion-button>
 
     </div>
 
     <!-- Registro -->
     <div class="register-container">
-
-      <span>
-        ¿No tienes cuenta?
-      </span>
-
-      <a [routerLink]="['/registro']">
-        Regístrate aquí
-      </a>
-
+      <span>¿No tienes cuenta?</span>
+      <a [routerLink]="['/registro']">Regístrate aquí</a>
     </div>
 
     <!-- Recuperación de contraseña -->
     <div class="forgot-password-container">
-
-      <a>
-        ¿Olvidaste tu contraseña?
-      </a>
-
+      <a>¿Olvidaste tu contraseña?</a>
     </div>
 
   </div>

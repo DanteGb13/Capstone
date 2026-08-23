@@ -2,13 +2,6 @@
 
   <div class="step-page">
 
-    <!-- Botón Volver -->
-    <div class="back-container">
-      <ion-button fill="clear" class="back-button" [routerLink]="['/registro']">
-        <ion-icon name="arrow-back-outline"></ion-icon>
-      </ion-button>
-    </div>
-
     <!-- Encabezado con Indicador de Paso -->
     <div class="step-header">
       <div class="step-badge">
@@ -29,64 +22,137 @@
         </h2>
 
         <!-- RUT -->
-        <ion-input
-          type="text"
-          placeholder="RUT (ej: 12.345.678-9)"
-          fill="outline"
-          class="step-input"
-          [(ngModel)]="rut">
-          <ion-icon slot="start" name="card-outline"></ion-icon>
-        </ion-input>
+        <div class="input-group">
+          <ion-input
+            type="text"
+            placeholder="RUT (ej: 12.345.678-9)"
+            fill="outline"
+            class="step-input"
+            [class.has-error]="errores.rut"
+            [(ngModel)]="rut"
+            (ionInput)="validarCampoRut()"
+            (ionBlur)="formatearRutEnBlur()">
+            <ion-icon slot="start" name="card-outline"></ion-icon>
+          </ion-input>
+          @if (errores.rut) {
+            <span class="field-error">{{ errores.rut }}</span>
+          }
+        </div>
 
-        <!-- Fecha de Nacimiento -->
-        <ion-input
-          type="date"
-          placeholder="Fecha de nacimiento"
-          fill="outline"
-          class="step-input date-input"
-          [(ngModel)]="fechaNacimiento">
-          <ion-icon slot="start" name="calendar-outline"></ion-icon>
-        </ion-input>
+        <!-- Fecha de Nacimiento (Selector Intuitivo Móvil) -->
+        <div class="input-group">
+          <div
+            class="date-picker-trigger"
+            [class.has-error]="errores.fechaNacimiento"
+            [class.has-value]="fechaNacimiento"
+            (click)="abrirSelectorFecha()">
+            <ion-icon name="calendar-outline" class="trigger-icon"></ion-icon>
+            <span class="trigger-text">
+              {{ fechaNacimiento ? fechaFormateada : 'Fecha de nacimiento (Toca para elegir)' }}
+            </span>
+          </div>
+          @if (errores.fechaNacimiento) {
+            <span class="field-error">{{ errores.fechaNacimiento }}</span>
+          }
+        </div>
+
+        <!-- Modal DateTime para Móvil -->
+        <ion-modal [isOpen]="mostrarModalFecha" (didDismiss)="cerrarSelectorFecha()" class="datetime-modal">
+          <ng-template>
+            <div class="modal-header">
+              <h3>Selecciona tu fecha de nacimiento</h3>
+              <ion-button fill="clear" (click)="cerrarSelectorFecha()">
+                <ion-icon name="close-outline"></ion-icon>
+              </ion-button>
+            </div>
+            <div class="modal-content">
+              <ion-datetime
+                presentation="date"
+                [max]="fechaMaxima"
+                [value]="fechaNacimiento || '1960-01-01'"
+                (ionChange)="onFechaSeleccionada($event)"
+                size="cover">
+              </ion-datetime>
+            </div>
+            <div class="modal-footer">
+              <ion-button expand="block" (click)="cerrarSelectorFecha()" class="modal-confirm-btn">
+                Confirmar Fecha
+              </ion-button>
+            </div>
+          </ng-template>
+        </ion-modal>
 
         <!-- Nombre -->
-        <ion-input
-          type="text"
-          placeholder="Nombre"
-          fill="outline"
-          class="step-input"
-          [(ngModel)]="nombre">
-          <ion-icon slot="start" name="person-outline"></ion-icon>
-        </ion-input>
+        <div class="input-group">
+          <ion-input
+            type="text"
+            placeholder="Nombre (ej: Carlos)"
+            fill="outline"
+            class="step-input"
+            [class.has-error]="errores.nombre"
+            [(ngModel)]="nombre"
+            (ionInput)="validarCampoNombre()"
+            (ionBlur)="validarCampoNombre()">
+            <ion-icon slot="start" name="person-outline"></ion-icon>
+          </ion-input>
+          @if (errores.nombre) {
+            <span class="field-error">{{ errores.nombre }}</span>
+          }
+        </div>
 
         <!-- Apellido Paterno -->
-        <ion-input
-          type="text"
-          placeholder="Apellido Paterno"
-          fill="outline"
-          class="step-input"
-          [(ngModel)]="apellidopa">
-          <ion-icon slot="start" name="person-outline"></ion-icon>
-        </ion-input>
+        <div class="input-group">
+          <ion-input
+            type="text"
+            placeholder="Apellido Paterno (ej: González)"
+            fill="outline"
+            class="step-input"
+            [class.has-error]="errores.apellidopa"
+            [(ngModel)]="apellidopa"
+            (ionInput)="validarCampoApellidoPaterno()"
+            (ionBlur)="validarCampoApellidoPaterno()">
+            <ion-icon slot="start" name="person-outline"></ion-icon>
+          </ion-input>
+          @if (errores.apellidopa) {
+            <span class="field-error">{{ errores.apellidopa }}</span>
+          }
+        </div>
 
         <!-- Apellido Materno -->
-        <ion-input
-          type="text"
-          placeholder="Apellido Materno"
-          fill="outline"
-          class="step-input"
-          [(ngModel)]="apellidoma">
-          <ion-icon slot="start" name="person-outline"></ion-icon>
-        </ion-input>
+        <div class="input-group">
+          <ion-input
+            type="text"
+            placeholder="Apellido Materno (Opcional)"
+            fill="outline"
+            class="step-input"
+            [class.has-error]="errores.apellidoma"
+            [(ngModel)]="apellidoma"
+            (ionInput)="validarCampoApellidoMaterno()"
+            (ionBlur)="validarCampoApellidoMaterno()">
+            <ion-icon slot="start" name="person-outline"></ion-icon>
+          </ion-input>
+          @if (errores.apellidoma) {
+            <span class="field-error">{{ errores.apellidoma }}</span>
+          }
+        </div>
 
         <!-- Teléfono -->
-        <ion-input
-          type="tel"
-          placeholder="Teléfono"
-          fill="outline"
-          class="step-input"
-          [(ngModel)]="telefono">
-          <ion-icon slot="start" name="call-outline"></ion-icon>
-        </ion-input>
+        <div class="input-group">
+          <ion-input
+            type="tel"
+            placeholder="Teléfono (ej: 912345678)"
+            fill="outline"
+            class="step-input"
+            [class.has-error]="errores.telefono"
+            [(ngModel)]="telefono"
+            (ionInput)="validarCampoTelefono()"
+            (ionBlur)="formatearTelefonoEnBlur()">
+            <ion-icon slot="start" name="call-outline"></ion-icon>
+          </ion-input>
+          @if (errores.telefono) {
+            <span class="field-error">{{ errores.telefono }}</span>
+          }
+        </div>
       </div>
 
       <!-- Sección 2: Dirección -->
@@ -97,53 +163,88 @@
         </h2>
 
         <!-- Región -->
-        <ion-input
-          type="text"
-          placeholder="Región (ej: Metropolitana)"
-          fill="outline"
-          class="step-input"
-          [(ngModel)]="region">
-          <ion-icon slot="start" name="map-outline"></ion-icon>
-        </ion-input>
+        <div class="input-group">
+          <ion-input
+            type="text"
+            placeholder="Región (ej: Metropolitana)"
+            fill="outline"
+            class="step-input"
+            [class.has-error]="errores.region"
+            [(ngModel)]="region"
+            (ionInput)="validarCampoRegion()"
+            (ionBlur)="validarCampoRegion()">
+            <ion-icon slot="start" name="map-outline"></ion-icon>
+          </ion-input>
+          @if (errores.region) {
+            <span class="field-error">{{ errores.region }}</span>
+          }
+        </div>
 
         <!-- Comuna -->
-        <ion-input
-          type="text"
-          placeholder="Comuna (ej: Santiago)"
-          fill="outline"
-          class="step-input"
-          [(ngModel)]="comuna">
-          <ion-icon slot="start" name="location-outline"></ion-icon>
-        </ion-input>
+        <div class="input-group">
+          <ion-input
+            type="text"
+            placeholder="Comuna (ej: Providencia)"
+            fill="outline"
+            class="step-input"
+            [class.has-error]="errores.comuna"
+            [(ngModel)]="comuna"
+            (ionInput)="validarCampoComuna()"
+            (ionBlur)="validarCampoComuna()">
+            <ion-icon slot="start" name="location-outline"></ion-icon>
+          </ion-input>
+          @if (errores.comuna) {
+            <span class="field-error">{{ errores.comuna }}</span>
+          }
+        </div>
 
         <!-- Calle -->
-        <ion-input
-          type="text"
-          placeholder="Calle / Avenida"
-          fill="outline"
-          class="step-input"
-          [(ngModel)]="calle">
-          <ion-icon slot="start" name="home-outline"></ion-icon>
-        </ion-input>
+        <div class="input-group">
+          <ion-input
+            type="text"
+            placeholder="Calle / Avenida (ej: Av. Los Leones)"
+            fill="outline"
+            class="step-input"
+            [class.has-error]="errores.calle"
+            [(ngModel)]="calle"
+            (ionInput)="validarCampoCalle()"
+            (ionBlur)="validarCampoCalle()">
+            <ion-icon slot="start" name="home-outline"></ion-icon>
+          </ion-input>
+          @if (errores.calle) {
+            <span class="field-error">{{ errores.calle }}</span>
+          }
+        </div>
 
         <!-- Número -->
-        <ion-input
-          type="text"
-          placeholder="Número (ej: 1234 o Depto 402)"
-          fill="outline"
-          class="step-input"
-          [(ngModel)]="numero">
-          <ion-icon slot="start" name="home-outline"></ion-icon>
-        </ion-input>
+        <div class="input-group">
+          <ion-input
+            type="text"
+            placeholder="Número / Depto (ej: 1420 o Depto 302)"
+            fill="outline"
+            class="step-input"
+            [class.has-error]="errores.numero"
+            [(ngModel)]="numero"
+            (ionInput)="validarCampoNumero()"
+            (ionBlur)="validarCampoNumero()">
+            <ion-icon slot="start" name="home-outline"></ion-icon>
+          </ion-input>
+          @if (errores.numero) {
+            <span class="field-error">{{ errores.numero }}</span>
+          }
+        </div>
       </div>
 
     </div>
 
-    <!-- Mensaje de Error -->
+    <!-- Mensaje de Error General Banner -->
     @if (mensajeError) {
-      <p class="error-message">
-        {{ mensajeError }}
-      </p>
+      <div class="alert-box">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        <p class="error-message">
+          {{ mensajeError }}
+        </p>
+      </div>
     }
 
     <!-- Botón Finalizar -->
@@ -153,7 +254,7 @@
       (click)="guardarYContinuar()"
       [disabled]="cargando">
       <ion-icon slot="end" name="checkmark-circle-outline"></ion-icon>
-      {{ cargando ? 'Guardando...' : 'Finalizar y Continuar' }}
+      {{ cargando ? 'Guardando perfil...' : 'Finalizar y Continuar' }}
     </ion-button>
 
   </div>

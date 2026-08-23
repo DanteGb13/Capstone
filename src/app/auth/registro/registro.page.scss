@@ -69,29 +69,52 @@ ion-content {
   width: 100%;
 }
 
+.input-group {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
 .register-input {
   width: 100%;
   height: 52px;
-
-  margin-bottom: 12px;
+  margin-bottom: 0;
 
   --background: #f1f5f8;
-
   --border-color: #9fb4c8;
   --border-width: 1.5px;
   --border-style: solid;
-
   --border-radius: 8px;
 
   --color: #344454;
   --placeholder-color: #68798a;
 
   font-size: 15px;
+  transition: all 0.2s ease-in-out;
 }
 
 .register-input ion-icon {
   color: #657789;
   font-size: 21px;
+}
+
+/* Estado de error en input */
+.register-input.has-error {
+  --border-color: #e53935 !important;
+  --background: #fef2f2 !important;
+}
+
+.register-input.has-error ion-icon {
+  color: #e53935 !important;
+}
+
+.field-error {
+  color: #d32f2f;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+  margin-left: 6px;
+  display: block;
 }
 
 
@@ -115,7 +138,6 @@ ion-content {
 .account-type h2 strong {
   font-weight: 700;
 }
-
 
 /* Opciones */
 
@@ -141,11 +163,43 @@ ion-content {
   font-weight: 700;
 
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .account-option.active {
   background: #6545b4;
   color: #ffffff;
+  box-shadow: 0 4px 10px rgba(101, 69, 180, 0.25);
+}
+
+
+/* =========================
+   ALERTAS DE ERROR
+========================= */
+
+.alert-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #fee2e2;
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 14px;
+}
+
+.alert-box ion-icon {
+  color: #dc2626;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.error-message {
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  text-align: left;
 }
 
 
@@ -157,7 +211,7 @@ ion-content {
   width: 100%;
   height: 49px;
 
-  margin: 24px 0 0;
+  margin: 20px 0 0;
 
   --background: #202a33;
   --background-activated: #161e25;
@@ -202,16 +256,8 @@ ion-content {
   margin-right: 8px;
 }
 
-.error-message {
-  color: #e53935;
-  font-size: 13px;
-  font-weight: 600;
-  margin: 10px 0 0 4px;
-  text-align: left;
-}
-
 /* =========================
-   LOGIN
+   LOGIN LINK
 ========================= */
 
 .login-link {

@@ -54,23 +54,13 @@ export class Login {
       tipoCuenta
     );
 
-    console.log(
-      'Registrando con Google como:',
-      tipoCuenta
-    );
-
     const { data, error } =
       await supabase.auth.signInWithOAuth({
-
         provider: 'google',
-
         options: {
-
           redirectTo:
             `${window.location.origin}/login`
-
         }
-
       });
 
     if (error) {
@@ -92,16 +82,11 @@ export class Login {
 
     const { data, error } =
       await supabase.auth.signInWithOAuth({
-
         provider: 'google',
-
         options: {
-
           redirectTo:
             `${window.location.origin}/login`
-
         }
-
       });
 
     if (error) {
@@ -134,29 +119,14 @@ export class Login {
     } = await supabase.auth.getUser();
 
     if (userError) {
-
-      console.error(
-        'Error obteniendo usuario:',
-        userError
-      );
-
       throw userError;
     }
 
     if (!user) {
-
       throw new Error(
         'No se encontró el usuario autenticado.'
       );
-
     }
-
-
-    console.log(
-      'Usuario Google:',
-      user.id,
-      user.email
-    );
 
 
     // ==========================================
@@ -172,35 +142,17 @@ export class Login {
       .eq('nombre', tipoCuenta)
       .maybeSingle();
 
-
     if (rolError) {
-
-      console.error(
-        'Error buscando rol:',
-        rolError
-      );
-
       throw new Error(
         `Error buscando el rol ${tipoCuenta}: ${rolError.message}`
       );
-
     }
 
-
     if (!rol) {
-
       throw new Error(
         `No existe el rol "${tipoCuenta}" en la tabla rol.`
       );
-
     }
-
-
-    console.log(
-      'Rol encontrado:',
-      rol.id,
-      rol.nombre
-    );
 
 
     // ==========================================
@@ -223,7 +175,6 @@ export class Login {
         .eq('id', user.id);
 
       if (usuarioError) {
-        console.error('Error actualizando usuario:', usuarioError);
         throw new Error(`No se pudo actualizar el usuario: ${usuarioError.message}`);
       }
     } else {
@@ -244,7 +195,6 @@ export class Login {
         });
 
       if (usuarioInsertError) {
-        console.error('Error insertando usuario:', usuarioInsertError);
         throw new Error(`No se pudo crear el usuario en la tabla: ${usuarioInsertError.message}`);
       }
     }
@@ -256,11 +206,6 @@ export class Login {
 
     if (tipoCuenta === 'Familiar') {
 
-
-      // ------------------------------------------
-      // Buscar si ya existe cuidador
-      // ------------------------------------------
-
       const {
         data: cuidadorExistente,
         error: cuidadorBusquedaError
@@ -270,85 +215,35 @@ export class Login {
         .eq('id_usuario', user.id)
         .maybeSingle();
 
-
       if (cuidadorBusquedaError) {
-
-        console.error(
-          'Error buscando cuidador:',
-          cuidadorBusquedaError
-        );
-
         throw new Error(
           `No se pudo consultar el cuidador: ${cuidadorBusquedaError.message}`
         );
-
       }
 
-
-      // ------------------------------------------
-      // Crear cuidador
-      // ------------------------------------------
-
       if (!cuidadorExistente) {
-
         const {
-          data: nuevoCuidador,
           error: cuidadorError
         } = await supabase
           .from('cuidador')
           .insert({
-
             id_usuario: user.id
-
           })
           .select()
           .single();
 
-
         if (cuidadorError) {
-
-          console.error(
-            'Error creando cuidador:',
-            cuidadorError
-          );
-
           throw new Error(
             `No se pudo crear el cuidador: ${cuidadorError.message}`
           );
-
         }
-
-
-        console.log(
-          'Cuidador creado:',
-          nuevoCuidador
-        );
-
-      } else {
-
-        console.log(
-          'El cuidador ya existe:',
-          cuidadorExistente
-        );
-
       }
-
     }
 
-
-    // ==========================================
-    // LIMPIAR SELECCIÓN
-    // ==========================================
-
+    // Limpiar selección temporal
     localStorage.removeItem(
       'tipo_cuenta_google'
     );
-
-
-    console.log(
-      `Registro completado como ${tipoCuenta}`
-    );
-
 
     return user;
   }
@@ -415,7 +310,6 @@ export class Login {
       );
     }
 
-
     const {
       data: usuario,
       error: usuarioError
@@ -432,13 +326,11 @@ export class Login {
       .eq('id', user.id)
       .maybeSingle();
 
-
     if (usuarioError) {
       throw usuarioError;
     }
 
     if (!usuario) {
-      // Si aún no está en la tabla usuario pero viene de registro con metadata
       const metaRol = user.user_metadata?.['tipo_cuenta'];
       if (metaRol) {
         return metaRol;
@@ -447,7 +339,6 @@ export class Login {
         'No se encontró el usuario en la base de datos.'
       );
     }
-
 
     const rolData = usuario.rol as any;
 
@@ -466,12 +357,6 @@ export class Login {
     if (!nombreRol) {
       throw new Error('No se pudo determinar el nombre del rol.');
     }
-
-    console.log(
-      'Rol del usuario:',
-      nombreRol
-    );
-
 
     return nombreRol;
   }

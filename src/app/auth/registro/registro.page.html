@@ -19,100 +19,111 @@
     <div class="register-form">
 
       <!-- Nombre completo -->
-      <ion-input
-        type="text"
-        placeholder="Nombre completo"
-        fill="outline"
-        class="register-input"
-        [(ngModel)]="nombreCompleto">
-
-        <ion-icon
-          slot="start"
-          name="person-outline">
-        </ion-icon>
-
-      </ion-input>
+      <div class="input-group">
+        <ion-input
+          type="text"
+          placeholder="Nombre completo (ej: Juan Pérez)"
+          fill="outline"
+          class="register-input"
+          [class.has-error]="errores.nombreCompleto"
+          [(ngModel)]="nombreCompleto"
+          (ionInput)="validarCampoNombre()"
+          (ionBlur)="validarCampoNombre()">
+          <ion-icon slot="start" name="person-outline"></ion-icon>
+        </ion-input>
+        @if (errores.nombreCompleto) {
+          <span class="field-error">{{ errores.nombreCompleto }}</span>
+        }
+      </div>
 
       <!-- Teléfono -->
-      <ion-input
-        type="tel"
-        placeholder="Teléfono de contacto"
-        fill="outline"
-        class="register-input"
-        [(ngModel)]="telefono">
-
-        <ion-icon
-          slot="start"
-          name="call-outline">
-        </ion-icon>
-
-      </ion-input>
+      <div class="input-group">
+        <ion-input
+          type="tel"
+          placeholder="Teléfono móvil (ej: 912345678)"
+          fill="outline"
+          class="register-input"
+          [class.has-error]="errores.telefono"
+          [(ngModel)]="telefono"
+          (ionInput)="validarCampoTelefono()"
+          (ionBlur)="formatearTelefonoEnBlur()">
+          <ion-icon slot="start" name="call-outline"></ion-icon>
+        </ion-input>
+        @if (errores.telefono) {
+          <span class="field-error">{{ errores.telefono }}</span>
+        }
+      </div>
 
       <!-- Correo -->
-      <ion-input
-        type="email"
-        placeholder="Correo"
-        fill="outline"
-        class="register-input"
-        [(ngModel)]="correo">
-
-        <ion-icon
-          slot="start"
-          name="mail-outline">
-        </ion-icon>
-
-      </ion-input>
+      <div class="input-group">
+        <ion-input
+          type="email"
+          placeholder="Correo electrónico"
+          fill="outline"
+          class="register-input"
+          [class.has-error]="errores.correo"
+          [(ngModel)]="correo"
+          (ionInput)="validarCampoCorreo()"
+          (ionBlur)="validarCampoCorreo()">
+          <ion-icon slot="start" name="mail-outline"></ion-icon>
+        </ion-input>
+        @if (errores.correo) {
+          <span class="field-error">{{ errores.correo }}</span>
+        }
+      </div>
 
       <!-- Contraseña -->
-      <ion-input
-        type="password"
-        placeholder="Contraseña"
-        fill="outline"
-        class="register-input"
-        [(ngModel)]="contrasena">
-
-        <ion-icon
-          slot="start"
-          name="lock-closed-outline">
-        </ion-icon>
-
-      </ion-input>
+      <div class="input-group">
+        <ion-input
+          type="password"
+          placeholder="Contraseña (mínimo 6 caracteres y números)"
+          fill="outline"
+          class="register-input"
+          [class.has-error]="errores.contrasena"
+          [(ngModel)]="contrasena"
+          (ionInput)="validarCampoContrasena()"
+          (ionBlur)="validarCampoContrasena()">
+          <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
+        </ion-input>
+        @if (errores.contrasena) {
+          <span class="field-error">{{ errores.contrasena }}</span>
+        }
+      </div>
 
       <!-- Confirmar contraseña -->
-      <ion-input
-        type="password"
-        placeholder="Confirmar Contraseña"
-        fill="outline"
-        class="register-input"
-        [(ngModel)]="confirmarContrasena">
-
-        <ion-icon
-          slot="start"
-          name="lock-closed-outline">
-        </ion-icon>
-
-      </ion-input>
+      <div class="input-group">
+        <ion-input
+          type="password"
+          placeholder="Confirmar Contraseña"
+          fill="outline"
+          class="register-input"
+          [class.has-error]="errores.confirmarContrasena"
+          [(ngModel)]="confirmarContrasena"
+          (ionInput)="validarCampoConfirmar()"
+          (ionBlur)="validarCampoConfirmar()">
+          <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
+        </ion-input>
+        @if (errores.confirmarContrasena) {
+          <span class="field-error">{{ errores.confirmarContrasena }}</span>
+        }
+      </div>
 
     </div>
 
     <!-- Tipo de cuenta -->
     <div class="account-type">
-
       <h2>
         Selecciona el tipo de cuenta:
         <strong>{{ tipoCuenta }}</strong>
       </h2>
 
       <div class="account-options">
-
         <button
           type="button"
           class="account-option"
           [class.active]="tipoCuenta === 'Usuario'"
           (click)="seleccionarTipo('Usuario')">
-
           Usuario
-
         </button>
 
         <button
@@ -120,22 +131,19 @@
           class="account-option"
           [class.active]="tipoCuenta === 'Familiar'"
           (click)="seleccionarTipo('Familiar')">
-
           Familiar
-
         </button>
-
       </div>
-
     </div>
 
-    <!-- Error -->
+    <!-- Error General Banner -->
     @if (mensajeError) {
-
-      <p class="error-message">
-        {{ mensajeError }}
-      </p>
-
+      <div class="alert-box">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        <p class="error-message">
+          {{ mensajeError }}
+        </p>
+      </div>
     }
 
     <!-- Registrarse -->
@@ -144,9 +152,7 @@
       class="register-button"
       (click)="registrar()"
       [disabled]="cargando">
-
       {{ cargando ? 'Registrando...' : 'Registrarse' }}
-
     </ion-button>
 
     <!-- Google -->
@@ -156,15 +162,12 @@
       class="google-button"
       (click)="registrarConGoogle()"
       [disabled]="cargando">
-
       <ion-icon
         name="logo-google"
         slot="start"
         class="google-icon">
       </ion-icon>
-
       Continuar con Google
-
     </ion-button>
 
     <!-- Login -->

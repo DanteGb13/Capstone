@@ -1,11 +1,19 @@
 import { Component, OnInit } from '@angular/core';
-import { IonButton, IonContent, IonIcon, IonInput } from '@ionic/angular';
+import { IonButton, IonContent, IonIcon, IonInput, NavController } from '@ionic/angular';
+import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { addIcons } from 'ionicons';
-import { peopleOutline, logoGoogle } from 'ionicons/icons';
+import {
+  peopleOutline,
+  logoGoogle,
+  mailOutline,
+  lockClosedOutline,
+  alertCircleOutline
+} from 'ionicons/icons';
 import { Login } from '../../services/guards/login/login';
 import { SupabaseService } from '../../services/supabase/supabase';
+import { validarEmail } from '../../services/utils/validators';
 
 @Component({
   selector: 'app-login',
@@ -16,6 +24,7 @@ import { SupabaseService } from '../../services/supabase/supabase';
     IonIcon,
     IonInput,
     IonButton,
+    CommonModule,
     FormsModule,
     RouterLink
   ]
@@ -27,272 +36,178 @@ export class LoginPage implements OnInit {
   mensajeError: string = '';
   cargando: boolean = false;
 
+  errores: {
+    correo?: string;
+    contrasena?: string;
+  } = {};
+
   constructor(
     private loginService: Login,
     private supabaseService: SupabaseService,
-    private router: Router
+    private router: Router,
+    private navCtrl: NavController
   ) {
     addIcons({
       peopleOutline,
-      logoGoogle
+      logoGoogle,
+      mailOutline,
+      lockClosedOutline,
+      alertCircleOutline
     });
   }
 
   // ==========================================
-  // INICIO DE LA PÁGINA
+  // INICIO DE LA PÁGINA Y AUTO-LOGIN
   // ==========================================
 
   async ngOnInit() {
-    // 1. Escuchar eventos de autenticación de Supabase (especialmente para retorno OAuth de Google)
     const supabase = this.supabaseService.getClient();
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        await this.procesarSesionGoogle();
-      }
-    });
-
-    // 2. Comprobar si ya hay una sesión activa o retorno de Google pendiente
-    await this.procesarSesionGoogle();
-  }
-
-  private async procesarSesionGoogle() {
+    // 1. Comprobar retorno OAuth de Google
     const tipoCuenta = localStorage.getItem('tipo_cuenta_google');
-
     if (tipoCuenta === 'Usuario' || tipoCuenta === 'Familiar') {
       await this.completarRegistroGoogle(tipoCuenta);
       return;
     }
 
-    // Si no hay registro pendiente, comprobar si el usuario acaba de autenticarse con Google
+    // 2. Escuchar cambios de autenticación
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const tipoGoogle = localStorage.getItem('tipo_cuenta_google');
+        if (tipoGoogle === 'Usuario' || tipoGoogle === 'Familiar') {
+          await this.completarRegistroGoogle(tipoGoogle);
+        } else {
+          await this.redireccionarSegunRol();
+        }
+      }
+    });
+
+    // 3. Comprobar si ya existe sesión activa localmente (sin bloquear)
     try {
-      const user = await this.loginService.obtenerUsuarioActual();
-      if (user) {
-        this.cargando = true;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
         await this.redireccionarSegunRol();
       }
     } catch {
-      // Si no hay sesión iniciada, el usuario permanece en el formulario de login normalmente
-    } finally {
-      this.cargando = false;
+      // Sin sesión activa
     }
   }
 
+  // ==========================================
+  // VALIDACIONES DE LOGIN
+  // ==========================================
+
+  validarCorreo(): boolean {
+    if (!this.correo || this.correo.trim().length === 0) {
+      this.errores.correo = 'Ingresa tu correo electrónico.';
+      return false;
+    }
+    if (!validarEmail(this.correo)) {
+      this.errores.correo = 'Formato de correo no válido.';
+      return false;
+    }
+    delete this.errores.correo;
+    return true;
+  }
+
+  validarContrasena(): boolean {
+    if (!this.contrasena || this.contrasena.trim().length === 0) {
+      this.errores.contrasena = 'Ingresa tu contraseña.';
+      return false;
+    }
+    delete this.errores.contrasena;
+    return true;
+  }
 
   // ==========================================
   // LOGIN CON CORREO Y CONTRASEÑA
   // ==========================================
 
   async ingresar() {
-
     this.mensajeError = '';
 
+    const vEmail = this.validarCorreo();
+    const vPass = this.validarContrasena();
 
-    // Validar campos
-
-    if (
-      !this.correo ||
-      !this.contrasena
-    ) {
-
-      this.mensajeError =
-        'Ingresa tu correo y contraseña.';
-
+    if (!vEmail || !vPass) {
+      this.mensajeError = 'Por favor completa los campos correctamente.';
       return;
-
     }
-
 
     this.cargando = true;
 
-
     try {
-
-      // ----------------------------------------
-      // LOGIN EN SUPABASE
-      // ----------------------------------------
-
-      const data =
-        await this.loginService.iniciarSesion(
-          this.correo,
-          this.contrasena
-        );
-
-
-      console.log(
-        'Login exitoso:',
-        data.user
+      await this.loginService.iniciarSesion(
+        this.correo.trim().toLowerCase(),
+        this.contrasena
       );
-
-
-      // ----------------------------------------
-      // REDIRECCIONAR SEGÚN ROL
-      // ----------------------------------------
 
       await this.redireccionarSegunRol();
 
-
     } catch (error: any) {
+      const msg = error?.message?.toLowerCase() || '';
 
-      console.error(
-        'Error iniciando sesión:',
-        error
-      );
-
-
-      if (
-        error?.message?.includes(
-          'Invalid login credentials'
-        )
-      ) {
-
-        this.mensajeError =
-          'Correo o contraseña incorrectos.';
-
+      if (msg.includes('invalid login credentials') || msg.includes('invalid_grant')) {
+        this.mensajeError = 'Correo o contraseña incorrectos. Por favor verifica tus datos.';
+      } else if (msg.includes('email not confirmed')) {
+        this.mensajeError = 'Debes confirmar tu correo electrónico antes de ingresar.';
+      } else if (msg.includes('network') || msg.includes('fetch')) {
+        this.mensajeError = 'Error de conexión. Comprueba tu acceso a internet.';
       } else {
-
-        this.mensajeError =
-          error?.message ||
-          'No se pudo iniciar sesión.';
-
+        this.mensajeError = error?.message || 'No se pudo iniciar sesión. Inténtalo nuevamente.';
       }
-
     } finally {
-
       this.cargando = false;
-
     }
-
   }
-
 
   // ==========================================
   // LOGIN CON GOOGLE
   // ==========================================
 
   async ingresarConGoogle() {
-
     this.mensajeError = '';
-
     try {
-
-      /*
-       * Este método es SOLO para iniciar sesión
-       * con una cuenta Google que ya existe.
-       */
-
       await this.loginService.iniciarSesionGoogle();
-
     } catch (error: any) {
-
-      console.error(
-        'Error iniciando sesión con Google:',
-        error
-      );
-
-      this.mensajeError =
-        error?.message ||
-        'No se pudo iniciar sesión con Google.';
-
+      this.mensajeError = error?.message || 'No se pudo conectar con Google.';
     }
-
   }
-
 
   // ==========================================
   // COMPLETAR REGISTRO GOOGLE
   // ==========================================
 
-  private async completarRegistroGoogle(
-    tipoCuenta: 'Usuario' | 'Familiar'
-  ) {
-
+  private async completarRegistroGoogle(tipoCuenta: 'Usuario' | 'Familiar') {
     this.cargando = true;
-
     try {
-
-      console.log(
-        'Completando registro Google como:',
-        tipoCuenta
-      );
-
-
-      // ----------------------------------------
-      // COMPLETAR REGISTRO INICIAL
-      // ----------------------------------------
-
-      await this.loginService.completarRegistroGoogle(
-        tipoCuenta
-      );
-
-
-      console.log(
-        'Registro inicial con Google completado correctamente'
-      );
-
-
-      // ----------------------------------------
-      // LIMPIAR TIPO DE CUENTA
-      // ----------------------------------------
-
-      localStorage.removeItem(
-        'tipo_cuenta_google'
-      );
-
-
-      // ----------------------------------------
-      // REDIRECCIONAR A SIGUIENTE PASO
-      // ----------------------------------------
-
-      console.log('Redirigiendo a /siguiente-paso para completar perfil');
-      await this.router.navigate(['/siguiente-paso']);
-
-
+      await this.loginService.completarRegistroGoogle(tipoCuenta);
+      localStorage.removeItem('tipo_cuenta_google');
+      await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
     } catch (error: any) {
-
-      console.error(
-        'Error completando registro Google:',
-        error
-      );
-
-
-      this.mensajeError =
-        error?.message ||
-        'No se pudo completar el registro.';
-
-
+      this.mensajeError = error?.message || 'No se pudo completar el registro.';
     } finally {
-
       this.cargando = false;
-
     }
-
   }
-
 
   // ==========================================
   // REDIRECCIÓN SEGÚN ROL / ESTADO DE PERFIL
   // ==========================================
 
   private async redireccionarSegunRol() {
-
     try {
-
       const supabase = this.supabaseService.getClient();
-      const {
-        data: { user },
-        error: userError
-      } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
 
-      if (userError || !user) {
-        throw new Error('No hay un usuario autenticado.');
+      if (!session?.user) {
+        return;
       }
 
-      // Verificar si el usuario ya tiene su perfil completo en la tabla usuario
-      const {
-        data: usuario,
-        error: usuarioError
-      } = await supabase
+      const user = session.user;
+
+      // Verificar perfil en tabla usuario
+      const { data: usuario, error: usuarioError } = await supabase
         .from('usuario')
         .select(`
           id,
@@ -307,83 +222,24 @@ export class LoginPage implements OnInit {
         .eq('id', user.id)
         .maybeSingle();
 
-      if (usuarioError) {
-        console.error('Error consultando usuario:', usuarioError);
-      }
-
-      // Si no existe en la tabla usuario o faltan RUT / Dirección -> enviar al siguiente paso
+      // Si perfil incompleto -> enviar al siguiente paso
       if (!usuario || !usuario.rut || !usuario.id_direccion) {
-        console.log('Perfil incompleto en tabla usuario, redirigiendo a /siguiente-paso');
-        await this.router.navigate(['/siguiente-paso']);
+        await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
         return;
       }
 
       const rolData = usuario.rol as any;
       const rol = Array.isArray(rolData) ? rolData[0]?.nombre : rolData?.nombre;
 
-      console.log(
-        'Rol detectado con perfil completo:',
-        rol
-      );
-
-
-      // ----------------------------------------
-      // USUARIO
-      // ----------------------------------------
-
-      if (rol === 'Usuario') {
-
-        console.log(
-          'Redirigiendo a /adulto-mayor'
-        );
-
-        await this.router.navigate([
-          '/adulto-mayor'
-        ]);
-
-        return;
-
-      }
-
-
-      // ----------------------------------------
-      // FAMILIAR / CUIDADOR
-      // ----------------------------------------
-
       if (rol === 'Familiar') {
-
-        console.log(
-          'Redirigiendo a /cuidador'
-        );
-
-        await this.router.navigate([
-          '/cuidador'
-        ]);
-
-        return;
-
+        await this.navCtrl.navigateRoot('/cuidador', { replaceUrl: true });
+      } else {
+        await this.navCtrl.navigateRoot('/adulto-mayor', { replaceUrl: true });
       }
-
-
-      // ----------------------------------------
-      // ROL DESCONOCIDO
-      // ----------------------------------------
-
-      throw new Error(
-        `Rol no reconocido: ${rol}`
-      );
 
     } catch (error) {
-
-      console.error(
-        'Error obteniendo rol:',
-        error
-      );
-
-      throw error;
-
+      // Ignorar error y mantenerse en login si falla la consulta
     }
-
   }
 
 }

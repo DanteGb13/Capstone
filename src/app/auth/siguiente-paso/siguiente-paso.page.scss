@@ -9,36 +9,11 @@ ion-content {
 }
 
 /* =========================
-   BOTÓN VOLVER
-========================= */
-
-.back-container {
-  padding-top: 50px;
-}
-
-.back-button {
-  --color: #27323d;
-  --border-color: #a8bacb;
-  --border-width: 1px;
-  --border-style: solid;
-
-  width: 38px;
-  height: 38px;
-
-  --border-radius: 50%;
-  margin: 0;
-}
-
-.back-button ion-icon {
-  font-size: 22px;
-}
-
-/* =========================
    ENCABEZADO
 ========================= */
 
 .step-header {
-  margin-top: 14px;
+  padding-top: 50px;
   margin-bottom: 20px;
 }
 
@@ -101,14 +76,20 @@ ion-content {
   font-size: 18px;
 }
 
+.input-group {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
 .step-input {
   width: 100%;
-  height: 48px;
-  margin-bottom: 10px;
+  height: 50px;
+  margin-bottom: 0;
 
   --background: #ffffff;
   --border-color: #cbd5e1;
-  --border-width: 1px;
+  --border-width: 1.5px;
   --border-style: solid;
   --border-radius: 8px;
 
@@ -116,6 +97,7 @@ ion-content {
   --placeholder-color: #94a3b8;
 
   font-size: 14px;
+  transition: all 0.2s ease-in-out;
 }
 
 .step-input ion-icon {
@@ -124,13 +106,144 @@ ion-content {
   margin-right: 6px;
 }
 
-/* Error */
+/* Estado de error en inputs */
+.step-input.has-error {
+  --border-color: #e53935 !important;
+  --background: #fef2f2 !important;
+}
+
+.step-input.has-error ion-icon {
+  color: #e53935 !important;
+}
+
+.field-error {
+  color: #d32f2f;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+  margin-left: 6px;
+  display: block;
+}
+
+/* =========================
+   SELECTOR DE FECHA MÓVIL
+========================= */
+
+.date-picker-trigger {
+  width: 100%;
+  height: 50px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.2s ease-in-out;
+}
+
+.date-picker-trigger:active {
+  background: #f1f5f9;
+}
+
+.date-picker-trigger .trigger-icon {
+  color: #6545b4;
+  font-size: 19px;
+  margin-right: 10px;
+}
+
+.date-picker-trigger .trigger-text {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.date-picker-trigger.has-value .trigger-text {
+  color: #344454;
+  font-weight: 600;
+}
+
+.date-picker-trigger.has-error {
+  border-color: #e53935 !important;
+  background: #fef2f2 !important;
+}
+
+.date-picker-trigger.has-error .trigger-icon {
+  color: #e53935 !important;
+}
+
+/* Modal DateTime */
+.datetime-modal {
+  --height: auto;
+  --max-height: 90vh;
+  --border-radius: 16px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px 8px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.modal-header ion-button {
+  --color: #64748b;
+  font-size: 22px;
+}
+
+.modal-content {
+  padding: 0 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.modal-footer {
+  padding: 10px 20px 18px;
+}
+
+.modal-confirm-btn {
+  --background: #6545b4;
+  --border-radius: 8px;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* =========================
+   ALERTAS DE ERROR
+========================= */
+
+.alert-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #fee2e2;
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 10px;
+  margin-bottom: 8px;
+}
+
+.alert-box ion-icon {
+  color: #dc2626;
+  font-size: 20px;
+  flex-shrink: 0;
+}
 
 .error-message {
-  color: #e53935;
+  color: #b91c1c;
   font-size: 13px;
   font-weight: 600;
-  margin: 8px 0 12px 4px;
+  margin: 0;
   text-align: left;
 }
 
@@ -140,8 +253,8 @@ ion-content {
 
 .finish-button {
   width: 100%;
-  height: 50px;
-  margin-top: 14px;
+  height: 52px;
+  margin-top: 16px;
 
   --background: #6545b4;
   --background-activated: #5637a3;
