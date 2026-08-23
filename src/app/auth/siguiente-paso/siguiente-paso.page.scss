@@ -1,0 +1,161 @@
+ion-content {
+  --background: #ffffff;
+}
+
+.step-page {
+  min-height: 100%;
+  padding: 0 18px 40px;
+  box-sizing: border-box;
+}
+
+/* =========================
+   BOTÓN VOLVER
+========================= */
+
+.back-container {
+  padding-top: 50px;
+}
+
+.back-button {
+  --color: #27323d;
+  --border-color: #a8bacb;
+  --border-width: 1px;
+  --border-style: solid;
+
+  width: 38px;
+  height: 38px;
+
+  --border-radius: 50%;
+  margin: 0;
+}
+
+.back-button ion-icon {
+  font-size: 22px;
+}
+
+/* =========================
+   ENCABEZADO
+========================= */
+
+.step-header {
+  margin-top: 14px;
+  margin-bottom: 20px;
+}
+
+.step-badge {
+  display: inline-block;
+  background: #eee8fa;
+  color: #6545b4;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.step-header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #202a33;
+}
+
+.step-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #667585;
+}
+
+.step-header p strong {
+  color: #6545b4;
+}
+
+/* =========================
+   SECCIONES Y FORMULARIO
+========================= */
+
+.step-form {
+  width: 100%;
+}
+
+.form-section {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px 2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #202a33;
+}
+
+.section-title ion-icon {
+  color: #6545b4;
+  font-size: 18px;
+}
+
+.step-input {
+  width: 100%;
+  height: 48px;
+  margin-bottom: 10px;
+
+  --background: #ffffff;
+  --border-color: #cbd5e1;
+  --border-width: 1px;
+  --border-style: solid;
+  --border-radius: 8px;
+
+  --color: #344454;
+  --placeholder-color: #94a3b8;
+
+  font-size: 14px;
+}
+
+.step-input ion-icon {
+  color: #6545b4;
+  font-size: 18px;
+  margin-right: 6px;
+}
+
+/* Error */
+
+.error-message {
+  color: #e53935;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 8px 0 12px 4px;
+  text-align: left;
+}
+
+/* =========================
+   BOTÓN FINALIZAR
+========================= */
+
+.finish-button {
+  width: 100%;
+  height: 50px;
+  margin-top: 14px;
+
+  --background: #6545b4;
+  --background-activated: #5637a3;
+  --background-hover: #5d3ea8;
+
+  --border-radius: 10px;
+
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: none;
+  box-shadow: 0 4px 12px rgba(101, 69, 180, 0.25);
+}
+
+.finish-button ion-icon {
+  font-size: 20px;
+  margin-left: 6px;
+}

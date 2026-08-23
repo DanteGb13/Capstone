@@ -218,7 +218,7 @@ export class LoginPage implements OnInit {
 
 
       // ----------------------------------------
-      // COMPLETAR REGISTRO
+      // COMPLETAR REGISTRO INICIAL
       // ----------------------------------------
 
       await this.loginService.completarRegistroGoogle(
@@ -227,7 +227,7 @@ export class LoginPage implements OnInit {
 
 
       console.log(
-        'Registro Google completado correctamente'
+        'Registro inicial con Google completado correctamente'
       );
 
 
@@ -241,10 +241,11 @@ export class LoginPage implements OnInit {
 
 
       // ----------------------------------------
-      // REDIRECCIONAR SEGÚN ROL
+      // REDIRECCIONAR A SIGUIENTE PASO
       // ----------------------------------------
 
-      await this.redireccionarSegunRol();
+      console.log('Redirigiendo a /siguiente-paso para completar perfil');
+      await this.router.navigate(['/siguiente-paso']);
 
 
     } catch (error: any) {
@@ -270,21 +271,58 @@ export class LoginPage implements OnInit {
 
 
   // ==========================================
-  // REDIRECCIÓN SEGÚN ROL
+  // REDIRECCIÓN SEGÚN ROL / ESTADO DE PERFIL
   // ==========================================
 
   private async redireccionarSegunRol() {
 
     try {
 
-      // Obtener rol desde Supabase
+      const supabase = this.supabaseService.getClient();
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser();
 
-      const rol =
-        await this.loginService.obtenerRolUsuario();
+      if (userError || !user) {
+        throw new Error('No hay un usuario autenticado.');
+      }
 
+      // Verificar si el usuario ya tiene su perfil completo en la tabla usuario
+      const {
+        data: usuario,
+        error: usuarioError
+      } = await supabase
+        .from('usuario')
+        .select(`
+          id,
+          rut,
+          id_direccion,
+          id_rol,
+          rol (
+            id,
+            nombre
+          )
+        `)
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (usuarioError) {
+        console.error('Error consultando usuario:', usuarioError);
+      }
+
+      // Si no existe en la tabla usuario o faltan RUT / Dirección -> enviar al siguiente paso
+      if (!usuario || !usuario.rut || !usuario.id_direccion) {
+        console.log('Perfil incompleto en tabla usuario, redirigiendo a /siguiente-paso');
+        await this.router.navigate(['/siguiente-paso']);
+        return;
+      }
+
+      const rolData = usuario.rol as any;
+      const rol = Array.isArray(rolData) ? rolData[0]?.nombre : rolData?.nombre;
 
       console.log(
-        'Rol detectado:',
+        'Rol detectado con perfil completo:',
         rol
       );
 
@@ -296,7 +334,7 @@ export class LoginPage implements OnInit {
       if (rol === 'Usuario') {
 
         console.log(
-          'Redirigiendo a /home'
+          'Redirigiendo a /adulto-mayor'
         );
 
         await this.router.navigate([

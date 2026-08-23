@@ -217,7 +217,8 @@ export class Login {
       const { error: usuarioError } = await supabase
         .from('usuario')
         .update({
-          id_rol: rol.id
+          id_rol: rol.id,
+          estado: true
         })
         .eq('id', user.id);
 
@@ -226,13 +227,20 @@ export class Login {
         throw new Error(`No se pudo actualizar el usuario: ${usuarioError.message}`);
       }
     } else {
+      const nombreUsuario =
+        user.user_metadata?.['full_name'] ||
+        user.user_metadata?.['name'] ||
+        user.email?.split('@')[0] ||
+        'Usuario';
+
       const { error: usuarioInsertError } = await supabase
         .from('usuario')
         .insert({
           id: user.id,
           id_rol: rol.id,
           correo: user.email,
-          nombre_completo: user.user_metadata?.['full_name'] || user.user_metadata?.['name'] || user.email || ''
+          nombre: nombreUsuario,
+          estado: true
         });
 
       if (usuarioInsertError) {

@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { IonButton, IonContent, IonIcon, IonInput } from '@ionic/angular';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { addIcons } from 'ionicons';
 
 import {
@@ -40,7 +40,8 @@ export class RegistroPage {
   cargando: boolean = false;
 
   constructor(
-    private registroService: registro
+    private registroService: registro,
+    private router: Router
   ) {
 
     addIcons({
@@ -106,9 +107,12 @@ export class RegistroPage {
       });
 
       console.log(
-        'Usuario registrado como:',
+        'Usuario registrado inicialmente como:',
         this.tipoCuenta
       );
+
+      // Redirigir al siguiente paso para completar datos
+      await this.router.navigate(['/siguiente-paso']);
 
     } catch (error: any) {
 

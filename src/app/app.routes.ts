@@ -34,7 +34,10 @@ export const routes: Routes = [
     path: 'registro',
     loadComponent: () => import('./auth/registro/registro.page').then( m => m.RegistroPage)
   },
-
+  {
+    path: 'siguiente-paso',
+    loadComponent: () => import('./auth/siguiente-paso/siguiente-paso.page').then( m => m.SiguientePasoPage)
+  },
   {
     path: 'adulto-mayor',
     loadComponent: () => import('./pages/adultosMayores/adulto-mayor/adulto-mayor.page').then( m => m.AdultoMayorPage)
@@ -55,17 +58,9 @@ export const routes: Routes = [
     path: 'estado',
     loadComponent: () => import('./pages/cuidadores/estado/estado.page').then( m => m.EstadoPage)
   },
-
-
-
-  //Saltos de paginas no existentes
-    {
+  // Saltos de paginas no existentes
+  {
     path: '**',
     loadComponent: () => import('./error/error/error.page').then( m => m.ErrorPage)
-  },  {
-    path: 'siguiente-paso',
-    loadComponent: () => import('./auth/siguiente-paso/siguiente-paso.page').then( m => m.SiguientePasoPage)
-  },
-
-
+  }
 ];

@@ -1,13 +1,161 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>siguientePaso</ion-title>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">siguientePaso</ion-title>
-    </ion-toolbar>
-  </ion-header>
+
+  <div class="step-page">
+
+    <!-- Botón Volver -->
+    <div class="back-container">
+      <ion-button fill="clear" class="back-button" [routerLink]="['/registro']">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </div>
+
+    <!-- Encabezado con Indicador de Paso -->
+    <div class="step-header">
+      <div class="step-badge">
+        <span>Paso 2 de 2</span>
+      </div>
+      <h1>Completa tu perfil</h1>
+      <p>Necesitamos estos datos para finalizar tu registro como <strong>{{ tipoCuenta }}</strong></p>
+    </div>
+
+    <!-- Formulario -->
+    <div class="step-form">
+
+      <!-- Sección 1: Datos Personales -->
+      <div class="form-section">
+        <h2 class="section-title">
+          <ion-icon name="person-outline"></ion-icon>
+          Datos Personales
+        </h2>
+
+        <!-- RUT -->
+        <ion-input
+          type="text"
+          placeholder="RUT (ej: 12.345.678-9)"
+          fill="outline"
+          class="step-input"
+          [(ngModel)]="rut">
+          <ion-icon slot="start" name="card-outline"></ion-icon>
+        </ion-input>
+
+        <!-- Fecha de Nacimiento -->
+        <ion-input
+          type="date"
+          placeholder="Fecha de nacimiento"
+          fill="outline"
+          class="step-input date-input"
+          [(ngModel)]="fechaNacimiento">
+          <ion-icon slot="start" name="calendar-outline"></ion-icon>
+        </ion-input>
+
+        <!-- Nombre -->
+        <ion-input
+          type="text"
+          placeholder="Nombre"
+          fill="outline"
+          class="step-input"
+          [(ngModel)]="nombre">
+          <ion-icon slot="start" name="person-outline"></ion-icon>
+        </ion-input>
+
+        <!-- Apellido Paterno -->
+        <ion-input
+          type="text"
+          placeholder="Apellido Paterno"
+          fill="outline"
+          class="step-input"
+          [(ngModel)]="apellidopa">
+          <ion-icon slot="start" name="person-outline"></ion-icon>
+        </ion-input>
+
+        <!-- Apellido Materno -->
+        <ion-input
+          type="text"
+          placeholder="Apellido Materno"
+          fill="outline"
+          class="step-input"
+          [(ngModel)]="apellidoma">
+          <ion-icon slot="start" name="person-outline"></ion-icon>
+        </ion-input>
+
+        <!-- Teléfono -->
+        <ion-input
+          type="tel"
+          placeholder="Teléfono"
+          fill="outline"
+          class="step-input"
+          [(ngModel)]="telefono">
+          <ion-icon slot="start" name="call-outline"></ion-icon>
+        </ion-input>
+      </div>
+
+      <!-- Sección 2: Dirección -->
+      <div class="form-section">
+        <h2 class="section-title">
+          <ion-icon name="location-outline"></ion-icon>
+          Dirección
+        </h2>
+
+        <!-- Región -->
+        <ion-input
+          type="text"
+          placeholder="Región (ej: Metropolitana)"
+          fill="outline"
+          class="step-input"
+          [(ngModel)]="region">
+          <ion-icon slot="start" name="map-outline"></ion-icon>
+        </ion-input>
+
+        <!-- Comuna -->
+        <ion-input
+          type="text"
+          placeholder="Comuna (ej: Santiago)"
+          fill="outline"
+          class="step-input"
+          [(ngModel)]="comuna">
+          <ion-icon slot="start" name="location-outline"></ion-icon>
+        </ion-input>
+
+        <!-- Calle -->
+        <ion-input
+          type="text"
+          placeholder="Calle / Avenida"
+          fill="outline"
+          class="step-input"
+          [(ngModel)]="calle">
+          <ion-icon slot="start" name="home-outline"></ion-icon>
+        </ion-input>
+
+        <!-- Número -->
+        <ion-input
+          type="text"
+          placeholder="Número (ej: 1234 o Depto 402)"
+          fill="outline"
+          class="step-input"
+          [(ngModel)]="numero">
+          <ion-icon slot="start" name="home-outline"></ion-icon>
+        </ion-input>
+      </div>
+
+    </div>
+
+    <!-- Mensaje de Error -->
+    @if (mensajeError) {
+      <p class="error-message">
+        {{ mensajeError }}
+      </p>
+    }
+
+    <!-- Botón Finalizar -->
+    <ion-button
+      expand="block"
+      class="finish-button"
+      (click)="guardarYContinuar()"
+      [disabled]="cargando">
+      <ion-icon slot="end" name="checkmark-circle-outline"></ion-icon>
+      {{ cargando ? 'Guardando...' : 'Finalizar y Continuar' }}
+    </ion-button>
+
+  </div>
+
 </ion-content>
