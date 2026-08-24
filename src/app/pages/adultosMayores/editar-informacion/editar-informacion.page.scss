@@ -154,19 +154,6 @@ h1{
 
 }
 
-
-
-.btn-editar{
-
-  margin-top:15px;
-
-  height:55px;
-
-  --border-radius:18px;
-
-  font-weight:bold;
-
-}
 .btn-editar {
   margin-top: 12px;
   --background: #2563eb;
@@ -175,6 +162,14 @@ h1{
 }
 
 .btn-cerrar {
+  margin-top: 12px;
+  --background: grey;
+  --background-hover: grey;
+  --color: white;
+  --border-radius: 12px;
+}
+
+.btn-cancelar {
   margin-top: 12px;
   --background: #dc2626;
   --background-hover: #b91c1c;

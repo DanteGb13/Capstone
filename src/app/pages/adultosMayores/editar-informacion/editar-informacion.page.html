@@ -133,8 +133,8 @@
         <ion-icon name="map-outline"></ion-icon>
         <div>
           <span>Región</span>
-          <p *ngIf="!modoEditar">{{usuario.region}}</p>
-          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.region"></ion-input>
+          <p *ngIf="!modoEditar">{{usuario.direccion?.region}}</p>
+          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.direccion.region" placeholder="Región"></ion-input>
         </div>
       </div>
 
@@ -143,8 +143,8 @@
         <ion-icon name="business-outline"></ion-icon>
         <div>
           <span>Comuna</span>
-          <p *ngIf="!modoEditar">{{usuario.comuna}}</p>
-          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.comuna"></ion-input>
+          <p *ngIf="!modoEditar">{{usuario.direccion?.comuna}}</p>
+          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.direccion.comuna" placeholder="Comuna"></ion-input>
         </div>
       </div>
 
@@ -153,11 +153,11 @@
         <ion-icon name="location-outline"></ion-icon>
         <div>
           <span>Calle y Número</span>
-          <p *ngIf="!modoEditar">{{usuario.calle}} #{{usuario.numero}}</p>
+          <p *ngIf="!modoEditar">{{usuario.direccion?.calle}} #{{usuario.direccion?.numero}}</p>
           
-          <div *ngIf="modoEditar" style="display: flex; gap: 10px;">
-            <ion-input [(ngModel)]="usuario.calle" placeholder="Calle"></ion-input>
-            <ion-input [(ngModel)]="usuario.numero" placeholder="N°" style="max-width: 80px;"></ion-input>
+          <div *ngIf="modoEditar" style="display: flex; gap: 10px; margin-top: 5px;">
+            <ion-input [(ngModel)]="usuario.direccion.calle" placeholder="Calle"></ion-input>
+            <ion-input [(ngModel)]="usuario.direccion.numero" placeholder="N°" style="max-width: 90px;"></ion-input>
           </div>
         </div>
       </div>
@@ -190,6 +190,18 @@
       </ion-icon>
       {{modoEditar ? 'Guardar cambios' : 'Editar datos'}}
     </ion-button>
+
+    <!-- Botón Cancelar cambios (Solo aparece al editar) -->
+      <ion-button 
+        *ngIf="modoEditar"
+        expand="block" 
+        color="medium"
+        class="btn-cancelar"
+        style="flex: 1;"
+        (click)="cancelarEdicion()">
+        <ion-icon name="close-outline" slot="start"></ion-icon>
+        Cancelar
+      </ion-button>
 
     <!-- Cerrar sesión -->
     <ion-button 

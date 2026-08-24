@@ -41,6 +41,7 @@ export class EditarInformacionPage implements OnInit {
 
   nombreUsuario: string = '';
   usuario: any = {};
+  usuarioOriginal: any = {}; // Copia para respaldar los datos originales al cancelar
   modoEditar = false;
 
   async ngOnInit() {
@@ -50,6 +51,8 @@ export class EditarInformacionPage implements OnInit {
 
       if (datosUsuario) {
         this.usuario = datosUsuario;
+        // Creamos una copia de respaldo profunda de los datos cargados
+        this.usuarioOriginal = JSON.parse(JSON.stringify(datosUsuario));
       }
 
       this.changeDetectorRef.detectChanges();
@@ -63,6 +66,14 @@ export class EditarInformacionPage implements OnInit {
       this.guardarCambios();
     }
     this.modoEditar = !this.modoEditar;
+  }
+
+  // Función para cancelar la edición y restaurar los datos anteriores
+  cancelarEdicion() {
+    // Restauramos los datos desde la copia de respaldo
+    this.usuario = JSON.parse(JSON.stringify(this.usuarioOriginal));
+    // Salimos del modo edición
+    this.modoEditar = false;
   }
 
   async guardarCambios() {
@@ -87,9 +98,9 @@ export class EditarInformacionPage implements OnInit {
         }
       }
 
-      // 2. Actualizamos los datos personales en la tabla 'usuario' (en singular)
+      // 2. Actualizamos los datos personales en la tabla 'usuario'
       const { data, error } = await this.supabaseService.getClient()
-        .from('usuario') // <-- Tabla en singular como marca tu diagrama
+        .from('usuario')
         .update({
           nombre: this.usuario.nombre,
           apellidopa: this.usuario.apellidopa,
@@ -103,6 +114,9 @@ export class EditarInformacionPage implements OnInit {
         console.error("Error al actualizar el usuario en Supabase:", error.message);
         return;
       }
+
+      // Actualizamos también la copia original con los nuevos datos guardados con éxito
+      this.usuarioOriginal = JSON.parse(JSON.stringify(this.usuario));
 
       console.log("¡Perfil y dirección actualizados con éxito!");
 
