@@ -10,4 +10,135 @@
       <ion-title size="large">cuidador</ion-title>
     </ion-toolbar>
   </ion-header>
+
+
+
+  
+<!-- ======================================== -->
+<!-- VINCULAR ADULTO MAYOR -->
+<!-- ======================================== -->
+
+
+  <ion-button expand="block" (click)="abrirVinculacion()">
+
+    Vincular adulto mayor
+
+  </ion-button>
+  <ion-modal [isOpen]="mostrarModal" (didDismiss)="cerrarModal()">
+
+    <ng-template>
+
+      <ion-header>
+
+        <ion-toolbar>
+
+          <ion-title>
+            Vincular adulto mayor
+          </ion-title>
+
+          <ion-buttons slot="end">
+
+            <ion-button (click)="cerrarModal()">
+
+              Cerrar
+
+            </ion-button>
+
+          </ion-buttons>
+
+        </ion-toolbar>
+
+      </ion-header>
+
+
+      <ion-content>
+
+        <div style="
+            padding: 25px;
+            text-align: center;
+          ">
+
+          <h2>
+            Vincular adulto mayor
+          </h2>
+
+          <p>
+            Ingresa el código que aparece
+            en el adulto mayor.
+          </p>
+
+
+          <!-- Código -->
+
+          <ion-input [(ngModel)]="codigo" type="text" maxlength="10" placeholder="Código de vinculación" fill="outline"
+            style="margin-top: 20px;">
+          </ion-input>
+
+
+          <!-- Error -->
+
+          @if (mensajeError) {
+
+          <p style="
+                color: red;
+                margin-top: 15px;
+              ">
+
+            {{ mensajeError }}
+
+          </p>
+
+          }
+
+
+          <!-- Éxito -->
+
+          @if (mensaje) {
+
+          <p style="
+                color: green;
+                margin-top: 15px;
+              ">
+
+            {{ mensaje }}
+
+          </p>
+
+          }
+
+
+          <!-- Vincular -->
+
+          <ion-button expand="block" style="margin-top: 20px;" (click)="vincularPorCodigo()" [disabled]="vinculando">
+
+            @if (vinculando) {
+
+            Enviando solicitud...
+
+            } @else {
+
+            Vincular adulto mayor
+
+            }
+
+          </ion-button>
+
+
+          <!-- QR -->
+
+          <ion-button expand="block" fill="outline" style="margin-top: 10px;">
+
+            Escanear código QR
+
+          </ion-button>
+
+
+        </div>
+
+      </ion-content>
+
+    </ng-template>
+
+  </ion-modal>
+  
 </ion-content>

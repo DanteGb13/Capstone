@@ -1,101 +1,512 @@
 <ion-content [fullscreen]="true">
+
   <div class="app-container">
 
     <!-- Header -->
     <div class="header">
+
       <div class="user-info">
+
         <div>
           <h1>Hola, {{ nombreUsuario }}</h1>
           <p>Tu familia te cuida</p>
         </div>
-        <button class="avatar" type="button" (click)="abrirPerfil()">
+
+        <button
+          class="avatar"
+          type="button"
+          (click)="abrirPerfil()">
 
           <ion-icon name="person"></ion-icon>
 
         </button>
+
       </div>
 
+
+      <!-- Botón vincular cuidador -->
+      <div class="vincular-cuidador">
+
+        <button
+          type="button"
+          class="vincular-button"
+          (click)="abrirVinculacion()">
+
+          <div class="vincular-icon-wrap">
+            <ion-icon name="people-outline"></ion-icon>
+          </div>
+
+          <span>Vincular cuidador</span>
+
+          <ion-icon
+            name="chevron-forward-outline"
+            class="vincular-arrow">
+          </ion-icon>
+
+        </button>
+
+      </div>
+
+
       <div class="status-card">
+
         <div class="status-icon">
           <i class="bi bi-shield-check"></i>
         </div>
+
         <div class="status-text">
-          <strong>Protección Activa 🛡️</strong>
-          <span>La familia puede ver tu ubicación.</span>
+
+          <strong>
+            Protección Activa 🛡️
+          </strong>
+
+          <span>
+            La familia puede ver tu ubicación.
+          </span>
+
         </div>
+
       </div>
+
     </div>
 
+
+    <!-- ================================================= -->
+    <!-- SOLICITUDES PENDIENTES DE VINCULACIÓN -->
+    <!-- ================================================= -->
+
+    @if (cargandoSolicitudes) {
+
+      <div class="solicitudes-loading">
+        <p>Cargando solicitudes...</p>
+      </div>
+
+    }
+
+    @if (!cargandoSolicitudes && solicitudes.length > 0) {
+
+      <h2 class="section-title" style="color: #d32f2f;">
+        🔔 Solicitudes pendientes
+      </h2>
+
+      @for (sol of solicitudes; track sol.id) {
+
+        <div class="solicitud-card">
+
+          <div class="solicitud-icon">
+            <ion-icon name="person-add-outline"></ion-icon>
+          </div>
+
+          <div class="solicitud-info">
+            <strong>Un cuidador quiere vincularse</strong>
+            <span>¿Aceptas que cuide de ti?</span>
+          </div>
+
+          <div class="solicitud-actions">
+
+            <button
+              class="btn-aceptar"
+              type="button"
+              (click)="aceptarSolicitud(sol.id)">
+              ✓
+            </button>
+
+            <button
+              class="btn-rechazar"
+              type="button"
+              (click)="rechazarSolicitud(sol.id)">
+              ✕
+            </button>
+
+          </div>
+
+        </div>
+
+      }
+
+    }
+
+
     <!-- Título -->
-    <h2 class="section-title">Acciones rápidas </h2>
+    <h2 class="section-title">
+      Acciones rápidas
+    </h2>
+
 
     <!-- Grid -->
     <div class="menu-grid">
 
-      <div class="menu-card ripple"
-        style="background: linear-gradient(135deg, #ff4d4f, #ff7875); box-shadow: 0 10px 25px rgba(255, 77, 79, 0.35); border:none">
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, #ff4d4f, #ff7875);
+          box-shadow: 0 10px 25px rgba(255, 77, 79, 0.35);
+          border:none
+        ">
 
         <ion-icon name="notifications"></ion-icon>
 
-        <h3>SOS</h3>
+        <h3>
+          SOS
+        </h3>
 
       </div>
 
 
-      <div class="menu-card ripple "
-        style=" background: linear-gradient(135deg, #c0793e, #977545); box-shadow: 0 10px 25px rgba(191, 199, 191, 0.35); border:none">
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, #c0793e, #977545);
+          box-shadow: 0 10px 25px rgba(191, 199, 191, 0.35);
+          border:none
+        ">
 
         <ion-icon name="home"></ion-icon>
 
-        <h3 style="color: black;">Estoy en Casa</h3>
+        <h3 style="color: black;">
+          Estoy en Casa
+        </h3>
 
       </div>
 
 
-      <div class="menu-card ripple"
-        style="background: linear-gradient(135deg, #2196f3, #64b5f6); box-shadow: 0 10px 25px rgba(33, 150, 243, 0.35); border:none">
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, #2196f3, #64b5f6);
+          box-shadow: 0 10px 25px rgba(33, 150, 243, 0.35);
+          border:none
+        ">
 
         <ion-icon name="location"></ion-icon>
 
-        <h3>Mi Ubicación </h3>
+        <h3>
+          Mi Ubicación
+        </h3>
 
       </div>
 
 
-      <div class="menu-card ripple"
-        style="background: linear-gradient(135deg, #ff9800, #ffb74d); box-shadow: 0 10px 25px rgba(255, 152, 0, 0.35); border:none">
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, #ff9800, #ffb74d);
+          box-shadow: 0 10px 25px rgba(255, 152, 0, 0.35);
+          border:none
+        ">
 
         <ion-icon name="share-social"></ion-icon>
 
-        <h3>Compartir </h3>
+        <h3>
+          Compartir
+        </h3>
 
       </div>
 
 
-      <div class="menu-card ripple"
-        style="background: linear-gradient(135deg, #4caf50, #81c784); box-shadow: 0 10px 25px rgba(156, 39, 176, 0.35); border:none">
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, #4caf50, #81c784);
+          box-shadow: 0 10px 25px rgba(156, 39, 176, 0.35);
+          border:none
+        ">
 
         <ion-icon name="shield-checkmark"></ion-icon>
 
-        <h3>Zona Segura</h3>
+        <h3>
+          Zona Segura
+        </h3>
 
       </div>
 
 
-      <div class="menu-card ripple" style=" background: linear-gradient(135deg, rgb(198, 100, 218), rgb(175, 108, 219)); box-shadow: 0 10px 25px rgbrgba(191, 199, 191, 0.35); border:none">
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, rgb(198, 100, 218), rgb(175, 108, 219));
+          box-shadow: 0 10px 25px rgba(191, 199, 191, 0.35);
+          border:none
+        ">
 
         <ion-icon name="call"></ion-icon>
 
-        <h3>Llamar</h3>
+        <h3>
+          Llamar
+        </h3>
 
       </div>
+
 
     </div>
 
   </div>
 
+
+
+  <!-- ================================================= -->
+  <!-- MODAL DE VINCULACIÓN -->
+  <!-- ================================================= -->
+
+  <ion-modal
+    [isOpen]="mostrarModal"
+    (didDismiss)="cerrarModal()">
+
+    <ng-template>
+
+      <!-- Header del modal -->
+
+      <ion-header>
+
+        <ion-toolbar>
+
+          <ion-title>
+            Vincular cuidador
+          </ion-title>
+
+          <ion-buttons slot="end">
+
+            <ion-button
+              (click)="cerrarModal()">
+
+              <ion-icon
+                name="close-outline">
+              </ion-icon>
+
+            </ion-button>
+
+          </ion-buttons>
+
+        </ion-toolbar>
+
+      </ion-header>
+
+
+      <!-- Contenido -->
+
+      <ion-content>
+
+        <div
+          style="
+            padding: 25px;
+            text-align: center;
+          ">
+
+
+          <!-- Título -->
+
+          <h2>
+            Comparte tu código
+          </h2>
+
+
+          <p>
+
+            Muéstrale este código a tu
+            familiar o cuidador para
+            que pueda solicitar vincularse
+            contigo.
+
+          </p>
+
+
+
+          <!-- ===================================== -->
+          <!-- QR -->
+          <!-- ===================================== -->
+
+          @if (qrCodeUrl) {
+
+            <div
+              style="
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 20px 0;
+              ">
+
+              <img
+                [src]="qrCodeUrl"
+                alt="Código QR de vinculación"
+                style="
+                  width: 230px;
+                  height: 230px;
+                  max-width: 100%;
+                "
+              />
+
+            </div>
+
+          }
+
+
+          <!-- ===================================== -->
+          <!-- GENERANDO -->
+          <!-- ===================================== -->
+
+          @if (generando) {
+
+            <p>
+              Generando código...
+            </p>
+
+          }
+
+
+          <!-- ===================================== -->
+          <!-- CÓDIGO -->
+          <!-- ===================================== -->
+
+          @if (codigo) {
+
+            <div
+              style="
+                margin: 20px 0;
+              ">
+
+              <p>
+                Código de vinculación
+              </p>
+
+              <h1
+                style="
+                  letter-spacing: 6px;
+                  font-size: 30px;
+                  font-weight: bold;
+                  margin: 10px 0;
+                ">
+
+                {{ codigo }}
+
+              </h1>
+
+            </div>
+
+          }
+
+
+          <!-- ===================================== -->
+          <!-- EXPIRACIÓN -->
+          <!-- ===================================== -->
+
+          @if (fechaExpiracion) {
+
+            <p
+              style="
+                font-size: 13px;
+                opacity: 0.7;
+              ">
+
+              <ion-icon
+                name="time-outline">
+              </ion-icon>
+
+              Código temporal
+
+            </p>
+
+          }
+
+
+          <!-- ===================================== -->
+          <!-- ERROR -->
+          <!-- ===================================== -->
+
+          @if (mensajeError) {
+
+            <p
+              style="
+                color: #d32f2f;
+                margin-top: 15px;
+              ">
+
+              {{ mensajeError }}
+
+            </p>
+
+          }
+
+
+          <!-- ===================================== -->
+          <!-- MENSAJE -->
+          <!-- ===================================== -->
+
+          @if (mensaje) {
+
+            <p
+              style="
+                color: #2e7d32;
+                margin-top: 15px;
+              ">
+
+              {{ mensaje }}
+
+            </p>
+
+          }
+
+
+          <!-- ===================================== -->
+          <!-- GENERAR NUEVO CÓDIGO -->
+          <!-- ===================================== -->
+
+          <ion-button
+            expand="block"
+            fill="outline"
+            (click)="generarCodigo()"
+            [disabled]="generando">
+
+            <ion-icon
+              name="refresh-outline"
+              slot="start">
+            </ion-icon>
+
+            @if (generando) {
+
+              Generando...
+
+            } @else {
+
+              Generar nuevo código
+
+            }
+
+          </ion-button>
+
+
+          <!-- ===================================== -->
+          <!-- CERRAR -->
+          <!-- ===================================== -->
+
+          <ion-button
+            expand="block"
+            (click)="cerrarModal()"
+            style="margin-top: 10px;">
+
+            Cerrar
+
+          </ion-button>
+
+
+        </div>
+
+      </ion-content>
+
+    </ng-template>
+
+  </ion-modal>
+
+
+
   <!-- Barra inferior -->
   <nav class="bottom-menu">
+
 
     <!--<button class="menu-item active" type="button">
 
@@ -108,20 +519,29 @@
     </button>-->
 
 
-    <button class="menu-item" type="button">
+    <button
+      class="menu-item"
+      type="button">
 
       <div class="icon-wrapper">
+
         <ion-icon name="people"></ion-icon>
+
       </div>
 
-      <span>Contactos</span>
+      <span>
+        Contactos
+      </span>
 
     </button>
 
 
 
     <!-- Botón central -->
-    <button class="menu-item menu-center" type="button">
+
+    <button
+      class="menu-item menu-center"
+      type="button">
 
       <ion-icon name="home"></ion-icon>
 
@@ -141,16 +561,23 @@
 
 
 
-    <button class="menu-item" type="button">
+    <button
+      class="menu-item"
+      type="button">
 
       <div class="icon-wrapper">
+
         <ion-icon name="settings"></ion-icon>
+
       </div>
 
-      <span>Ajustes</span>
+      <span>
+        Ajustes
+      </span>
 
     </button>
 
 
   </nav>
+
 </ion-content>

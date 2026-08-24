@@ -92,6 +92,102 @@ ion-content {
     }
 }
 
+/* SOLICITUDES PENDIENTES */
+.solicitudes-loading {
+    text-align: center;
+    padding: 12px 0;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.solicitud-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: white;
+    border-radius: 20px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(211, 47, 47, 0.15);
+    animation: slideIn 0.3s ease;
+
+    .solicitud-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 13px;
+        background: rgba(211, 47, 47, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        ion-icon {
+            font-size: 22px;
+            color: #d32f2f;
+        }
+    }
+
+    .solicitud-info {
+        flex: 1;
+
+        strong {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        span {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+    }
+
+    .solicitud-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+}
+
+.btn-aceptar,
+.btn-rechazar {
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 50%;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+
+    &:active {
+        transform: scale(0.92);
+        opacity: 0.8;
+    }
+}
+
+.btn-aceptar {
+    background: linear-gradient(135deg, #43a047, #66bb6a);
+    color: white;
+    box-shadow: 0 4px 12px rgba(67, 160, 71, 0.3);
+}
+
+.btn-rechazar {
+    background: linear-gradient(135deg, #e53935, #ef5350);
+    color: white;
+    box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3);
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
 /* TÍTULO DE SECCIÓN */
 .section-title {
     margin: 30px 0 16px;
@@ -273,4 +369,68 @@ ion-content {
         width: 95%;
     }
 }
+
+
+/* ==========================================
+   VINCULAR CUIDADOR
+   ========================================== */
+
+.vincular-cuidador {
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+
+.vincular-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 20px;
+  background: white;
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+
+  .vincular-icon-wrap {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    background: linear-gradient(135deg, var(--primary), #9c3ded);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 20px;
+      color: white;
+    }
+  }
+
+  span {
+    flex: 1;
+    text-align: left;
+    color: var(--text-main);
+  }
+
+  .vincular-arrow {
+    font-size: 18px;
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
+}
+
+.vincular-button:active {
+  transform: scale(0.98);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
 
