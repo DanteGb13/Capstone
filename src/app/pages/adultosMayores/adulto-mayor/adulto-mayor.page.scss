@@ -92,6 +92,57 @@ ion-content {
     }
 }
 
+/* CUIDADOR ASIGNADO */
+.cuidador-activo-card {
+    margin-top: 12px;
+    background: linear-gradient(135deg, #7715c7, #9c3ded);
+    border-radius: 20px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: white;
+    box-shadow: 0 10px 25px rgba(119, 21, 199, 0.25);
+
+    .cuidador-avatar-circle {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        flex-shrink: 0;
+    }
+
+    .cuidador-activo-info {
+        flex: 1;
+
+        small {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            opacity: 0.85;
+        }
+
+        strong {
+            display: block;
+            font-size: 16px;
+            font-weight: 700;
+            color: white;
+            margin: 1px 0;
+        }
+
+        span {
+            display: block;
+            font-size: 12px;
+            opacity: 0.9;
+        }
+    }
+}
+
 /* SOLICITUDES PENDIENTES */
 .solicitudes-loading {
     text-align: center;

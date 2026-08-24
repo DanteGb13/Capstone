@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonItem, IonInput } from '@ionic/angular';
+import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput } from '@ionic/angular';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
@@ -24,7 +24,6 @@ import { SupabaseService } from '../../../services/supabase/supabase';
     CommonModule,
     FormsModule,
     IonButtons,
-    IonItem,
     IonInput
   ]
 })

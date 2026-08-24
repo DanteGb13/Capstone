@@ -1,13 +1,179 @@
-<ion-header [translucent]="true">
+<ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-title>ubicacion</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/cuidador" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Ubicación en vivo</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">ubicacion</ion-title>
-    </ion-toolbar>
-  </ion-header>
+
+  <div class="ubicacion-container">
+
+    <!-- ================================================= -->
+    <!-- SELECTOR DE ADULTO MAYOR -->
+    <!-- ================================================= -->
+
+    @if (adultosACargo.length > 1) {
+      <div class="selector-card">
+        <ion-icon name="people-outline"></ion-icon>
+        <div class="selector-body">
+          <label>Cuidando a:</label>
+          <ion-select
+            [value]="adultoSeleccionado?.id"
+            interface="popover"
+            (ionChange)="onAdultoChange($event)">
+            @for (adulto of adultosACargo; track adulto.id) {
+              <ion-select-option [value]="adulto.id">
+                {{ adulto.adulto_mayor?.nombre }} {{ adulto.adulto_mayor?.apellidopa }}
+              </ion-select-option>
+            }
+          </ion-select>
+        </div>
+      </div>
+    }
+
+    <!-- ================================================= -->
+    <!-- MAPA INTERACTIVO -->
+    <!-- ================================================= -->
+
+    @if (adultosACargo.length > 0) {
+
+      <div class="map-wrapper">
+
+        <!-- Contenedor del Mapa Leaflet -->
+        <div id="map" class="map-view"></div>
+
+        <!-- Indicador flotante superior -->
+        <div class="map-top-badge">
+          <span class="pulse-dot"></span>
+          <span>Rastreando a: <strong>{{ nombreAdultoActual }}</strong></span>
+        </div>
+
+        <!-- Botón flotante para centrar/localizar rápido -->
+        <button
+          type="button"
+          class="btn-float-center"
+          (click)="localizarEnMapa()"
+          title="Centrar en la persona">
+          <ion-icon name="locate"></ion-icon>
+        </button>
+
+      </div>
+
+      <!-- ================================================= -->
+      <!-- TARJETA DE INFORMACIÓN Y CONTROLES -->
+      <!-- ================================================= -->
+
+      <div class="info-card">
+
+        <!-- Encabezado de la tarjeta -->
+        <div class="info-header">
+
+          <div class="user-avatar-wrap">
+            <ion-icon name="person"></ion-icon>
+          </div>
+
+          <div class="user-meta">
+            <h3>{{ nombreAdultoActual }}</h3>
+            <div class="status-indicator">
+              <span class="dot-green"></span>
+              <span>Protección activa</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Dirección detectada -->
+        <div class="address-box">
+          <ion-icon name="location-outline"></ion-icon>
+          <span>{{ ubicacionActual?.direccionTexto || 'Calculando dirección...' }}</span>
+        </div>
+
+        <!-- Estado de actualización y temporizador -->
+        <div class="refresh-meta">
+          <div class="meta-item">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>Última vez: <strong>{{ ultimaActualizacionTexto }}</strong></span>
+          </div>
+
+          <div class="meta-item auto-timer">
+            <ion-icon name="sync-outline" [class.spin]="cargandoUbicacion"></ion-icon>
+            <span>Auto en: <strong>{{ contadorTexto }}</strong></span>
+          </div>
+        </div>
+
+        <!-- BOTONES DE ACCIÓN PRINCIPAL -->
+        <div class="action-buttons">
+
+          <!-- Botón Localizar -->
+          <button
+            type="button"
+            class="btn-control btn-localizar"
+            (click)="localizarEnMapa()">
+            <ion-icon name="navigate-outline"></ion-icon>
+            <span>Localizar</span>
+          </button>
+
+          <!-- Botón Actualizar Ahora -->
+          <button
+            type="button"
+            class="btn-control btn-actualizar"
+            (click)="actualizarUbicacion(true)"
+            [disabled]="cargandoUbicacion">
+            @if (cargandoUbicacion) {
+              <ion-spinner name="crescent" style="width: 18px; height: 18px;"></ion-spinner>
+            } @else {
+              <ion-icon name="refresh-outline"></ion-icon>
+            }
+            <span>Actualizar</span>
+          </button>
+
+          <!-- Botón Cómo Llegar -->
+          <button
+            type="button"
+            class="btn-control btn-rutas"
+            (click)="abrirEnGoogleMaps()">
+            <ion-icon name="navigate-circle-outline"></ion-icon>
+            <span>Cómo llegar</span>
+          </button>
+
+        </div>
+
+      </div>
+
+    }
+
+    <!-- ================================================= -->
+    <!-- ESTADO VACÍO (SIN ADULTOS VINCULADOS) -->
+    <!-- ================================================= -->
+
+    @if (!cargandoLista && adultosACargo.length === 0) {
+
+      <div class="empty-state">
+
+        <div class="empty-icon-wrap">
+          <ion-icon name="map-outline"></ion-icon>
+        </div>
+
+        <h2>No hay adultos vinculados</h2>
+
+        <p>
+          Para localizar a un adulto mayor en el mapa, primero debes vincularlo ingresando su código de vinculación desde el panel principal.
+        </p>
+
+        <ion-button
+          expand="block"
+          routerLink="/cuidador"
+          style="--background: #7715c7; margin-top: 20px;">
+          Ir al panel del cuidador
+        </ion-button>
+
+      </div>
+
+    }
+
+  </div>
+
 </ion-content>

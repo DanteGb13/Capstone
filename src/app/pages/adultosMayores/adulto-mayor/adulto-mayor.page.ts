@@ -36,6 +36,7 @@ import * as icons from 'ionicons/icons';
 
 import * as QRCode from 'qrcode';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
+import { Gps } from '../../../services/Backend/gps/gps';
 
 
 @Component({
@@ -82,6 +83,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   nombreUsuario: string = '';
 
+  idUsuarioActual: string = '';
+
 
   // =====================================================
   // VINCULACIÓN
@@ -108,6 +111,17 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
 
   // =====================================================
+  // CUIDADORES VINCULADOS (PROTECCIÓN ACTIVA)
+  // =====================================================
+
+  cuidadoresVinculados: any[] = [];
+
+  nombreCuidadorActivo: string = '';
+
+  cargandoCuidadores: boolean = false;
+
+
+  // =====================================================
   // MENSAJES
   // =====================================================
 
@@ -125,6 +139,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     private cuidadoresService: CuidadoresService,
 
     private vinculacionService: Vinculacion,
+
+    private gpsService: Gps,
 
     private changeDetectorRef: ChangeDetectorRef,
 
@@ -150,25 +166,45 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       await this.cuidadoresService.cargarUsuarioNombre();
 
 
-    // Cargar solicitudes pendientes
+    // Cargar solicitudes pendientes y cuidadores vinculados
 
-    await this.cargarSolicitudes();
+    await Promise.all([
+      this.cargarSolicitudes(),
+      this.cargarCuidadoresVinculados(),
+      this.reportarUbicacion()
+    ]);
 
 
     this.changeDetectorRef.detectChanges();
 
 
-    // Refrescar solicitudes cada 30 segundos
+    // Refrescar solicitudes y cuidadores vinculados cada 30 segundos
     // para que aparezcan sin recargar la página
 
     this.solicitudesInterval = setInterval(async () => {
 
-      await this.cargarSolicitudes();
+      await Promise.all([
+        this.cargarSolicitudes(),
+        this.cargarCuidadoresVinculados(),
+        this.reportarUbicacion()
+      ]);
 
       this.changeDetectorRef.detectChanges();
 
     }, 30000);
 
+  }
+
+  async reportarUbicacion() {
+    try {
+      const user = await this.cuidadoresService.cargarUsuario();
+      if (user?.id) {
+        this.idUsuarioActual = user.id;
+        await this.gpsService.reportarUbicacionAdulto(user.id);
+      }
+    } catch (e) {
+      // ignore
+    }
   }
 
 
@@ -419,6 +455,69 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
 
   // =====================================================
+  // CARGAR CUIDADORES VINCULADOS
+  // =====================================================
+
+  async cargarCuidadoresVinculados() {
+
+    this.cargandoCuidadores = true;
+
+    try {
+
+      const data =
+        await this.vinculacionService
+          .obtenerCuidadoresVinculados();
+
+      this.cuidadoresVinculados = data;
+
+      if (data && data.length > 0) {
+
+        const nombres = data
+          .map((item: any) => {
+
+            const usuario =
+              item.cuidador?.usuario;
+
+            if (!usuario) {
+              return '';
+            }
+
+            const nombreCompleto =
+              `${usuario.nombre || ''} ${usuario.apellidopa || ''}`.trim();
+
+            return nombreCompleto;
+
+          })
+          .filter((nom: string) => nom.length > 0);
+
+
+        this.nombreCuidadorActivo =
+          nombres.join(', ');
+
+      } else {
+
+        this.nombreCuidadorActivo = '';
+
+      }
+
+    } catch (error: any) {
+
+      console.error(
+        'Error cargando cuidadores vinculados:',
+        error
+      );
+
+    } finally {
+
+      this.cargandoCuidadores = false;
+
+    }
+
+  }
+
+
+
+  // =====================================================
   // ACEPTAR SOLICITUD
   // =====================================================
 
@@ -443,9 +542,12 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
         'Cuidador vinculado correctamente.';
 
 
-      // Actualizar lista
+      // Actualizar listas
 
-      await this.cargarSolicitudes();
+      await Promise.all([
+        this.cargarSolicitudes(),
+        this.cargarCuidadoresVinculados()
+      ]);
 
 
       this.changeDetectorRef.detectChanges();

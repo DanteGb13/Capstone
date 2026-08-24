@@ -1,29 +1,298 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>cuidador</ion-title>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">cuidador</ion-title>
-    </ion-toolbar>
-  </ion-header>
+
+  <div class="app-container">
+
+    <!-- Header -->
+    <div class="header">
+
+      <div class="user-info">
+
+        <div>
+          <h1>Hola, {{ nombreUsuario || 'Cuidador' }}</h1>
+          <p>Panel de Cuidador</p>
+        </div>
+
+        <button
+          class="avatar"
+          type="button"
+          (click)="abrirPerfil()">
+          <ion-icon name="person"></ion-icon>
+        </button>
+
+      </div>
+
+      <!-- Resumen de protección -->
+      <div class="status-card">
+
+        <div class="status-icon">
+          <ion-icon name="shield-checkmark"></ion-icon>
+        </div>
+
+        <div class="status-text">
+
+          <strong>
+            @if (adultosACargo.length > 0) {
+              Cuidando a {{ adultosACargo.length }} {{ adultosACargo.length === 1 ? 'persona' : 'personas' }}
+            } @else {
+              Sin personas a cargo
+            }
+          </strong>
+
+          <span>
+            @if (adultosACargo.length > 0) {
+              Supervisión y protección activa.
+            } @else {
+              Vincula un adulto mayor para comenzar.
+            }
+          </span>
+
+        </div>
+
+      </div>
+
+      <!-- Botón vincular nuevo adulto mayor -->
+      <div class="vincular-seccion">
+
+        <button
+          type="button"
+          class="vincular-button"
+          (click)="abrirVinculacion()">
+
+          <div class="vincular-icon-wrap">
+            <ion-icon name="person-add"></ion-icon>
+          </div>
+
+          <span>Vincular adulto mayor</span>
+
+          <ion-icon
+            name="chevron-forward-outline"
+            class="vincular-arrow">
+          </ion-icon>
+
+        </button>
+
+      </div>
+
+    </div>
 
 
+    <!-- ================================================= -->
+    <!-- PERSONAS QUE ESTÁ CUIDANDO -->
+    <!-- ================================================= -->
 
-  
-<!-- ======================================== -->
-<!-- VINCULAR ADULTO MAYOR -->
-<!-- ======================================== -->
+    <h2 class="section-title">
+      Personas a tu cuidado
+    </h2>
+
+    @if (cargandoAdultos) {
+
+      <div class="loading-box">
+        <ion-icon name="sync-outline" class="spin-icon"></ion-icon>
+        <p>Cargando información...</p>
+      </div>
+
+    }
+
+    @if (!cargandoAdultos && adultosACargo.length > 0) {
+
+      <div class="adultos-list">
+
+        @for (item of adultosACargo; track item.id) {
+
+          <div class="adulto-card">
+
+            <div class="adulto-card-header">
+
+              <div class="adulto-avatar">
+                <ion-icon name="person-circle-outline"></ion-icon>
+              </div>
+
+              <div class="adulto-datos">
+
+                <h3>
+                  {{ item.adulto_mayor?.nombre }} {{ item.adulto_mayor?.apellidopa }} {{ item.adulto_mayor?.apellidoma || '' }}
+                </h3>
+
+                <div class="estado-badge">
+                  <span class="badge-dot"></span>
+                  Protección activa
+                </div>
+
+              </div>
+
+            </div>
+
+            <div class="adulto-info-row">
+
+              @if (item.adulto_mayor?.telefono) {
+                <div class="info-chip">
+                  <ion-icon name="call-outline"></ion-icon>
+                  <span>{{ item.adulto_mayor.telefono }}</span>
+                </div>
+              }
+
+              @if (item.adulto_mayor?.direccion?.comuna) {
+                <div class="info-chip">
+                  <ion-icon name="home-outline"></ion-icon>
+                  <span>{{ item.adulto_mayor.direccion.comuna }}</span>
+                </div>
+              }
+
+            </div>
+
+            <!-- Botones de acción rápida para este adulto -->
+            <div class="adulto-card-actions">
+
+              <button
+                class="btn-action btn-ubicacion"
+                type="button"
+                (click)="verUbicacion(item)">
+                <ion-icon name="location-outline"></ion-icon>
+                <span>Ubicación</span>
+              </button>
+
+              @if (item.adulto_mayor?.telefono) {
+                <button
+                  class="btn-action btn-llamar"
+                  type="button"
+                  (click)="llamarAdulto(item.adulto_mayor.telefono)">
+                  <ion-icon name="call-outline"></ion-icon>
+                  <span>Llamar</span>
+                </button>
+              }
+
+              <button
+                class="btn-action btn-historial"
+                type="button"
+                (click)="verHistorial(item)">
+                <ion-icon name="time-outline"></ion-icon>
+                <span>Historial</span>
+              </button>
+
+            </div>
+
+          </div>
+
+        }
+
+      </div>
+
+    }
+
+    @if (!cargandoAdultos && adultosACargo.length === 0) {
+
+      <div class="empty-card">
+
+        <div class="empty-icon">
+          <ion-icon name="heart-dislike-outline"></ion-icon>
+        </div>
+
+        <h3>No tienes adultos mayores a tu cargo</h3>
+
+        <p>
+          Ingresa el código que aparece en la app del adulto mayor para comenzar a cuidarlo y ver su ubicación.
+        </p>
+
+        <button
+          type="button"
+          class="btn-vincular-empty"
+          (click)="abrirVinculacion()">
+          <ion-icon name="add-circle-outline"></ion-icon>
+          Vincular ahora
+        </button>
+
+      </div>
+
+    }
 
 
-  <ion-button expand="block" (click)="abrirVinculacion()">
+    <!-- ================================================= -->
+    <!-- ACCIONES RÁPIDAS -->
+    <!-- ================================================= -->
 
-    Vincular adulto mayor
+    <h2 class="section-title">
+      Acciones del cuidador
+    </h2>
 
-  </ion-button>
+    <div class="menu-grid">
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, #2196f3, #64b5f6);
+          box-shadow: 0 10px 25px rgba(33, 150, 243, 0.35);
+          border: none;
+        "
+        (click)="verUbicacion()">
+
+        <ion-icon name="map"></ion-icon>
+
+        <h3>
+          Mapa en vivo
+        </h3>
+
+      </div>
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, #4caf50, #81c784);
+          box-shadow: 0 10px 25px rgba(76, 175, 80, 0.35);
+          border: none;
+        "
+        (click)="verEstado()">
+
+        <ion-icon name="pulse"></ion-icon>
+
+        <h3>
+          Estado de salud
+        </h3>
+
+      </div>
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, #ff9800, #ffb74d);
+          box-shadow: 0 10px 25px rgba(255, 152, 0, 0.35);
+          border: none;
+        "
+        (click)="verHistorial()">
+
+        <ion-icon name="calendar"></ion-icon>
+
+        <h3>
+          Historial
+        </h3>
+
+      </div>
+
+      <div
+        class="menu-card ripple"
+        style="
+          background: linear-gradient(135deg, #9c27b0, #ba68c8);
+          box-shadow: 0 10px 25px rgba(156, 39, 176, 0.35);
+          border: none;
+        "
+        (click)="abrirVinculacion()">
+
+        <ion-icon name="people"></ion-icon>
+
+        <h3>
+          Vincular
+        </h3>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================= -->
+  <!-- MODAL DE VINCULACIÓN -->
+  <!-- ================================================= -->
+
   <ion-modal [isOpen]="mostrarModal" (didDismiss)="cerrarModal()">
 
     <ng-template>
@@ -39,9 +308,7 @@
           <ion-buttons slot="end">
 
             <ion-button (click)="cerrarModal()">
-
-              Cerrar
-
+              <ion-icon name="close-outline"></ion-icon>
             </ion-button>
 
           </ion-buttons>
@@ -50,88 +317,82 @@
 
       </ion-header>
 
-
       <ion-content>
 
-        <div style="
-            padding: 25px;
-            text-align: center;
+        <div style="padding: 25px; text-align: center;">
+
+          <div style="
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: rgba(119, 21, 199, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
           ">
+            <ion-icon name="key-outline" style="font-size: 28px; color: #7715c7;"></ion-icon>
+          </div>
 
           <h2>
-            Vincular adulto mayor
+            Código de vinculación
           </h2>
 
-          <p>
-            Ingresa el código que aparece
-            en el adulto mayor.
+          <p style="color: #666; font-size: 14px; margin-bottom: 24px;">
+            Ingresa el código que aparece en la pantalla del adulto mayor (Ej: SC-ABC123).
           </p>
-
 
           <!-- Código -->
-
-          <ion-input [(ngModel)]="codigo" type="text" maxlength="10" placeholder="Código de vinculación" fill="outline"
-            style="margin-top: 20px;">
+          <ion-input
+            [(ngModel)]="codigo"
+            type="text"
+            maxlength="10"
+            placeholder="SC-XXXXXX"
+            fill="outline"
+            style="margin-top: 10px; font-size: 18px; font-weight: bold; letter-spacing: 2px; text-align: center;">
           </ion-input>
 
-
           <!-- Error -->
-
           @if (mensajeError) {
 
-          <p style="
-                color: red;
-                margin-top: 15px;
-              ">
-
-            {{ mensajeError }}
-
-          </p>
+            <p style="color: #d32f2f; margin-top: 15px; font-size: 14px;">
+              {{ mensajeError }}
+            </p>
 
           }
-
 
           <!-- Éxito -->
-
           @if (mensaje) {
 
-          <p style="
-                color: green;
-                margin-top: 15px;
-              ">
-
-            {{ mensaje }}
-
-          </p>
+            <p style="color: #2e7d32; margin-top: 15px; font-size: 14px;">
+              {{ mensaje }}
+            </p>
 
           }
 
-
           <!-- Vincular -->
-
-          <ion-button expand="block" style="margin-top: 20px;" (click)="vincularPorCodigo()" [disabled]="vinculando">
+          <ion-button
+            expand="block"
+            style="margin-top: 24px; --background: #7715c7;"
+            (click)="vincularPorCodigo()"
+            [disabled]="vinculando">
 
             @if (vinculando) {
-
-            Enviando solicitud...
-
+              Enviando solicitud...
             } @else {
-
-            Vincular adulto mayor
-
+              Vincular adulto mayor
             }
 
           </ion-button>
 
-
-          <!-- QR -->
-
-          <ion-button expand="block" fill="outline" style="margin-top: 10px;">
-
-            Escanear código QR
-
+          <!-- Cerrar -->
+          <ion-button
+            expand="block"
+            fill="outline"
+            style="margin-top: 10px;"
+            (click)="cerrarModal()">
+            Cancelar
           </ion-button>
-
 
         </div>
 
@@ -140,5 +401,5 @@
     </ng-template>
 
   </ion-modal>
-  
+
 </ion-content>

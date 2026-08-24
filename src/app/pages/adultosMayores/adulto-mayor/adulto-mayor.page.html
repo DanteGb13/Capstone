@@ -47,26 +47,52 @@
 
       </div>
 
-
+      <!-- Botón de estado 
       <div class="status-card">
 
         <div class="status-icon">
           <i class="bi bi-shield-check"></i>
         </div>
-
+        
         <div class="status-text">
 
           <strong>
-            Protección Activa 🛡️
+            @if (nombreCuidadorActivo) {
+              Protección Activa 🛡️
+            } @else {
+              Protección Activa 🛡️
+            }
           </strong>
 
           <span>
-            La familia puede ver tu ubicación.
+            @if (nombreCuidadorActivo) {
+              {{ nombreCuidadorActivo }} está cuidando de ti y conectado.
+            } @else {
+              La familia puede ver tu ubicación.
+            }
           </span>
 
         </div>
 
       </div>
+      -->
+      @if (nombreCuidadorActivo) {
+
+        <div class="cuidador-activo-card">
+
+          <div class="cuidador-avatar-circle">
+            <ion-icon name="shield-checkmark"></ion-icon>
+          </div>
+
+          <div class="cuidador-activo-info">
+            <small>TU CUIDADOR ASIGNADO</small>
+            <strong>{{ nombreCuidadorActivo }}</strong>
+            <span>Puede ver tu ubicación en tiempo real</span>
+          </div>
+
+        </div>
+
+      }
 
     </div>
 
@@ -98,7 +124,13 @@
           </div>
 
           <div class="solicitud-info">
-            <strong>Un cuidador quiere vincularse</strong>
+            <strong>
+              @if (sol.cuidador?.usuario?.nombre) {
+                {{ sol.cuidador.usuario.nombre }} {{ sol.cuidador.usuario.apellidopa || '' }} quiere vincularse
+              } @else {
+                Un cuidador quiere vincularse
+              }
+            </strong>
             <span>¿Aceptas que cuide de ti?</span>
           </div>
 

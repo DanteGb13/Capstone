@@ -1,0 +1,158 @@
+:host {
+  --primary: #7715c7;
+  --background: #f8f7fc;
+  --text-main: #1a1d26;
+  --text-muted: #8c92a4;
+}
+
+ion-toolbar {
+  --background: #ffffff;
+  --color: #1a1d26;
+  font-weight: 700;
+}
+
+.container {
+  padding: 20px;
+  min-height: 100%;
+}
+
+.loading-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--text-muted);
+
+  .spin-icon {
+    font-size: 32px;
+    animation: spin 1s linear infinite;
+    color: var(--primary);
+    margin-bottom: 12px;
+  }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.adultos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.adulto-card {
+  background: white;
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .avatar-icon {
+      font-size: 40px;
+      color: var(--primary);
+    }
+
+    .info {
+      flex: 1;
+
+      h3 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text-main);
+      }
+
+      .badge-online {
+        font-size: 12px;
+        color: #27ae60;
+        font-weight: 600;
+      }
+    }
+  }
+
+  .card-details {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .detail-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
+
+      ion-icon {
+        color: var(--primary);
+      }
+    }
+  }
+
+  .card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+
+    .btn-action {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px;
+      border-radius: 12px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-location {
+      background: #2196f3;
+      color: white;
+    }
+
+    .btn-call {
+      background: #4caf50;
+      color: white;
+    }
+
+    .btn-history {
+      background: #f0f0f5;
+      color: var(--text-main);
+    }
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+
+  ion-icon {
+    font-size: 64px;
+    color: var(--primary);
+    opacity: 0.5;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    color: var(--text-main);
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 14px;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+}
