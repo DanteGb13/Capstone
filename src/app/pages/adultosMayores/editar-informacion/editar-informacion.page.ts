@@ -51,7 +51,7 @@ export class EditarInformacionPage implements OnInit {
 
       if (datosUsuario) {
         this.usuario = datosUsuario;
-        // Creamos una copia de respaldo profunda de los datos cargados
+        // Creamos una copia de respaldo profunda de los datos cargados (incluyendo la dirección)
         this.usuarioOriginal = JSON.parse(JSON.stringify(datosUsuario));
       }
 
@@ -80,15 +80,15 @@ export class EditarInformacionPage implements OnInit {
     try {
       console.log("Datos a actualizar:", this.usuario);
 
-      // 1. Si modificaste la dirección, actualizamos la tabla 'direccion' primero
-      if (this.usuario.id_direccion) {
+      // 1. Si el usuario tiene una dirección asociada, actualizamos la tabla 'direccion'
+      if (this.usuario.id_direccion && this.usuario.direccion) {
         const { error: errorDireccion } = await this.supabaseService.getClient()
           .from('direccion')
           .update({
-            region: this.usuario.region,
-            comuna: this.usuario.comuna,
-            calle: this.usuario.calle,
-            numero: this.usuario.numero
+            region: this.usuario.direccion.region,
+            comuna: this.usuario.direccion.comuna,
+            calle: this.usuario.direccion.calle,
+            numero: this.usuario.direccion.numero
           })
           .eq('id', this.usuario.id_direccion);
 
