@@ -1,0 +1,183 @@
+ion-content{
+
+  --background:#faf8fc;
+
+}
+
+
+
+.perfil-container{
+
+  padding:25px;
+
+}
+
+
+
+.avatar{
+
+  width:110px;
+
+  height:110px;
+
+  border-radius:50%;
+
+  background:#7715c7;
+
+  color:white;
+
+  margin:20px auto;
+
+  display:flex;
+
+  justify-content:center;
+
+  align-items:center;
+
+}
+
+
+
+.avatar ion-icon{
+
+  font-size:60px;
+
+}
+
+
+
+h1{
+
+  text-align:center;
+
+  font-size:28px;
+
+  font-weight:800;
+
+  margin-bottom:5px;
+
+}
+
+
+
+.rol{
+
+  text-align:center;
+
+  color:#777;
+
+  margin-bottom:25px;
+
+}
+
+
+
+.card{
+
+  background:white;
+
+  border-radius:25px;
+
+  padding:20px;
+
+  margin-bottom:20px;
+
+  box-shadow:0 8px 20px rgba(0,0,0,.08);
+
+}
+
+
+
+.card h2{
+
+  font-size:18px;
+
+  font-weight:700;
+
+  margin-bottom:20px;
+
+}
+
+
+
+.dato{
+
+  display:flex;
+
+  align-items:center;
+
+  gap:15px;
+
+  margin-bottom:18px;
+
+}
+
+
+
+.dato ion-icon{
+
+  font-size:28px;
+
+  color:#7715c7;
+
+  min-width:35px;
+
+}
+
+
+
+.dato span{
+
+  font-size:13px;
+
+  color:#777;
+
+}
+
+
+
+.dato p{
+
+  margin:3px 0;
+
+  font-weight:600;
+
+  color:#222;
+
+}
+
+
+
+.activo{
+
+  color:#22a447;
+
+}
+
+
+
+.btn-editar{
+
+  margin-top:15px;
+
+  height:55px;
+
+  --border-radius:18px;
+
+  font-weight:bold;
+
+}
+.btn-editar {
+  margin-top: 12px;
+  --background: #2563eb;
+  --color: white;
+  --border-radius: 12px;
+}
+
+.btn-cerrar {
+  margin-top: 12px;
+  --background: #dc2626;
+  --background-hover: #b91c1c;
+  --color: white;
+  --border-radius: 12px;
+}

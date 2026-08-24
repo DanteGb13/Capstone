@@ -1,13 +1,207 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
-    <ion-title>editarInformacion</ion-title>
+
+    <!-- Botón volver -->
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+
+    <ion-title>
+      Mi Perfil
+    </ion-title>
+
+    <!-- Botón editar / guardar -->
+    <ion-buttons slot="end">
+      <ion-button (click)="editarPerfil()">
+        <ion-icon 
+          [name]="modoEditar ? 'save-outline' : 'create-outline'">
+        </ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">editarInformacion</ion-title>
-    </ion-toolbar>
-  </ion-header>
+  <div class="perfil-container">
+    <!-- Avatar -->
+    <div class="avatar">
+      <ion-icon name="person"></ion-icon>
+    </div>
+    <!-- Información personal -->
+    <div class="card">
+
+      <h2>
+        Información personal
+      </h2>
+
+      <!-- Nombre -->
+      <div class="dato">
+        <ion-icon name="person-outline"></ion-icon>
+        <div>
+          <span>Nombre completo</span>
+          <p *ngIf="!modoEditar">
+            {{usuario.nombre}}
+            {{usuario.apellidopa}}
+            {{usuario.apellidoma}}
+          </p>
+          <ion-input
+            *ngIf="modoEditar"
+            [(ngModel)]="usuario.nombre">
+          </ion-input>
+          <ion-input
+            *ngIf="modoEditar"
+            [(ngModel)]="usuario.apellidopa">
+          </ion-input>
+          <ion-input
+            *ngIf="modoEditar"
+            [(ngModel)]="usuario.apellidoma">
+          </ion-input>
+        </div>
+      </div>
+
+      <!-- RUT (No editable) -->
+      <div class="dato">
+        <ion-icon name="card-outline"></ion-icon>
+        <div>
+          <span>RUT</span>
+          <p>{{usuario.rut}}</p>
+          <!-- Mensaje que aparece solo cuando el modo editar está activo -->
+          <small *ngIf="modoEditar" class="text-muted" style="color: gray; font-style: italic;">
+            El RUT no se puede modificar.
+          </small>
+        </div>
+      </div>
+
+      <!-- Correo (No editable) -->
+      <div class="dato">
+        <ion-icon name="mail-outline"></ion-icon>
+        <div>
+          <span>Correo</span>
+          <p>{{usuario.correo}}</p>
+          <!-- Mensaje que aparece solo cuando el modo editar está activo -->
+          <small *ngIf="modoEditar" class="text-muted" style="color: gray; font-style: italic;">
+            El correo electrónico no se puede modificar.
+          </small>
+        </div>
+      </div>
+
+      <!-- Teléfono -->
+      <div class="dato">
+        <ion-icon name="call-outline"></ion-icon>
+        <div>
+          <span>Teléfono</span>
+          <p *ngIf="!modoEditar">
+            {{usuario.telefono}}
+          </p>
+          <ion-input
+            *ngIf="modoEditar"
+            type="tel"
+            [(ngModel)]="usuario.telefono">
+          </ion-input>
+        </div>
+      </div>
+
+      
+
+      <!-- Fecha nacimiento -->
+      <div class="dato">
+
+        <ion-icon name="calendar-outline"></ion-icon>
+        <div>
+          <span>Fecha nacimiento</span>
+          <p *ngIf="!modoEditar">
+            {{usuario.fecha_nacimiento}}
+          </p>
+          <ion-input
+            *ngIf="modoEditar"
+            type="date"
+            [(ngModel)]="usuario.fecha_nacimiento">
+          </ion-input>
+        </div>
+      </div>
+    </div>
+    <!-- Dirección -->
+    <div class="card">
+      <h2>
+        Dirección
+      </h2>
+
+      <!-- Región -->
+      <div class="dato">
+        <ion-icon name="map-outline"></ion-icon>
+        <div>
+          <span>Región</span>
+          <p *ngIf="!modoEditar">{{usuario.region}}</p>
+          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.region"></ion-input>
+        </div>
+      </div>
+
+      <!-- Comuna -->
+      <div class="dato">
+        <ion-icon name="business-outline"></ion-icon>
+        <div>
+          <span>Comuna</span>
+          <p *ngIf="!modoEditar">{{usuario.comuna}}</p>
+          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.comuna"></ion-input>
+        </div>
+      </div>
+
+      <!-- Calle y Número -->
+      <div class="dato">
+        <ion-icon name="location-outline"></ion-icon>
+        <div>
+          <span>Calle y Número</span>
+          <p *ngIf="!modoEditar">{{usuario.calle}} #{{usuario.numero}}</p>
+          
+          <div *ngIf="modoEditar" style="display: flex; gap: 10px;">
+            <ion-input [(ngModel)]="usuario.calle" placeholder="Calle"></ion-input>
+            <ion-input [(ngModel)]="usuario.numero" placeholder="N°" style="max-width: 80px;"></ion-input>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Estado de cuenta -->
+    <div class="card">
+      <h2>
+        Estado de cuenta
+      </h2>
+      <div class="dato">
+        <ion-icon name="shield-checkmark-outline"></ion-icon>
+        <div>
+          <span>Tipo de cuenta</span>
+          <p>
+            {{usuario.id_rol === 1 ? 'Adulto Mayor' : 'Cuidador'}}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón editar / guardar -->
+    <ion-button 
+      expand="block" 
+      class="btn-editar"
+      (click)="editarPerfil()">
+
+      <ion-icon 
+        [name]="modoEditar ? 'save-outline' : 'create-outline'"
+        slot="start">
+      </ion-icon>
+      {{modoEditar ? 'Guardar cambios' : 'Editar datos'}}
+    </ion-button>
+
+    <!-- Cerrar sesión -->
+    <ion-button 
+      expand="block" 
+      class="btn-cerrar"
+      color="danger">
+
+      <ion-icon 
+        name="log-out-outline"
+        slot="start">
+      </ion-icon>
+      Cerrar sesión
+    </ion-button>
+  </div>
 </ion-content>

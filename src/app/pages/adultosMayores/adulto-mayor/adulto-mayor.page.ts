@@ -1,18 +1,18 @@
-import { Component, OnInit } from '@angular/core';
-
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
-import { 
-  IonContent, 
-  IonHeader, 
-  IonTitle, 
-  IonToolbar, 
+import {
+  IonContent,
+  IonHeader,
+  IonTitle,
+  IonToolbar,
   IonIcon
 } from '@ionic/angular';
 
 import { addIcons } from 'ionicons';
-
 import * as icons from 'ionicons/icons';
 
 
@@ -40,23 +40,38 @@ import * as icons from 'ionicons/icons';
 export class AdultoMayorPage implements OnInit {
 
 
-  constructor() {
+  nombreUsuario: string = '';
 
-    // Carga todos los iconos de Ionic
+
+  constructor(
+    private cuidadoresService: CuidadoresService, private changeDetectorRef: ChangeDetectorRef, private router: Router    
+  ) {
+
+    // Carga todos los iconos Ionic
     addIcons(icons);
 
   }
 
 
-  ngOnInit() {
+
+  async ngOnInit() {
+
+    this.nombreUsuario =
+      await this.cuidadoresService.cargarUsuarioNombre();
+    console.log("Nombre:", this.nombreUsuario);
+    this.changeDetectorRef.detectChanges();
+  }
+
+
+
+  abrirPerfil() {
+    (document.activeElement as HTMLElement)?.blur();
+    this.router.navigate(['/editar-informacion']);
+
 
   }
 
-  abrirPerfil(){
 
-  console.log('Abrir perfil');
-
-}
 
   irInicio() {
 
