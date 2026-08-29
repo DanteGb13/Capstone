@@ -1,13 +1,271 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>historial</ion-title>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">historial</ion-title>
-    </ion-toolbar>
-  </ion-header>
+
+  <div class="historial-page">
+
+    <!-- =========================
+         ENCABEZADO
+    ========================== -->
+
+    <div class="header">
+
+      <ion-button fill="clear" class="back-button">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+
+      <h1>Historial</h1>
+
+    </div>
+
+
+    <!-- =========================
+         ADULTO MAYOR
+    ========================== -->
+
+    <div class="adulto-header">
+
+      <p>Adulto mayor</p>
+
+      <h2>María González</h2>
+
+    </div>
+
+
+    <!-- =========================
+         BUSCADOR
+    ========================== -->
+
+    <div class="search-container">
+
+      <ion-icon name="search-outline"></ion-icon>
+
+      <input
+        type="text"
+        placeholder="Buscar en historial"
+      >
+
+    </div>
+
+
+    <!-- =========================
+         FILTROS
+    ========================== -->
+
+    <div class="filter-section">
+
+      <p>FILTRAR POR</p>
+
+      <div class="filters">
+
+        <button class="filter active">
+          Todos
+        </button>
+
+        <button class="filter">
+          SOS
+        </button>
+
+        <button class="filter">
+          Alertas
+        </button>
+
+        <button class="filter">
+          Llamadas
+        </button>
+
+        <button class="filter">
+          Confirmaciones
+        </button>
+
+        <button class="filter">
+          Ubicación
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <!-- =========================
+         HISTORIAL
+    ========================== -->
+
+    <div class="history-section">
+
+      <h3>Hoy</h3>
+
+
+      <!-- =========================
+           SOS
+      ========================== -->
+
+      <div class="history-item">
+
+        <div class="history-icon sos">
+
+          <ion-icon
+            name="alert-circle-outline">
+          </ion-icon>
+
+        </div>
+
+        <div class="history-info">
+
+          <h4>SOS activado</h4>
+
+          <p>María González</p>
+
+          <span>14:32</span>
+
+        </div>
+
+        <ion-icon
+          name="chevron-forward-outline"
+          class="arrow">
+        </ion-icon>
+
+      </div>
+
+
+      <!-- =========================
+           LLAMADA
+      ========================== -->
+
+      <div class="history-item">
+
+        <div class="history-icon call">
+
+          <ion-icon
+            name="call-outline">
+          </ion-icon>
+
+        </div>
+
+        <div class="history-info">
+
+          <h4>Llamada realizada</h4>
+
+          <p>María González</p>
+
+          <span>13:15</span>
+
+        </div>
+
+        <ion-icon
+          name="chevron-forward-outline"
+          class="arrow">
+        </ion-icon>
+
+      </div>
+
+
+      <!-- =========================
+           CONFIRMACIÓN
+      ========================== -->
+
+      <div class="history-item">
+
+        <div class="history-icon confirmation">
+
+          <ion-icon
+            name="checkmark-circle-outline">
+          </ion-icon>
+
+        </div>
+
+        <div class="history-info">
+
+          <h4>Estado confirmado</h4>
+
+          <p>"Estoy bien"</p>
+
+          <span>10:05</span>
+
+        </div>
+
+        <ion-icon
+          name="chevron-forward-outline"
+          class="arrow">
+        </ion-icon>
+
+      </div>
+
+
+      <!-- =========================
+           UBICACIÓN
+      ========================== -->
+
+      <div
+        class="history-item"
+        (click)="verUbicacion()">
+
+        <div class="history-icon location">
+
+          <ion-icon
+            name="location-outline">
+          </ion-icon>
+
+        </div>
+
+        <div class="history-info">
+
+          <h4>Ubicación registrada</h4>
+
+          <p>María González</p>
+
+          <span>12:48</span>
+
+        </div>
+
+        <ion-icon
+          name="chevron-forward-outline"
+          class="arrow">
+        </ion-icon>
+
+      </div>
+
+
+      <!-- =========================
+           DÍA ANTERIOR
+      ========================== -->
+
+      <h3 class="previous-day">
+        Ayer
+      </h3>
+
+
+      <!-- =========================
+           ALERTA
+      ========================== -->
+
+      <div class="history-item">
+
+        <div class="history-icon alert">
+
+          <ion-icon
+            name="notifications-outline">
+          </ion-icon>
+
+        </div>
+
+        <div class="history-info">
+
+          <h4>Alerta preventiva</h4>
+
+          <p>Sin confirmación</p>
+
+          <span>19:42</span>
+
+        </div>
+
+        <ion-icon
+          name="chevron-forward-outline"
+          class="arrow">
+        </ion-icon>
+
+      </div>
+
+    </div>
+
+  </div>
+
 </ion-content>
