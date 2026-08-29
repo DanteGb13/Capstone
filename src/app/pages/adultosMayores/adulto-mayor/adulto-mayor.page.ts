@@ -162,20 +162,31 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   async ngOnInit() {
 
-    this.nombreUsuario =
-      await this.cuidadoresService.cargarUsuarioNombre();
+    // 1. Cargar datos del usuario UNA sola vez (nombre + id + dirección)
+    const usuario = await this.cuidadoresService.cargarUsuario();
+    if (usuario) {
+      this.nombreUsuario = usuario.nombre || '';
+      this.idUsuarioActual = usuario.id || '';
+    } else {
+      this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
+    }
+
+    // 2. Refrescar la vista YA con el nombre para que no se vea vacía
+    this.changeDetectorRef.detectChanges();
 
 
-    // Cargar solicitudes pendientes y cuidadores vinculados
-
+    // 3. Cargar en paralelo sólo lo esencial del panel (solicitudes + cuidadores)
     await Promise.all([
       this.cargarSolicitudes(),
-      this.cargarCuidadoresVinculados(),
-      this.reportarUbicacion()
+      this.cargarCuidadoresVinculados()
     ]);
 
-
     this.changeDetectorRef.detectChanges();
+
+
+    // 4. Reportar ubicación en SEGUNDO PLANO (geolocalización + geocoding externo),
+    //    sin bloquear la visualización del panel.
+    this.reportarUbicacion();
 
 
     // Refrescar solicitudes y cuidadores vinculados cada 30 segundos
@@ -185,8 +196,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
       await Promise.all([
         this.cargarSolicitudes(),
-        this.cargarCuidadoresVinculados(),
-        this.reportarUbicacion()
+        this.cargarCuidadoresVinculados()
       ]);
 
       this.changeDetectorRef.detectChanges();
@@ -196,14 +206,20 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   }
 
   async reportarUbicacion() {
-    try {
-      const user = await this.cuidadoresService.cargarUsuario();
-      if (user?.id) {
-        this.idUsuarioActual = user.id;
-        await this.gpsService.reportarUbicacionAdulto(user.id);
+    if (!this.idUsuarioActual) {
+      try {
+        const user = await this.cuidadoresService.cargarUsuario();
+        this.idUsuarioActual = user?.id || '';
+      } catch (e) {
+        return;
       }
-    } catch (e) {
-      // ignore
+    }
+    if (this.idUsuarioActual) {
+      try {
+        await this.gpsService.reportarUbicacionAdulto(this.idUsuarioActual);
+      } catch (e) {
+        // ignore
+      }
     }
   }
 
