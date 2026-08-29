@@ -283,10 +283,20 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   // SOS
   // =====================================================
 
+  mostrarModalSOS: boolean = false;
+
   abrirSOS() {
+    this.mostrarModalSOS = true;
+  }
 
-    console.log('SOS');
+  cerrarModalSOS() {
+    this.mostrarModalSOS = false;
+  }
 
+  confirmarSOS() {
+    this.mostrarModalSOS = false;
+    // TODO: implementar lógica de emergencia (avisar al cuidador)
+    console.log('SOS confirmado: avisar al cuidador');
   }
 
 

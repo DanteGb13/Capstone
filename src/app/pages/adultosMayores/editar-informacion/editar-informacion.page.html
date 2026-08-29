@@ -24,7 +24,14 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <div class="perfil-container">
+
+  <!-- Pantalla de carga mientras se obtienen los datos -->
+  <div class="perfil-loading" *ngIf="cargandoPerfil">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Cargando perfil...</p>
+  </div>
+
+  <div class="perfil-container" *ngIf="!cargandoPerfil">
     <!-- Avatar -->
     <div class="avatar">
       <ion-icon name="person"></ion-icon>

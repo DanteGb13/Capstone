@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, AlertController } from '@ionic/angular';
+import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController } from '@ionic/angular';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
@@ -30,7 +30,8 @@ import {
     CommonModule,
     FormsModule,
     IonButtons,
-    IonInput
+    IonInput,
+    IonSpinner
   ]
 })
 export class EditarInformacionPage implements OnInit {
@@ -49,6 +50,7 @@ export class EditarInformacionPage implements OnInit {
   usuario: any = {};
   usuarioOriginal: any = {}; // Copia para respaldar los datos originales al cancelar
   modoEditar = false;
+  cargandoPerfil: boolean = true;
 
   // Errores de validación por campo
   errores: {
@@ -67,18 +69,21 @@ export class EditarInformacionPage implements OnInit {
 
   async ngOnInit() {
     try {
-      this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
+      // Una sola consulta trae nombre + dirección (cargarUsuario ya incluye el nombre)
       const datosUsuario = await this.cuidadoresService.cargarUsuario();
 
       if (datosUsuario) {
         this.usuario = datosUsuario;
+        this.nombreUsuario = datosUsuario.nombre || '';
         // Creamos una copia de respaldo profunda de los datos cargados (incluyendo la dirección)
         this.usuarioOriginal = JSON.parse(JSON.stringify(datosUsuario));
       }
 
-      this.changeDetectorRef.detectChanges();
     } catch (error) {
       console.error("Error al cargar los datos del usuario:", error);
+    } finally {
+      this.cargandoPerfil = false;
+      this.changeDetectorRef.detectChanges();
     }
   }
 

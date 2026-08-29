@@ -84,3 +84,63 @@
     font-weight: 700;
   }
 }
+
+/* =====================================================
+   Modal SOS - Selección de tipo de emergencia
+   ===================================================== */
+.sos-modal {
+
+  --width: 90%;
+  --max-width: 380px;
+  --height: auto;
+  --border-radius: 20px;
+  --box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+
+  &::part(content) {
+    border-radius: 20px;
+  }
+
+  .sos-modal-header {
+    text-align: center;
+    padding: 22px 20px 14px;
+
+    h3 {
+      margin: 0 0 8px;
+      color: #b91c1c;
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: 1px;
+    }
+
+    p {
+      margin: 0;
+      color: #555;
+      font-size: 14px;
+    }
+  }
+
+  .sos-acciones {
+    display: flex;
+    gap: 12px;
+    padding: 8px 18px 20px;
+
+    ion-button {
+      margin: 0;
+      flex: 1;
+      --border-radius: 12px;
+      font-weight: 700;
+    }
+  }
+
+  .sos-alerta {
+    --background: #dc2626;
+    --background-hover: #b91c1c;
+    --color: #ffffff;
+  }
+
+  .sos-cancelar {
+    --background: #22a447;
+    --background-hover: #1b8a3a;
+    --color: #ffffff;
+  }
+}

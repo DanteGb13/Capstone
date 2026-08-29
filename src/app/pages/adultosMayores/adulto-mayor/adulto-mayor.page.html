@@ -171,6 +171,7 @@
 
       <div
         class="menu-card ripple"
+        (click)="abrirSOS()"
         style="
           background: linear-gradient(135deg, #ff4d4f, #ff7875);
           box-shadow: 0 10px 25px rgba(255, 77, 79, 0.35);
@@ -611,5 +612,44 @@
 
 
   </nav>
+
+  <!-- Modal SOS: confirmación de aviso -->
+  <ion-modal
+    [isOpen]="mostrarModalSOS"
+    (didDismiss)="cerrarModalSOS()"
+    class="sos-modal">
+
+    <ng-template>
+
+      <div class="sos-modal-header">
+        <h3>
+          S.O.S
+        </h3>
+        <p>
+          ¿Estás seguro de dar aviso a tu cuidador?
+        </p>
+      </div>
+
+      <div class="sos-acciones">
+        <ion-button
+          expand="block"
+          fill="solid"
+          class="sos-alerta"
+          (click)="confirmarSOS()">
+          Alertar
+        </ion-button>
+
+        <ion-button
+          expand="block"
+          fill="solid"
+          class="sos-cancelar"
+          (click)="cerrarModalSOS()">
+          Cancelar
+        </ion-button>
+      </div>
+
+    </ng-template>
+
+  </ion-modal>
 
 </ion-content>

@@ -203,3 +203,25 @@ ion-input.ion-invalid {
   --highlight-color: #dc2626;
   border-bottom: 1px solid #dc2626;
 }
+
+.perfil-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 70vh;
+  color: #7715c7;
+
+  ion-spinner {
+    width: 42px;
+    height: 42px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #777;
+  }
+}
