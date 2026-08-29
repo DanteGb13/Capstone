@@ -69,6 +69,10 @@ export class CuidadoresService {
                         comuna,
                         calle,
                         numero
+                    ),
+                    rol (
+                        id,
+                        nombre
                     )
                 `)
                 .eq('id', userData.user.id)

@@ -217,6 +217,24 @@ export class EditarInformacionPage implements OnInit {
     window.history.back();
   }
 
+  /**
+   * Devuelve el nombre real del tipo de cuenta desde la relación 'rol'
+   * (maneja que Supabase a veces retorna la relación 1-1 como arreglo).
+   */
+  get tipoCuentaTexto(): string {
+    const rol = this.usuario?.rol;
+    let nombre: string | undefined;
+    if (Array.isArray(rol)) {
+      nombre = rol[0]?.nombre;
+    } else if (rol) {
+      nombre = rol.nombre;
+    }
+    if (nombre) {
+      return nombre;
+    }
+    return this.usuario?.id_rol === 1 ? 'Adulto Mayor' : 'Cuidador';
+  }
+
   async cerrarSesion() {
     const alert = await this.alertController.create({
       cssClass: 'alerta-cerrar-sesion',
