@@ -48,16 +48,25 @@
           </p>
           <ion-input
             *ngIf="modoEditar"
-            [(ngModel)]="usuario.nombre">
+            [(ngModel)]="usuario.nombre"
+            [class.ion-invalid]="errores.nombre"
+            [class.ion-touched]="errores.nombre">
           </ion-input>
           <ion-input
             *ngIf="modoEditar"
-            [(ngModel)]="usuario.apellidopa">
+            [(ngModel)]="usuario.apellidopa"
+            [class.ion-invalid]="errores.apellidopa"
+            [class.ion-touched]="errores.apellidopa">
           </ion-input>
           <ion-input
             *ngIf="modoEditar"
-            [(ngModel)]="usuario.apellidoma">
+            [(ngModel)]="usuario.apellidoma"
+            [class.ion-invalid]="errores.apellidoma"
+            [class.ion-touched]="errores.apellidoma">
           </ion-input>
+          <small *ngIf="errores.nombre" class="error-msg">{{errores.nombre}}</small>
+          <small *ngIf="errores.apellidopa" class="error-msg">{{errores.apellidopa}}</small>
+          <small *ngIf="errores.apellidoma" class="error-msg">{{errores.apellidoma}}</small>
         </div>
       </div>
 
@@ -98,8 +107,11 @@
           <ion-input
             *ngIf="modoEditar"
             type="tel"
-            [(ngModel)]="usuario.telefono">
+            [(ngModel)]="usuario.telefono"
+            [class.ion-invalid]="errores.telefono"
+            [class.ion-touched]="errores.telefono">
           </ion-input>
+          <small *ngIf="errores.telefono" class="error-msg">{{errores.telefono}}</small>
         </div>
       </div>
 
@@ -117,8 +129,11 @@
           <ion-input
             *ngIf="modoEditar"
             type="date"
-            [(ngModel)]="usuario.fecha_nacimiento">
+            [(ngModel)]="usuario.fecha_nacimiento"
+            [class.ion-invalid]="errores.fecha_nacimiento"
+            [class.ion-touched]="errores.fecha_nacimiento">
           </ion-input>
+          <small *ngIf="errores.fecha_nacimiento" class="error-msg">{{errores.fecha_nacimiento}}</small>
         </div>
       </div>
     </div>
@@ -134,7 +149,10 @@
         <div>
           <span>Región</span>
           <p *ngIf="!modoEditar">{{usuario.direccion?.region}}</p>
-          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.direccion.region" placeholder="Región"></ion-input>
+          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.direccion.region" placeholder="Región"
+            [class.ion-invalid]="errores.region"
+            [class.ion-touched]="errores.region"></ion-input>
+          <small *ngIf="errores.region" class="error-msg">{{errores.region}}</small>
         </div>
       </div>
 
@@ -144,7 +162,10 @@
         <div>
           <span>Comuna</span>
           <p *ngIf="!modoEditar">{{usuario.direccion?.comuna}}</p>
-          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.direccion.comuna" placeholder="Comuna"></ion-input>
+          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.direccion.comuna" placeholder="Comuna"
+            [class.ion-invalid]="errores.comuna"
+            [class.ion-touched]="errores.comuna"></ion-input>
+          <small *ngIf="errores.comuna" class="error-msg">{{errores.comuna}}</small>
         </div>
       </div>
 
@@ -156,8 +177,12 @@
           <p *ngIf="!modoEditar">{{usuario.direccion?.calle}} #{{usuario.direccion?.numero}}</p>
           
           <div *ngIf="modoEditar" style="display: flex; gap: 10px; margin-top: 5px;">
-            <ion-input [(ngModel)]="usuario.direccion.calle" placeholder="Calle"></ion-input>
-            <ion-input [(ngModel)]="usuario.direccion.numero" placeholder="N°" style="max-width: 90px;"></ion-input>
+            <ion-input [(ngModel)]="usuario.direccion.calle" placeholder="Calle"
+              [class.ion-invalid]="errores.calle"
+              [class.ion-touched]="errores.calle"></ion-input>
+            <ion-input [(ngModel)]="usuario.direccion.numero" placeholder="N°" style="max-width: 90px;"
+              [class.ion-invalid]="errores.numero"
+              [class.ion-touched]="errores.numero"></ion-input>
           </div>
         </div>
       </div>
@@ -178,9 +203,14 @@
       </div>
     </div>
 
+    <!-- Mensaje general de error de validación -->
+    <small *ngIf="modoEditar && mensajeError" class="mensaje-error-general">
+      {{mensajeError}}
+    </small>
+
     <!-- Botón editar / guardar -->
-    <ion-button 
-      expand="block" 
+    <ion-button
+      expand="block"
       class="btn-editar"
       (click)="editarPerfil()">
 
@@ -204,12 +234,13 @@
       </ion-button>
 
     <!-- Cerrar sesión -->
-    <ion-button 
-      expand="block" 
+    <ion-button
+      expand="block"
       class="btn-cerrar"
-      color="danger">
+      color="danger"
+      (click)="cerrarSesion()">
 
-      <ion-icon 
+      <ion-icon
         name="log-out-outline"
         slot="start">
       </ion-icon>

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import {
   IonContent,
   IonButton,
@@ -96,7 +96,8 @@ export class SiguientePasoPage implements OnInit {
     private registroService: registro,
     private supabaseService: SupabaseService,
     private router: Router,
-    private navCtrl: NavController
+    private navCtrl: NavController,
+    private changeDetectorRef: ChangeDetectorRef
   ) {
     addIcons({
       arrowBackOutline,
@@ -201,6 +202,10 @@ export class SiguientePasoPage implements OnInit {
 
     } catch {
       // Permanecer en la vista para completar datos
+    } finally {
+      // Forzar la actualización de la vista para que los datos
+      // precargados desde el registro aparezcan de inmediato
+      this.changeDetectorRef.detectChanges();
     }
   }
 

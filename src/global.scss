@@ -35,3 +35,52 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
+
+/* =====================================================
+   Alerta de confirmación - Cerrar sesión
+   (Estilos globales porque el alert es un overlay)
+   ===================================================== */
+.alerta-cerrar-sesion {
+
+  --ion-color-primary: #7715c7;
+
+  .alert-wrapper {
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(119, 21, 199, 0.18);
+  }
+
+  .alert-head {
+    padding-top: 22px;
+  }
+
+  .alert-title {
+    color: #7715c7;
+    font-weight: 700;
+    font-size: 19px;
+  }
+
+  .alert-message {
+    color: #555;
+    font-size: 14px;
+  }
+
+  .alert-button-group {
+    padding: 8px 12px 14px;
+  }
+
+  .alert-button {
+    color: #7715c7;
+    font-weight: 600;
+    text-transform: none;
+  }
+
+  .alert-button-role-cancel {
+    color: #777;
+    font-weight: 500;
+  }
+
+  .alert-button-role-destructive {
+    color: #dc2626;
+    font-weight: 700;
+  }
+}

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput } from '@ionic/angular';
+import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, AlertController } from '@ionic/angular';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
@@ -9,6 +9,12 @@ import { ChangeDetectorRef } from '@angular/core';
 import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
 import { SupabaseService } from '../../../services/supabase/supabase';
+import {
+  validarNombreOApellido,
+  validarTelefonoChileno,
+  validarFechaNacimiento,
+  validarTextoBasico
+} from '../../../services/utils/validators';
 
 @Component({
   selector: 'app-editar-informacion',
@@ -33,7 +39,8 @@ export class EditarInformacionPage implements OnInit {
     private cuidadoresService: CuidadoresService,
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef, 
-    private supabaseService: SupabaseService
+    private supabaseService: SupabaseService,
+    private alertController: AlertController
   ) {
     addIcons(icons);
   }
@@ -42,6 +49,21 @@ export class EditarInformacionPage implements OnInit {
   usuario: any = {};
   usuarioOriginal: any = {}; // Copia para respaldar los datos originales al cancelar
   modoEditar = false;
+
+  // Errores de validación por campo
+  errores: {
+    nombre?: string;
+    apellidopa?: string;
+    apellidoma?: string;
+    telefono?: string;
+    fecha_nacimiento?: string;
+    region?: string;
+    comuna?: string;
+    calle?: string;
+    numero?: string;
+  } = {};
+
+  mensajeError: string = '';
 
   async ngOnInit() {
     try {
@@ -60,23 +82,88 @@ export class EditarInformacionPage implements OnInit {
     }
   }
 
-  editarPerfil() {
+  async editarPerfil() {
     if (this.modoEditar) {
-      this.guardarCambios();
+      const guardado = await this.guardarCambios();
+      if (!guardado) {
+        return;
+      }
     }
     this.modoEditar = !this.modoEditar;
   }
 
   // Función para cancelar la edición y restaurar los datos anteriores
   cancelarEdicion() {
+    // Limpiamos errores de validación
+    this.errores = {};
+    this.mensajeError = '';
     // Restauramos los datos desde la copia de respaldo
     this.usuario = JSON.parse(JSON.stringify(this.usuarioOriginal));
     // Salimos del modo edición
     this.modoEditar = false;
   }
 
-  async guardarCambios() {
+  /**
+   * Valida todos los campos editables usando los validadores compartidos.
+   * Retorna true si todo es válido, false en caso contrario (poblando `errores`).
+   */
+  validarCampos(): boolean {
+    this.errores = {};
+    this.mensajeError = '';
+
+    const u = this.usuario || {};
+    const dir = u.direccion || {};
+
+    if (!validarNombreOApellido(u.nombre ?? '')) {
+      this.errores.nombre = 'El nombre solo debe contener letras y al menos 2 caracteres.';
+    }
+
+    if (!validarNombreOApellido(u.apellidopa ?? '')) {
+      this.errores.apellidopa = 'El apellido paterno solo debe contener letras y al menos 2 caracteres.';
+    }
+
+    // El apellido materno es opcional: solo se valida si se ingresó algo
+    if ((u.apellidoma ?? '').trim().length > 0 && !validarNombreOApellido(u.apellidoma)) {
+      this.errores.apellidoma = 'El apellido materno solo debe contener letras.';
+    }
+
+    if (!validarTelefonoChileno(u.telefono ?? '')) {
+      this.errores.telefono = 'Ingresa un teléfono chileno válido (9 dígitos, ej: 912345678).';
+    }
+
+    if (!validarFechaNacimiento(u.fecha_nacimiento ?? '')) {
+      this.errores.fecha_nacimiento = 'Ingresa una fecha de nacimiento válida (no futura).';
+    }
+
+    if (!validarTextoBasico(dir.region ?? '', 2)) {
+      this.errores.region = 'La región es requerida.';
+    }
+    if (!validarTextoBasico(dir.comuna ?? '', 2)) {
+      this.errores.comuna = 'La comuna es requerida.';
+    }
+    if (!validarTextoBasico(dir.calle ?? '', 2)) {
+      this.errores.calle = 'La calle es requerida.';
+    }
+    if (!validarTextoBasico((dir.numero ?? '').toString(), 1)) {
+      this.errores.numero = 'El número es requerido.';
+    }
+
+    const hayErrores = Object.keys(this.errores).length > 0;
+    if (hayErrores) {
+      this.mensajeError = 'Revisa los campos marcados en rojo.';
+    }
+
+    return !hayErrores;
+  }
+
+  async guardarCambios(): Promise<boolean> {
     try {
+      // 0. Validar campos antes de guardar
+      if (!this.validarCampos()) {
+        this.changeDetectorRef.detectChanges();
+        return false;
+      }
+
       console.log("Datos a actualizar:", this.usuario);
 
       // 1. Si el usuario tiene una dirección asociada, actualizamos la tabla 'direccion'
@@ -93,7 +180,7 @@ export class EditarInformacionPage implements OnInit {
 
         if (errorDireccion) {
           console.error("Error al actualizar la dirección:", errorDireccion.message);
-          return;
+          return false;
         }
       }
 
@@ -111,20 +198,51 @@ export class EditarInformacionPage implements OnInit {
 
       if (error) {
         console.error("Error al actualizar el usuario en Supabase:", error.message);
-        return;
+        return false;
       }
 
       // Actualizamos también la copia original con los nuevos datos guardados con éxito
       this.usuarioOriginal = JSON.parse(JSON.stringify(this.usuario));
 
       console.log("¡Perfil y dirección actualizados con éxito!");
+      return true;
 
     } catch (err) {
       console.error("Error inesperado al guardar los cambios:", err);
+      return false;
     }
   }
 
   volver() {
     window.history.back();
+  }
+
+  async cerrarSesion() {
+    const alert = await this.alertController.create({
+      cssClass: 'alerta-cerrar-sesion',
+      header: 'Cerrar sesión',
+      message: '¿Estás seguro de que deseas cerrar sesión?',
+      buttons: [
+        {
+          text: 'Cancelar',
+          role: 'cancel'
+        },
+        {
+          text: 'Cerrar sesión',
+          role: 'destructive',
+          handler: async () => {
+            try {
+              await this.supabaseService.getClient().auth.signOut();
+            } catch (err) {
+              console.error('Error al cerrar sesión:', err);
+            } finally {
+              this.router.navigate(['/login'], { replaceUrl: true });
+            }
+          }
+        }
+      ]
+    });
+
+    await alert.present();
   }
 }

@@ -31,11 +31,20 @@ export function validarPassword(password: string): { valida: boolean; mensaje?: 
   if (!password) {
     return { valida: false, mensaje: 'La contraseña es requerida.' };
   }
-  if (password.length < 6) {
-    return { valida: false, mensaje: 'La contraseña debe tener al menos 6 caracteres.' };
+  if (password.length < 8) {
+    return { valida: false, mensaje: 'La contraseña debe tener al menos 8 caracteres.' };
   }
   if (!/\d/.test(password)) {
     return { valida: false, mensaje: 'La contraseña debe incluir al menos un número.' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valida: false, mensaje: 'La contraseña debe incluir al menos una letra minúscula.' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valida: false, mensaje: 'La contraseña debe incluir al menos una letra mayúscula.' };
+  }
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return { valida: false, mensaje: 'La contraseña debe incluir al menos un símbolo.' };
   }
   return { valida: true };
 }

@@ -176,3 +176,30 @@ h1{
   --color: white;
   --border-radius: 12px;
 }
+
+.error-msg {
+  display: block;
+  margin-top: 4px;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.mensaje-error-general {
+  display: block;
+  margin: 0 0 16px 0;
+  padding: 10px 12px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+ion-input.ion-invalid {
+  --border-color: #dc2626;
+  --highlight-color: #dc2626;
+  border-bottom: 1px solid #dc2626;
+}
