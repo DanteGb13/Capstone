@@ -234,7 +234,7 @@ export class RegistroPage implements OnInit {
       if (error?.message?.includes('User already registered') || error?.message?.includes('already exists')) {
         this.mensajeError = 'Este correo electrónico ya está registrado. Intenta iniciar sesión.';
       } else if (error?.message?.includes('Password should be')) {
-        this.mensajeError = 'La contraseña debe tener al menos 6 caracteres y números.';
+        this.mensajeError = 'La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial.';
       } else {
         this.mensajeError = error?.message || 'No se pudo registrar el usuario. Revisa tu conexión.';
       }
