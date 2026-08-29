@@ -66,18 +66,13 @@ export class registro {
 
 
 
-  async registrarConGoogle(
-    tipoCuenta: 'Usuario' | 'Familiar'
-  ) {
+  async registrarConGoogle() {
 
     const supabase =
       this.supabaseService.getClient();
 
-    // Guardar el tipo seleccionado
-    localStorage.setItem(
-      'tipo_cuenta_google',
-      tipoCuenta
-    );
+    // El tipo de cuenta se elige después en la pantalla 'elegir-tipo',
+    // por lo que NO se guarda 'tipo_cuenta_google' aquí.
 
     const { data, error } =
       await supabase.auth.signInWithOAuth({

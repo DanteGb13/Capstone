@@ -70,27 +70,25 @@ export class LoginPage implements OnInit {
       return;
     }
 
-    // 2. Escuchar cambios de autenticación
+    // Si venimos de Google sin tipo elegido (cuenta nueva), derivar según
+    // si ya existe el usuario en la BD o es la primera vez
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user) {
+      await this.derivarTrasGoogle();
+      return;
+    }
+
+    // 2. Sin sesión aún: escuchar cambios de autenticación (p.ej. retorno OAuth)
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         const tipoGoogle = localStorage.getItem('tipo_cuenta_google');
         if (tipoGoogle === 'Usuario' || tipoGoogle === 'Familiar') {
           await this.completarRegistroGoogle(tipoGoogle);
         } else {
-          await this.redireccionarSegunRol();
+          await this.derivarTrasGoogle();
         }
       }
     });
-
-    // 3. Comprobar si ya existe sesión activa localmente (sin bloquear)
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        await this.redireccionarSegunRol();
-      }
-    } catch {
-      // Sin sesión activa
-    }
   }
 
   // ==========================================
@@ -194,6 +192,43 @@ export class LoginPage implements OnInit {
   // ==========================================
   // REDIRECCIÓN SEGÚN ROL / ESTADO DE PERFIL
   // ==========================================
+
+  /**
+   * Para retornos de Google sin tipo preseleccionado:
+   * - Si ya existe la fila 'usuario' -> perfil completo o a completar (siguiente-paso).
+   * - Si NO existe (cuenta nueva) -> página para elegir Usuario/Familiar.
+   */
+  private async derivarTrasGoogle() {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        this.router.navigate(['/login'], { replaceUrl: true });
+        return;
+      }
+
+      const { data: usuario } = await supabase
+        .from('usuario')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (usuario) {
+        // Ya registrado: seguir flujo normal
+        await this.redireccionarSegunRol();
+      } else if (localStorage.getItem('datos_registro_temp')) {
+        // Registro de correo ya iniciado: ir a completar perfil
+        await this.redireccionarSegunRol();
+      } else {
+        // Cuenta nueva (ej. Google sin elegir tipo): preguntar el tipo
+        this.navCtrl.navigateRoot('/elegir-tipo', { replaceUrl: true });
+      }
+    } catch {
+      // Ante dudas, mandar a login
+      this.router.navigate(['/login'], { replaceUrl: true });
+    }
+  }
 
   private async redireccionarSegunRol() {
     try {

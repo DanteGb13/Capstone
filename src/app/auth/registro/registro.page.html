@@ -76,7 +76,7 @@
       <div class="input-group">
         <ion-input
           type="password"
-          placeholder="Contraseña (mínimo 6 caracteres y números)"
+          placeholder="Contraseña (Ej: Ejemplo123456@)"
           fill="outline"
           class="register-input"
           [class.has-error]="errores.contrasena"
@@ -108,32 +108,6 @@
         }
       </div>
 
-    </div>
-
-    <!-- Tipo de cuenta -->
-    <div class="account-type">
-      <h2>
-        Selecciona el tipo de cuenta:
-        <strong>{{ tipoCuenta }}</strong>
-      </h2>
-
-      <div class="account-options">
-        <button
-          type="button"
-          class="account-option"
-          [class.active]="tipoCuenta === 'Usuario'"
-          (click)="seleccionarTipo('Usuario')">
-          Usuario
-        </button>
-
-        <button
-          type="button"
-          class="account-option"
-          [class.active]="tipoCuenta === 'Familiar'"
-          (click)="seleccionarTipo('Familiar')">
-          Familiar
-        </button>
-      </div>
     </div>
 
     <!-- Error General Banner -->

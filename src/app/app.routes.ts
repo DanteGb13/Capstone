@@ -48,6 +48,10 @@ export const routes: Routes = [
     canActivate: [siguientePasoGuard]
   },
   {
+    path: 'elegir-tipo',
+    loadComponent: () => import('./auth/elegir-tipo/elegir-tipo.page').then( m => m.ElegirTipoPage)
+  },
+  {
     path: 'adulto-mayor',
     loadComponent: () => import('./pages/adultosMayores/adulto-mayor/adulto-mayor.page').then( m => m.AdultoMayorPage),
     canActivate: [authGuard]

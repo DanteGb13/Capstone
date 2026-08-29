@@ -106,10 +106,6 @@ export class RegistroPage implements OnInit {
     }
   }
 
-  seleccionarTipo(tipo: 'Usuario' | 'Familiar') {
-    this.tipoCuenta = tipo;
-  }
-
   // Validación en tiempo real del campo Nombre Completo
   validarCampoNombre() {
     if (!this.nombreCompleto || this.nombreCompleto.trim().length === 0) {
@@ -227,8 +223,8 @@ export class RegistroPage implements OnInit {
         tipoCuenta: this.tipoCuenta
       });
 
-      // Redirigir al siguiente paso impidiendo el retroceso al paso de registro
-      await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
+      // Redirigir a la pantalla de elección de rol (el tipo se elige ahí)
+      await this.navCtrl.navigateRoot('/elegir-tipo', { replaceUrl: true });
 
     } catch (error: any) {
       if (error?.message?.includes('User already registered') || error?.message?.includes('already exists')) {
@@ -246,7 +242,7 @@ export class RegistroPage implements OnInit {
   async registrarConGoogle() {
     this.mensajeError = '';
     try {
-      await this.registroService.registrarConGoogle(this.tipoCuenta);
+      await this.registroService.registrarConGoogle();
     } catch (error: any) {
       this.mensajeError = error?.message || 'No se pudo conectar con Google.';
     }

@@ -64,7 +64,13 @@ export const noAuthGuard: CanActivateFn = async () => {
       }
       return false;
     } else {
-      router.navigate(['/siguiente-paso'], { replaceUrl: true });
+      // Perfil incompleto: distinguir cuenta nueva (ej. Google sin elegir tipo)
+      // de un registro de correo ya iniciado (tiene datos temporales).
+      if (!estado.rol && !localStorage.getItem('datos_registro_temp')) {
+        router.navigate(['/elegir-tipo'], { replaceUrl: true });
+      } else {
+        router.navigate(['/siguiente-paso'], { replaceUrl: true });
+      }
       return false;
     }
   }

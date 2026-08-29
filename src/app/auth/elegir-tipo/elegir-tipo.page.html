@@ -1,0 +1,51 @@
+<ion-content [fullscreen]="true">
+
+  <div class="elegir-container">
+
+    <div class="elegir-header">
+      <ion-icon name="person-circle-outline" class="logo"></ion-icon>
+      <h1>Únete a SiempreCerca</h1>
+      <p>Esta es tu primera sesión. ¿Qué tipo de cuenta quieres crear?</p>
+    </div>
+
+    <div class="elegir-opciones">
+
+      <button
+        type="button"
+        class="tipo-card tipo-usuario"
+        (click)="elegir('Usuario')"
+        [disabled]="cargando">
+
+        <ion-icon name="person-outline"></ion-icon>
+        <span class="tipo-titulo">Usuario</span>
+        <small>Soy adulto mayor y quiero cuidado y compañía.</small>
+
+      </button>
+
+      <button
+        type="button"
+        class="tipo-card tipo-familiar"
+        (click)="elegir('Familiar')"
+        [disabled]="cargando">
+
+        <ion-icon name="people-outline"></ion-icon>
+        <span class="tipo-titulo">Familiar</span>
+        <small>Soy cuidador de un adulto mayor (familiar o apoderado).</small>
+
+      </button>
+
+    </div>
+
+    <ion-button
+      expand="block"
+      fill="clear"
+      color="medium"
+      class="volver-btn"
+      [disabled]="cargando"
+      (click)="irLogin()">
+      Cancelar
+    </ion-button>
+
+  </div>
+
+</ion-content>
