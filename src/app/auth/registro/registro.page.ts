@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { IonButton, IonContent, IonIcon, IonInput, NavController } from '@ionic/angular';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
 import { addIcons } from 'ionicons';
 import {
   arrowBackOutline,
@@ -14,6 +15,7 @@ import {
   alertCircleOutline
 } from 'ionicons/icons';
 import { registro } from '../../services/guards/registro/registro';
+import { Login } from '../../services/guards/login/login';
 import { SupabaseService } from '../../services/supabase/supabase';
 import {
   validarNombreOApellido,
@@ -37,7 +39,7 @@ import {
     RouterLink
   ]
 })
-export class RegistroPage implements OnInit {
+export class RegistroPage implements OnInit, OnDestroy {
   nombreCompleto: string = '';
   telefono: string = '';
   correo: string = '';
@@ -48,6 +50,9 @@ export class RegistroPage implements OnInit {
 
   mensajeError: string = '';
   cargando: boolean = false;
+  private procesandoGoogle: boolean = false;
+  private oauthSub?: Subscription;
+  private authSub?: { unsubscribe: () => void };
 
   // Errores específicos por campo
   errores: {
@@ -62,6 +67,7 @@ export class RegistroPage implements OnInit {
 
   constructor(
     private registroService: registro,
+    private loginService: Login,
     private supabaseService: SupabaseService,
     private router: Router,
     private navCtrl: NavController
@@ -100,9 +106,70 @@ export class RegistroPage implements OnInit {
         } else {
           await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
         }
+        return;
       }
     } catch {
       // Continuar en registro
+    }
+
+    // Reaccionar al retorno de Google OAuth (deep link en móvil)
+    const tipoGoogle = localStorage.getItem('tipo_cuenta_google');
+    if (tipoGoogle === 'Usuario' || tipoGoogle === 'Familiar') {
+      await this.completarRegistroGoogle(tipoGoogle);
+      return;
+    }
+
+    this.oauthSub = this.supabaseService.oauthResult$.subscribe(async (res) => {
+      if (!res) {
+        return;
+      }
+      if (res.ok) {
+        const { data: { session: s } } = await this.supabaseService.getClient().auth.getSession();
+        const tipo = this.obtenerTipoGoogle();
+        if (s?.user && tipo && !this.procesandoGoogle) {
+          await this.completarRegistroGoogle(tipo);
+        }
+      } else if (res.error) {
+        this.mensajeError = 'No se pudo registrar con Google: ' + res.error;
+      }
+    });
+
+    const authResult = this.supabaseService.getClient().auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        const tipo = this.obtenerTipoGoogle();
+        if (tipo && !this.procesandoGoogle) {
+          await this.completarRegistroGoogle(tipo);
+        }
+      }
+    });
+    this.authSub = authResult.data.subscription;
+  }
+
+  ngOnDestroy() {
+    this.oauthSub?.unsubscribe();
+    this.authSub?.unsubscribe();
+  }
+
+  private obtenerTipoGoogle(): 'Usuario' | 'Familiar' | null {
+    const tipo = localStorage.getItem('tipo_cuenta_google');
+    if (tipo === 'Usuario' || tipo === 'Familiar') {
+      return tipo;
+    }
+    return null;
+  }
+
+  private async completarRegistroGoogle(tipoCuenta: 'Usuario' | 'Familiar') {
+    this.cargando = true;
+    this.procesandoGoogle = true;
+    try {
+      await this.loginService.completarRegistroGoogle(tipoCuenta);
+      localStorage.removeItem('tipo_cuenta_google');
+      await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
+    } catch (error: any) {
+      this.procesandoGoogle = false;
+      this.mensajeError = error?.message || 'No se pudo completar el registro con Google.';
+    } finally {
+      this.cargando = false;
     }
   }
 

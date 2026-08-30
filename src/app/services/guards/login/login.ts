@@ -59,7 +59,7 @@ export class Login {
         provider: 'google',
         options: {
           redirectTo:
-            `${window.location.origin}/login`
+            this.supabaseService.googleRedirectUrl()
         }
       });
 
@@ -85,7 +85,7 @@ export class Login {
         provider: 'google',
         options: {
           redirectTo:
-            `${window.location.origin}/login`
+            this.supabaseService.googleRedirectUrl()
         }
       });
 

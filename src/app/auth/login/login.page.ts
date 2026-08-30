@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { IonButton, IonContent, IonIcon, IonInput, NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { addIcons } from 'ionicons';
 import {
   peopleOutline,
@@ -29,12 +30,15 @@ import { validarEmail } from '../../services/utils/validators';
     RouterLink
   ]
 })
-export class LoginPage implements OnInit {
+export class LoginPage implements OnInit, OnDestroy {
 
   correo: string = '';
   contrasena: string = '';
   mensajeError: string = '';
   cargando: boolean = false;
+  private procesandoGoogle: boolean = false;
+  private oauthSub?: Subscription;
+  private authSub?: { unsubscribe: () => void };
 
   errores: {
     correo?: string;
@@ -78,17 +82,43 @@ export class LoginPage implements OnInit {
       return;
     }
 
-    // 2. Sin sesión aún: escuchar cambios de autenticación (p.ej. retorno OAuth)
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    // 2. Sin sesión aún: en móvil el intercambio PKCE puede ocurrir en el
+    //    listener de deep link (appUrlOpen) ANTES de que esta página se
+    //    suscriba, o justo después de getSession(). Reaccionamos al resultado
+    //    para no quedarnos pegados en /login.
+    this.oauthSub = this.supabaseService.oauthResult$.subscribe(async (res) => {
+      if (!res) {
+        return;
+      }
+      if (res.ok) {
+        const { data: { session: s } } = await supabase.auth.getSession();
+        if (s?.user && !this.procesandoGoogle) {
+          this.procesandoGoogle = true;
+          await this.derivarTrasGoogle();
+        }
+      } else if (res.error) {
+        this.mensajeError = 'No se pudo iniciar con Google: ' + res.error;
+      }
+    });
+
+    // 3. Respaldo: escuchar cambios de autenticación (p.ej. retorno OAuth web)
+    const authResult = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         const tipoGoogle = localStorage.getItem('tipo_cuenta_google');
         if (tipoGoogle === 'Usuario' || tipoGoogle === 'Familiar') {
           await this.completarRegistroGoogle(tipoGoogle);
-        } else {
+        } else if (!this.procesandoGoogle) {
+          this.procesandoGoogle = true;
           await this.derivarTrasGoogle();
         }
       }
     });
+    this.authSub = authResult.data.subscription;
+  }
+
+  ngOnDestroy() {
+    this.oauthSub?.unsubscribe();
+    this.authSub?.unsubscribe();
   }
 
   // ==========================================

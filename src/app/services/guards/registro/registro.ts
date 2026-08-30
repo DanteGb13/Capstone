@@ -83,7 +83,7 @@ export class registro {
 
           // volver al login para terminar el registro
           redirectTo:
-            `${window.location.origin}/login`
+            this.supabaseService.googleRedirectUrl()
 
         }
 
