@@ -235,6 +235,69 @@
         </div>
       </div>
 
+      <!-- Sección 3: Contraseña (Solo usuarios Google) -->
+      @if (esUsuarioGoogle) {
+        <div class="form-section">
+          <h2 class="section-title">
+            <ion-icon name="lock-closed-outline"></ion-icon>
+            Define tu Contraseña
+          </h2>
+          <p class="section-subtitle">Para poder iniciar sesión con tu correo y contraseña</p>
+
+          <!-- Contraseña -->
+          <div class="input-group">
+            <div class="password-wrapper">
+              <ion-input
+                [type]="mostrarContrasena ? 'text' : 'password'"
+                placeholder="Contraseña"
+                fill="outline"
+                class="step-input password-input"
+                [class.has-error]="errores.contrasena"
+                [(ngModel)]="contrasena"
+                (ionInput)="validarCampoContrasena()"
+                (ionBlur)="validarCampoContrasenaConfirmacion()">
+                <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
+              </ion-input>
+              <button
+                type="button"
+                class="toggle-password"
+                (click)="mostrarContrasena = !mostrarContrasena">
+                <ion-icon [name]="mostrarContrasena ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+              </button>
+            </div>
+            @if (errores.contrasena) {
+              <span class="field-error">{{ errores.contrasena }}</span>
+            }
+          </div>
+
+          <!-- Confirmar Contraseña -->
+          <div class="input-group">
+            <div class="password-wrapper">
+              <ion-input
+                [type]="mostrarContrasenaConfirmacion ? 'text' : 'password'"
+                placeholder="Confirmar contraseña"
+                fill="outline"
+                class="step-input password-input"
+                [class.has-error]="errores.contrasenaConfirmacion"
+                [(ngModel)]="contrasenaConfirmacion"
+                (ionInput)="validarCampoContrasenaConfirmacion()"
+                (ionBlur)="validarCampoContrasenaConfirmacion()">
+                <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
+              </ion-input>
+              <button
+                type="button"
+                class="toggle-password"
+                (click)="mostrarContrasenaConfirmacion = !mostrarContrasenaConfirmacion">
+                <ion-icon [name]="mostrarContrasenaConfirmacion ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+              </button>
+            </div>
+            @if (errores.contrasenaConfirmacion) {
+              <span class="field-error">{{ errores.contrasenaConfirmacion }}</span>
+            }
+          </div>
+        </div>
+      }
+
     </div>
 
     <!-- Mensaje de Error General Banner -->

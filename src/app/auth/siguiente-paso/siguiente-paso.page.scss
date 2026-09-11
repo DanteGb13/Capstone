@@ -76,6 +76,12 @@ ion-content {
   font-size: 18px;
 }
 
+.section-subtitle {
+  margin: -8px 0 14px 2px;
+  font-size: 12px;
+  color: #667585;
+}
+
 .input-group {
   margin-bottom: 12px;
   display: flex;
@@ -123,6 +129,40 @@ ion-content {
   margin-top: 4px;
   margin-left: 6px;
   display: block;
+}
+
+/* =========================
+   CAMPO DE CONTRASEÑA
+========================= */
+
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input {
+  width: 100%;
+  padding-right: 44px;
+  box-sizing: border-box;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6545b4;
+}
+
+.toggle-password ion-icon {
+  font-size: 20px;
 }
 
 /* =========================

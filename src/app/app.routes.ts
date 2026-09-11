@@ -91,6 +91,14 @@ export const routes: Routes = [
   },  {
     path: 'ajustes',
     loadComponent: () => import('./pages/ajustes/ajustes.page').then( m => m.AjustesPage)
+  },
+  {
+    path: 'recuperar-contrasena',
+    loadComponent: () => import('./auth/recuperar-contrasena/recuperar-contrasena.page').then( m => m.RecuperarContrasenaPage)
+  },
+  {
+    path: 'correo-contrasena',
+    loadComponent: () => import('./auth/correo-contrasena/correo-contrasena.page').then( m => m.CorreoContrasenaPage)
   }
 
 ];

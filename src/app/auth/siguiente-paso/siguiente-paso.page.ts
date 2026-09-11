@@ -23,7 +23,10 @@ import {
   mapOutline,
   checkmarkCircleOutline,
   alertCircleOutline,
-  closeOutline
+  closeOutline,
+  lockClosedOutline,
+  eyeOutline,
+  eyeOffOutline
 } from 'ionicons/icons';
 import { registro } from '../../services/guards/registro/registro';
 import { SupabaseService } from '../../services/supabase/supabase';
@@ -34,7 +37,8 @@ import {
   validarTelefonoChileno,
   formatearTelefonoChileno,
   validarFechaNacimiento,
-  validarTextoBasico
+  validarTextoBasico,
+  validarPassword
 } from '../../services/utils/validators';
 
 @Component({
@@ -72,6 +76,13 @@ export class SiguientePasoPage implements OnInit {
   mensajeError: string = '';
   cargando: boolean = false;
 
+  // Campos de contraseña (solo para usuarios de Google)
+  esUsuarioGoogle: boolean = false;
+  contrasena: string = '';
+  contrasenaConfirmacion: string = '';
+  mostrarContrasena: boolean = false;
+  mostrarContrasenaConfirmacion: boolean = false;
+
   // Control modal de fecha para móvil
   mostrarModalFecha: boolean = false;
   fechaMaxima: string = new Date().toISOString();
@@ -88,6 +99,8 @@ export class SiguientePasoPage implements OnInit {
     comuna?: string;
     calle?: string;
     numero?: string;
+    contrasena?: string;
+    contrasenaConfirmacion?: string;
   } = {};
 
   formularioIntentado: boolean = false;
@@ -110,7 +123,10 @@ export class SiguientePasoPage implements OnInit {
       mapOutline,
       checkmarkCircleOutline,
       alertCircleOutline,
-      closeOutline
+      closeOutline,
+      lockClosedOutline,
+      eyeOutline,
+      eyeOffOutline
     });
   }
 
@@ -127,6 +143,10 @@ export class SiguientePasoPage implements OnInit {
       }
 
       const user = session.user;
+
+      // 1.5. Detectar si el usuario se registró con Google
+      const providers = user.app_metadata?.['providers'] || [];
+      this.esUsuarioGoogle = providers.includes('google') && !providers.includes('email');
 
       // 2. Verificar si el usuario ya tiene su perfil completo en la BD
       const { data: usuario } = await supabase
@@ -382,6 +402,32 @@ export class SiguientePasoPage implements OnInit {
     return true;
   }
 
+  // Validaciones de Contraseña (solo Google)
+  validarCampoContrasena() {
+    if (!this.esUsuarioGoogle) return true;
+    const resultado = validarPassword(this.contrasena);
+    if (!resultado.valida) {
+      this.errores.contrasena = resultado.mensaje;
+      return false;
+    }
+    delete this.errores.contrasena;
+    return true;
+  }
+
+  validarCampoContrasenaConfirmacion() {
+    if (!this.esUsuarioGoogle) return true;
+    if (!this.contrasenaConfirmacion || this.contrasenaConfirmacion.trim().length === 0) {
+      this.errores.contrasenaConfirmacion = 'Confirma tu contraseña.';
+      return false;
+    }
+    if (this.contrasena !== this.contrasenaConfirmacion) {
+      this.errores.contrasenaConfirmacion = 'Las contraseñas no coinciden.';
+      return false;
+    }
+    delete this.errores.contrasenaConfirmacion;
+    return true;
+  }
+
   validarFormularioCompleto(): boolean {
     this.formularioIntentado = true;
     const vRut = this.validarCampoRut();
@@ -394,8 +440,10 @@ export class SiguientePasoPage implements OnInit {
     const vCom = this.validarCampoComuna();
     const vCal = this.validarCampoCalle();
     const vNum = this.validarCampoNumero();
+    const vCon = this.validarCampoContrasena();
+    const vConConf = this.validarCampoContrasenaConfirmacion();
 
-    return vRut && vFecha && vNom && vApeP && vApeM && vTel && vReg && vCom && vCal && vNum;
+    return vRut && vFecha && vNom && vApeP && vApeM && vTel && vReg && vCom && vCal && vNum && vCon && vConConf;
   }
 
   async guardarYContinuar() {
@@ -424,6 +472,18 @@ export class SiguientePasoPage implements OnInit {
         numero: this.numero.trim(),
         tipoCuenta: this.tipoCuenta
       });
+
+      // Si es usuario de Google, crear contraseña para poder login con email/password
+      if (this.esUsuarioGoogle && this.contrasena) {
+        const supabase = this.supabaseService.getClient();
+        const { error: passError } = await supabase.auth.updateUser({
+          password: this.contrasena
+        });
+        if (passError) {
+          console.error('Error al guardar contraseña:', passError);
+          this.mensajeError = 'Perfil guardado, pero no se pudo establecer la contraseña. Puedes intentar más tarde desde ajustes.';
+        }
+      }
 
       // Redirección segura según rol impidiendo volver atrás al formulario
       if (resultado.tipoCuenta === 'Usuario') {
