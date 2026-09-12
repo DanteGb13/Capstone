@@ -1,19 +1,41 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController } from '@ionic/angular';
+import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController, IonModal } from '@ionic/angular';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
 
 import { addIcons } from 'ionicons';
-import * as icons from 'ionicons/icons';
+import {
+  arrowBackOutline,
+  person,
+  personOutline,
+  cardOutline,
+  mailOutline,
+  createOutline,
+  saveOutline,
+  callOutline,
+  calendarOutline,
+  mapOutline,
+  businessOutline,
+  locationOutline,
+  shieldCheckmarkOutline,
+  closeOutline,
+  logOutOutline,
+  timeOutline,
+  sendOutline,
+  keypadOutline,
+  checkmarkCircleOutline
+} from 'ionicons/icons';
 import { SupabaseService } from '../../../services/supabase/supabase';
+import { environment } from '../../../../environments/environment';
 import {
   validarNombreOApellido,
   validarTelefonoChileno,
   validarFechaNacimiento,
-  validarTextoBasico
+  validarTextoBasico,
+  validarEmail
 } from '../../../services/utils/validators';
 
 @Component({
@@ -31,7 +53,8 @@ import {
     FormsModule,
     IonButtons,
     IonInput,
-    IonSpinner
+    IonSpinner,
+    IonModal
   ]
 })
 export class EditarInformacionPage implements OnInit {
@@ -43,14 +66,31 @@ export class EditarInformacionPage implements OnInit {
     private supabaseService: SupabaseService,
     private alertController: AlertController
   ) {
-    addIcons(icons);
+    addIcons({
+      arrowBackOutline, person, personOutline, cardOutline, mailOutline,
+      createOutline, saveOutline, callOutline, calendarOutline, mapOutline,
+      businessOutline, locationOutline, shieldCheckmarkOutline,
+      closeOutline, logOutOutline, timeOutline, sendOutline,
+      keypadOutline, checkmarkCircleOutline
+    });
   }
 
   nombreUsuario: string = '';
   usuario: any = {};
-  usuarioOriginal: any = {}; // Copia para respaldar los datos originales al cancelar
+  usuarioOriginal: any = {};
   modoEditar = false;
   cargandoPerfil: boolean = true;
+
+  // Cambio de correo
+  mostrarModalCorreo: boolean = false;
+  nuevoCorreo: string = '';
+  codigoVerificacion: string = '';
+  pasoCambioCorreo: 'formulario' | 'verificar' = 'formulario';
+  cargandoCorreo: boolean = false;
+  errorCorreo: string = '';
+  exitoCorreo: string = '';
+  bloqueadoCorreo: boolean = false;
+  mensajeBloqueoCorreo: string = '';
 
   // Errores de validación por campo
   errores: {
@@ -215,6 +255,178 @@ export class EditarInformacionPage implements OnInit {
     } catch (err) {
       console.error("Error inesperado al guardar los cambios:", err);
       return false;
+    }
+  }
+
+  // ==========================================
+  // CAMBIO DE CORREO
+  // ==========================================
+
+  async abrirModalCorreo() {
+    this.errorCorreo = '';
+    this.exitoCorreo = '';
+    this.bloqueadoCorreo = false;
+    this.mensajeBloqueoCorreo = '';
+
+    try {
+      const supabase = this.supabaseService.getClient();
+      const { data: perfil } = await supabase
+        .from('usuario')
+        .select('ultimo_cambio_correo')
+        .eq('id', this.usuario.id)
+        .single();
+
+      if (perfil?.ultimo_cambio_correo) {
+        const ultimoCambio = new Date(perfil.ultimo_cambio_correo);
+        const cuatroMesesDespues = new Date(ultimoCambio);
+        cuatroMesesDespues.setMonth(cuatroMesesDespues.getMonth() + 4);
+        const ahora = new Date();
+
+        if (ahora < cuatroMesesDespues) {
+          const opciones: Intl.DateTimeFormatOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+          const fechaDisponible = cuatroMesesDespues.toLocaleDateString('es-CL', opciones);
+          this.bloqueadoCorreo = true;
+          this.mensajeBloqueoCorreo = `Solo puedes cambiar tu correo una vez cada 4 meses. Podrás cambiarlo nuevamente el ${fechaDisponible}.`;
+          this.mostrarModalCorreo = true;
+          this.changeDetectorRef.detectChanges();
+          return;
+        }
+      }
+    } catch (error) {
+      console.error('Error verificando cooldown de correo:', error);
+    }
+
+    this.nuevoCorreo = '';
+    this.codigoVerificacion = '';
+    this.pasoCambioCorreo = 'formulario';
+    this.mostrarModalCorreo = true;
+  }
+
+  cerrarModalCorreo() {
+    this.mostrarModalCorreo = false;
+    this.nuevoCorreo = '';
+    this.codigoVerificacion = '';
+    this.pasoCambioCorreo = 'formulario';
+    this.errorCorreo = '';
+    this.exitoCorreo = '';
+  }
+
+  async enviarCodigoCorreo() {
+    this.errorCorreo = '';
+    this.exitoCorreo = '';
+
+    if (!this.nuevoCorreo || this.nuevoCorreo.trim().length === 0) {
+      this.errorCorreo = 'Ingresa el nuevo correo electrónico.';
+      return;
+    }
+
+    if (!validarEmail(this.nuevoCorreo)) {
+      this.errorCorreo = 'Formato de correo no válido.';
+      return;
+    }
+
+    if (this.nuevoCorreo === this.usuario.correo) {
+      this.errorCorreo = 'El nuevo correo es igual al actual.';
+      return;
+    }
+
+    this.cargandoCorreo = true;
+
+    try {
+      const supabase = this.supabaseService.getClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(
+        `${environment.supabaseUrl}/functions/v1/enviar-codigo-correo`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'apikey': environment.supabaseKey,
+          },
+          body: JSON.stringify({ correo_nuevo: this.nuevoCorreo.trim() }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        this.errorCorreo = result.error || 'No se pudo enviar el código.';
+        this.changeDetectorRef.detectChanges();
+        return;
+      }
+
+      this.pasoCambioCorreo = 'verificar';
+      this.exitoCorreo = `Código enviado a ${this.nuevoCorreo}`;
+      this.changeDetectorRef.detectChanges();
+
+    } catch (error) {
+      this.errorCorreo = 'Error de conexión. Intenta nuevamente.';
+    } finally {
+      this.cargandoCorreo = false;
+    }
+  }
+
+  async verificarCodigoCorreo() {
+    this.errorCorreo = '';
+    this.exitoCorreo = '';
+
+    if (!this.codigoVerificacion || this.codigoVerificacion.trim().length === 0) {
+      this.errorCorreo = 'Ingresa el código de verificación.';
+      return;
+    }
+
+    if (this.codigoVerificacion.trim().length !== 6) {
+      this.errorCorreo = 'El código debe tener 6 dígitos.';
+      return;
+    }
+
+    this.cargandoCorreo = true;
+
+    try {
+      const supabase = this.supabaseService.getClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      const response = await fetch(
+        `${environment.supabaseUrl}/functions/v1/verificar-codigo-correo`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'apikey': environment.supabaseKey,
+          },
+          body: JSON.stringify({
+            codigo: this.codigoVerificacion.trim(),
+            correo_nuevo: this.nuevoCorreo.trim(),
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        this.errorCorreo = result.error || 'Código incorrecto.';
+        return;
+      }
+
+      this.usuario.correo = this.nuevoCorreo.trim();
+      this.usuarioOriginal.correo = this.nuevoCorreo.trim();
+      this.cargandoCorreo = false;
+      this.changeDetectorRef.detectChanges();
+
+      setTimeout(() => {
+        this.cerrarModalCorreo();
+        this.changeDetectorRef.detectChanges();
+      }, 1500);
+
+    } catch (error) {
+      this.errorCorreo = 'Error de conexión. Intenta nuevamente.';
+    } finally {
+      this.cargandoCorreo = false;
     }
   }
 

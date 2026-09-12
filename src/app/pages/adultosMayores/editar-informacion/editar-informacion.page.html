@@ -90,15 +90,23 @@
         </div>
       </div>
 
-      <!-- Correo (No editable) -->
+      <!-- Correo -->
       <div class="dato">
         <ion-icon name="mail-outline"></ion-icon>
         <div>
           <span>Correo</span>
           <p>{{usuario.correo}}</p>
-          <!-- Mensaje que aparece solo cuando el modo editar está activo -->
+          <ion-button
+            *ngIf="!modoEditar"
+            fill="clear"
+            size="small"
+            class="btn-cambiar-correo"
+            (click)="abrirModalCorreo()">
+            <ion-icon name="create-outline" slot="start"></ion-icon>
+            Cambiar correo
+          </ion-button>
           <small *ngIf="modoEditar" class="text-muted" style="color: gray; font-style: italic;">
-            El correo electrónico no se puede modificar.
+            Para cambiar el correo, usa el botón "Cambiar correo".
           </small>
         </div>
       </div>
@@ -254,4 +262,116 @@
       Cerrar sesión
     </ion-button>
   </div>
+
+  <!-- Modal Cambio de Correo -->
+  <ion-modal [isOpen]="mostrarModalCorreo" (didDismiss)="cerrarModalCorreo()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button (click)="cerrarModalCorreo()">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+          <ion-title>Cambiar correo</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="modal-correo-content">
+        <div class="modal-correo-container">
+
+          <!-- Bloqueado por cooldown -->
+          <div *ngIf="bloqueadoCorreo" class="modal-correo-form">
+            <div class="modal-correo-icon">
+              <ion-icon name="time-outline"></ion-icon>
+            </div>
+            <h3>Cambio de correo no disponible</h3>
+            <p class="modal-correo-desc">{{ mensajeBloqueoCorreo }}</p>
+
+            <ion-button
+              expand="block"
+              class="modal-correo-btn"
+              (click)="cerrarModalCorreo()">
+              Entendido
+            </ion-button>
+          </div>
+
+          <!-- Paso 1: Ingresar nuevo correo -->
+          <div *ngIf="!bloqueadoCorreo && pasoCambioCorreo === 'formulario'" class="modal-correo-form">
+            <div class="modal-correo-icon">
+              <ion-icon name="mail-outline"></ion-icon>
+            </div>
+            <h3>Ingresa tu nuevo correo</h3>
+            <p class="modal-correo-desc">
+              Se enviará un código de verificación de 6 dígitos a tu nuevo correo electrónico.
+            </p>
+
+            <ion-input
+              type="email"
+              placeholder="nuevo@correo.com"
+              fill="outline"
+              class="modal-correo-input"
+              [(ngModel)]="nuevoCorreo"
+              [disabled]="cargandoCorreo">
+            </ion-input>
+
+            <small *ngIf="errorCorreo" class="modal-correo-error">{{ errorCorreo }}</small>
+            <small *ngIf="exitoCorreo" class="modal-correo-exito">{{ exitoCorreo }}</small>
+
+            <ion-button
+              expand="block"
+              class="modal-correo-btn"
+              (click)="enviarCodigoCorreo()"
+              [disabled]="cargandoCorreo">
+              <ion-icon *ngIf="!cargandoCorreo" name="send-outline" slot="start"></ion-icon>
+              <ion-spinner *ngIf="cargandoCorreo" name="crescent" slot="start"></ion-spinner>
+              {{ cargandoCorreo ? 'Enviando...' : 'Enviar código' }}
+            </ion-button>
+          </div>
+
+          <!-- Paso 2: Verificar código -->
+          <div *ngIf="!bloqueadoCorreo && pasoCambioCorreo === 'verificar'" class="modal-correo-form">
+            <div class="modal-correo-icon">
+              <ion-icon name="keypad-outline"></ion-icon>
+            </div>
+            <h3>Ingresa el código</h3>
+            <p class="modal-correo-desc">
+              Revisa tu correo <strong>{{ nuevoCorreo }}</strong> e ingresa el código de 6 dígitos.
+            </p>
+
+            <ion-input
+              type="text"
+              placeholder="000000"
+              fill="outline"
+              class="modal-correo-input modal-correo-codigo"
+              maxlength="6"
+              [(ngModel)]="codigoVerificacion"
+              [disabled]="cargandoCorreo">
+            </ion-input>
+
+            <small *ngIf="errorCorreo" class="modal-correo-error">{{ errorCorreo }}</small>
+            <small *ngIf="exitoCorreo" class="modal-correo-exito">{{ exitoCorreo }}</small>
+
+            <ion-button
+              expand="block"
+              class="modal-correo-btn"
+              (click)="verificarCodigoCorreo()"
+              [disabled]="cargandoCorreo">
+              <ion-icon *ngIf="!cargandoCorreo" name="checkmark-circle-outline" slot="start"></ion-icon>
+              <ion-spinner *ngIf="cargandoCorreo" name="crescent" slot="start"></ion-spinner>
+              {{ cargandoCorreo ? 'Verificando...' : 'Confirmar' }}
+            </ion-button>
+
+            <ion-button
+              fill="clear"
+              class="modal-correo-reenviar"
+              (click)="enviarCodigoCorreo()"
+              [disabled]="cargandoCorreo">
+              Reenviar código
+            </ion-button>
+          </div>
+
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 </ion-content>

@@ -225,3 +225,124 @@ ion-input.ion-invalid {
     color: #777;
   }
 }
+
+/* =========================
+   CAMBIO DE CORREO
+========================= */
+
+.btn-cambiar-correo {
+  --color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 0 0 -8px;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  height: 28px;
+}
+
+.modal-correo-content {
+  --background: #f8f9fa;
+}
+
+.modal-correo-container {
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.modal-correo-form {
+  width: 100%;
+  text-align: center;
+}
+
+.modal-correo-icon {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: #f0ecfa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+
+.modal-correo-icon ion-icon {
+  font-size: 32px;
+  color: #6545b4;
+}
+
+.modal-correo-form h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.modal-correo-desc {
+  margin: 0 0 24px;
+  font-size: 13px;
+  color: #667585;
+  line-height: 1.5;
+}
+
+.modal-correo-input {
+  width: 100%;
+  margin-bottom: 12px;
+
+  --background: #ffffff;
+  --border-color: #cbd5e1;
+  --border-width: 1.5px;
+  --border-radius: 10px;
+  --color: #344454;
+  --placeholder-color: #94a3b8;
+
+  font-size: 15px;
+}
+
+.modal-correo-codigo {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 8px;
+  --padding-top: 14px;
+  --padding-bottom: 14px;
+}
+
+.modal-correo-error {
+  display: block;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.modal-correo-exito {
+  display: block;
+  color: #16a34a;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.modal-correo-btn {
+  width: 100%;
+  height: 48px;
+  margin-top: 8px;
+
+  --background: #6545b4;
+  --background-activated: #5637a3;
+  --border-radius: 10px;
+
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.modal-correo-reenviar {
+  --color: #6545b4;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+  text-transform: none;
+}
