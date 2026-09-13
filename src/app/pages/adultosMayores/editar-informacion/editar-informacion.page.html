@@ -111,6 +111,24 @@
         </div>
       </div>
 
+      <!-- Contraseña -->
+      <div class="dato">
+        <ion-icon name="lock-closed-outline"></ion-icon>
+        <div>
+          <span>Contraseña</span>
+          <p>••••••••</p>
+          <ion-button
+            *ngIf="!modoEditar"
+            fill="clear"
+            size="small"
+            class="btn-cambiar-correo"
+            (click)="abrirModalContrasena()">
+            <ion-icon name="create-outline" slot="start"></ion-icon>
+            Cambiar contraseña
+          </ion-button>
+        </div>
+      </div>
+
       <!-- Teléfono -->
       <div class="dato">
         <ion-icon name="call-outline"></ion-icon>
@@ -367,6 +385,95 @@
               (click)="enviarCodigoCorreo()"
               [disabled]="cargandoCorreo">
               Reenviar código
+            </ion-button>
+          </div>
+
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Cambio de Contraseña -->
+  <ion-modal [isOpen]="mostrarModalContrasena" (didDismiss)="cerrarModalContrasena()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-buttons slot="start">
+            <ion-button (click)="cerrarModalContrasena()">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+          <ion-title>Cambiar contraseña</ion-title>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="modal-correo-content">
+        <div class="modal-correo-container">
+
+          <div class="modal-correo-form">
+            <div class="modal-correo-icon">
+              <ion-icon name="lock-closed-outline"></ion-icon>
+            </div>
+            <h3>Cambiar contraseña</h3>
+            <p class="modal-correo-desc">
+              Ingresa tu contraseña actual y la nueva contraseña.
+            </p>
+
+            <!-- Contraseña actual -->
+            <div class="input-group-modal">
+              <ion-input
+                [type]="mostrarContrasenaActual ? 'text' : 'password'"
+                placeholder="Contraseña actual"
+                fill="outline"
+                class="modal-correo-input"
+                [(ngModel)]="contrasenaActual"
+                [disabled]="cargandoContrasena">
+              </ion-input>
+              <ion-button fill="clear" class="toggle-modal-btn" (click)="mostrarContrasenaActual = !mostrarContrasenaActual">
+                <ion-icon [name]="mostrarContrasenaActual ? 'eye-off-outline' : 'eye-outline'" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+
+            <!-- Nueva contraseña -->
+            <div class="input-group-modal">
+              <ion-input
+                [type]="mostrarNuevaContrasena ? 'text' : 'password'"
+                placeholder="Nueva contraseña"
+                fill="outline"
+                class="modal-correo-input"
+                [(ngModel)]="nuevaContrasena"
+                [disabled]="cargandoContrasena">
+              </ion-input>
+              <ion-button fill="clear" class="toggle-modal-btn" (click)="mostrarNuevaContrasena = !mostrarNuevaContrasena">
+                <ion-icon [name]="mostrarNuevaContrasena ? 'eye-off-outline' : 'eye-outline'" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+
+            <!-- Confirmar contraseña -->
+            <div class="input-group-modal">
+              <ion-input
+                [type]="mostrarConfirmarContrasena ? 'text' : 'password'"
+                placeholder="Confirmar nueva contraseña"
+                fill="outline"
+                class="modal-correo-input"
+                [(ngModel)]="confirmarContrasena"
+                [disabled]="cargandoContrasena">
+              </ion-input>
+              <ion-button fill="clear" class="toggle-modal-btn" (click)="mostrarConfirmarContrasena = !mostrarConfirmarContrasena">
+                <ion-icon [name]="mostrarConfirmarContrasena ? 'eye-off-outline' : 'eye-outline'" slot="icon-only"></ion-icon>
+              </ion-button>
+            </div>
+
+            <small *ngIf="errorContrasena" class="modal-correo-error">{{ errorContrasena }}</small>
+            <small *ngIf="exitoContrasena" class="modal-correo-exito">{{ exitoContrasena }}</small>
+
+            <ion-button
+              expand="block"
+              class="modal-correo-btn"
+              (click)="cambiarContrasena()"
+              [disabled]="cargandoContrasena">
+              <ion-icon *ngIf="!cargandoContrasena" name="checkmark-circle-outline" slot="start"></ion-icon>
+              <ion-spinner *ngIf="cargandoContrasena" name="crescent" slot="start"></ion-spinner>
+              {{ cargandoContrasena ? 'Cambiando...' : 'Cambiar contraseña' }}
             </ion-button>
           </div>
 

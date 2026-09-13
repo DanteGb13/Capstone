@@ -346,3 +346,23 @@ ion-input.ion-invalid {
   margin-top: 8px;
   text-transform: none;
 }
+
+.input-group-modal {
+  position: relative;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.input-group-modal .modal-correo-input {
+  margin-bottom: 0;
+}
+
+.toggle-modal-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  --color: #6545b4;
+  --padding-start: 8px;
+  --padding-end: 8px;
+}

@@ -15,7 +15,7 @@ import {
   eyeOffOutline
 } from 'ionicons/icons';
 import { environment } from '../../../environments/environment';
-import { validarEmail } from '../../services/utils/validators';
+import { validarEmail, validarPassword } from '../../services/utils/validators';
 
 @Component({
   selector: 'app-recuperar-contrasena',
@@ -123,8 +123,9 @@ export class RecuperarContrasenaPage {
       return;
     }
 
-    if (this.nuevaContrasena.length < 6) {
-      this.errorMensaje = 'La contraseña debe tener al menos 6 caracteres.';
+    const resultado = validarPassword(this.nuevaContrasena);
+    if (!resultado.valida) {
+      this.errorMensaje = resultado.mensaje || 'Contraseña no válida.';
       return;
     }
 

@@ -26,7 +26,10 @@ import {
   timeOutline,
   sendOutline,
   keypadOutline,
-  checkmarkCircleOutline
+  checkmarkCircleOutline,
+  lockClosedOutline,
+  eyeOutline,
+  eyeOffOutline
 } from 'ionicons/icons';
 import { SupabaseService } from '../../../services/supabase/supabase';
 import { environment } from '../../../../environments/environment';
@@ -35,7 +38,8 @@ import {
   validarTelefonoChileno,
   validarFechaNacimiento,
   validarTextoBasico,
-  validarEmail
+  validarEmail,
+  validarPassword
 } from '../../../services/utils/validators';
 
 @Component({
@@ -71,7 +75,8 @@ export class EditarInformacionPage implements OnInit {
       createOutline, saveOutline, callOutline, calendarOutline, mapOutline,
       businessOutline, locationOutline, shieldCheckmarkOutline,
       closeOutline, logOutOutline, timeOutline, sendOutline,
-      keypadOutline, checkmarkCircleOutline
+      keypadOutline, checkmarkCircleOutline,
+      lockClosedOutline, eyeOutline, eyeOffOutline
     });
   }
 
@@ -91,6 +96,18 @@ export class EditarInformacionPage implements OnInit {
   exitoCorreo: string = '';
   bloqueadoCorreo: boolean = false;
   mensajeBloqueoCorreo: string = '';
+
+  // Cambio de contraseña
+  mostrarModalContrasena: boolean = false;
+  contrasenaActual: string = '';
+  nuevaContrasena: string = '';
+  confirmarContrasena: string = '';
+  cargandoContrasena: boolean = false;
+  errorContrasena: string = '';
+  exitoContrasena: string = '';
+  mostrarContrasenaActual: boolean = false;
+  mostrarNuevaContrasena: boolean = false;
+  mostrarConfirmarContrasena: boolean = false;
 
   // Errores de validación por campo
   errores: {
@@ -427,6 +444,90 @@ export class EditarInformacionPage implements OnInit {
       this.errorCorreo = 'Error de conexión. Intenta nuevamente.';
     } finally {
       this.cargandoCorreo = false;
+    }
+  }
+
+  // ==========================================
+  // CAMBIO DE CONTRASEÑA
+  // ==========================================
+
+  abrirModalContrasena() {
+    this.contrasenaActual = '';
+    this.nuevaContrasena = '';
+    this.confirmarContrasena = '';
+    this.errorContrasena = '';
+    this.exitoContrasena = '';
+    this.mostrarContrasenaActual = false;
+    this.mostrarNuevaContrasena = false;
+    this.mostrarConfirmarContrasena = false;
+    this.mostrarModalContrasena = true;
+  }
+
+  cerrarModalContrasena() {
+    this.mostrarModalContrasena = false;
+    this.contrasenaActual = '';
+    this.nuevaContrasena = '';
+    this.confirmarContrasena = '';
+    this.errorContrasena = '';
+    this.exitoContrasena = '';
+  }
+
+  async cambiarContrasena() {
+    this.errorContrasena = '';
+    this.exitoContrasena = '';
+
+    if (!this.contrasenaActual || this.contrasenaActual.trim().length === 0) {
+      this.errorContrasena = 'Ingresa tu contraseña actual.';
+      return;
+    }
+
+    if (!this.nuevaContrasena || this.nuevaContrasena.trim().length === 0) {
+      this.errorContrasena = 'Ingresa la nueva contraseña.';
+      return;
+    }
+
+    const resultado = validarPassword(this.nuevaContrasena);
+    if (!resultado.valida) {
+      this.errorContrasena = resultado.mensaje || 'Contraseña no válida.';
+      return;
+    }
+
+    if (this.nuevaContrasena === this.contrasenaActual) {
+      this.errorContrasena = 'La nueva contraseña debe ser diferente a la actual.';
+      return;
+    }
+
+    if (this.nuevaContrasena !== this.confirmarContrasena) {
+      this.errorContrasena = 'Las contraseñas no coinciden.';
+      return;
+    }
+
+    this.cargandoContrasena = true;
+
+    try {
+      const supabase = this.supabaseService.getClient();
+      const { error } = await supabase.auth.updateUser({
+        password: this.nuevaContrasena,
+      });
+
+      if (error) {
+        this.errorContrasena = error.message || 'No se pudo actualizar la contraseña.';
+        return;
+      }
+
+      this.exitoContrasena = 'Contraseña actualizada correctamente.';
+      this.changeDetectorRef.detectChanges();
+
+      setTimeout(() => {
+        this.cerrarModalContrasena();
+        this.changeDetectorRef.detectChanges();
+      }, 2000);
+
+    } catch (error) {
+      this.errorContrasena = 'Error de conexión. Intenta nuevamente.';
+    } finally {
+      this.cargandoContrasena = false;
+      this.changeDetectorRef.detectChanges();
     }
   }
 
