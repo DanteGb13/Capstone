@@ -1,13 +1,139 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>recuperar-contrasena</ion-title>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">recuperar-contrasena</ion-title>
-    </ion-toolbar>
-  </ion-header>
+  <div class="recuperar-container">
+
+    <!-- Header con botón volver -->
+    <div class="recuperar-header">
+      <ion-button fill="clear" (click)="volver()" [disabled]="cargando">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+      <h1>Recuperar contraseña</h1>
+    </div>
+
+    <!-- Paso 1: Ingresar correo -->
+    <div *ngIf="paso === 'correo'" class="recuperar-form">
+      <div class="recuperar-icon">
+        <ion-icon name="mail-outline"></ion-icon>
+      </div>
+      <h3>¿Olvidaste tu contraseña?</h3>
+      <p class="recuperar-desc">
+        Ingresa tu correo electrónico y te enviaremos un código de verificación.
+      </p>
+
+      <ion-input
+        type="email"
+        placeholder="Correo electrónico"
+        fill="outline"
+        class="recuperar-input"
+        [(ngModel)]="correo"
+        [disabled]="cargando">
+      </ion-input>
+
+      <small *ngIf="errorMensaje" class="recuperar-error">{{ errorMensaje }}</small>
+      <small *ngIf="exitoMensaje" class="recuperar-exito">{{ exitoMensaje }}</small>
+
+      <ion-button
+        expand="block"
+        class="recuperar-btn"
+        (click)="enviarCodigo()"
+        [disabled]="cargando">
+        <ion-spinner *ngIf="cargando" name="crescent" slot="start"></ion-spinner>
+        <ion-icon *ngIf="!cargando" name="send-outline" slot="start"></ion-icon>
+        {{ cargando ? 'Enviando...' : 'Enviar código' }}
+      </ion-button>
+    </div>
+
+    <!-- Paso 2: Verificar código -->
+    <div *ngIf="paso === 'codigo'" class="recuperar-form">
+      <div class="recuperar-icon">
+        <ion-icon name="keypad-outline"></ion-icon>
+      </div>
+      <h3>Ingresa el código</h3>
+      <p class="recuperar-desc">
+        Revisa tu correo <strong>{{ correo }}</strong> e ingresa el código de 6 dígitos.
+      </p>
+
+      <ion-input
+        type="text"
+        placeholder="000000"
+        fill="outline"
+        class="recuperar-input recuperar-codigo"
+        maxlength="6"
+        [(ngModel)]="codigoVerificacion"
+        [disabled]="cargando">
+      </ion-input>
+
+      <small *ngIf="errorMensaje" class="recuperar-error">{{ errorMensaje }}</small>
+      <small *ngIf="exitoMensaje" class="recuperar-exito">{{ exitoMensaje }}</small>
+
+      <ion-button
+        expand="block"
+        class="recuperar-btn"
+        (click)="verificarCodigo()"
+        [disabled]="cargando">
+        <ion-icon *ngIf="!cargando" name="checkmark-circle-outline" slot="start"></ion-icon>
+        Verificar código
+      </ion-button>
+
+      <ion-button
+        fill="clear"
+        class="recuperar-reenviar"
+        (click)="enviarCodigo()"
+        [disabled]="cargando">
+        Reenviar código
+      </ion-button>
+    </div>
+
+    <!-- Paso 3: Nueva contraseña -->
+    <div *ngIf="paso === 'contrasena'" class="recuperar-form">
+      <div class="recuperar-icon">
+        <ion-icon name="lock-closed-outline"></ion-icon>
+      </div>
+      <h3>Nueva contraseña</h3>
+      <p class="recuperar-desc">
+        Ingresa tu nueva contraseña. Debe tener al menos 6 caracteres.
+      </p>
+
+      <div class="input-group">
+        <ion-input
+          [type]="mostrarContrasena ? 'text' : 'password'"
+          placeholder="Nueva contraseña"
+          fill="outline"
+          class="recuperar-input"
+          [(ngModel)]="nuevaContrasena"
+          [disabled]="cargando">
+        </ion-input>
+        <ion-button fill="clear" class="toggle-btn" (click)="mostrarContrasena = !mostrarContrasena">
+          <ion-icon [name]="mostrarContrasena ? 'eye-off-outline' : 'eye-outline'" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div class="input-group">
+        <ion-input
+          [type]="mostrarConfirmar ? 'text' : 'password'"
+          placeholder="Confirmar contraseña"
+          fill="outline"
+          class="recuperar-input"
+          [(ngModel)]="confirmarContrasena"
+          [disabled]="cargando">
+        </ion-input>
+        <ion-button fill="clear" class="toggle-btn" (click)="mostrarConfirmar = !mostrarConfirmar">
+          <ion-icon [name]="mostrarConfirmar ? 'eye-off-outline' : 'eye-outline'" slot="icon-only"></ion-icon>
+        </ion-button>
+      </div>
+
+      <small *ngIf="errorMensaje" class="recuperar-error">{{ errorMensaje }}</small>
+      <small *ngIf="exitoMensaje" class="recuperar-exito">{{ exitoMensaje }}</small>
+
+      <ion-button
+        expand="block"
+        class="recuperar-btn"
+        (click)="cambiarContrasena()"
+        [disabled]="cargando">
+        <ion-spinner *ngIf="cargando" name="crescent" slot="start"></ion-spinner>
+        <ion-icon *ngIf="!cargando" name="checkmark-circle-outline" slot="start"></ion-icon>
+        {{ cargando ? 'Cambiando...' : 'Cambiar contraseña' }}
+      </ion-button>
+    </div>
+
+  </div>
 </ion-content>

@@ -76,19 +76,7 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/cuidadores/estado/estado.page').then( m => m.EstadoPage),
     canActivate: [authGuard]
   },
-  
-  
-  
-  
-  
-  
-  
-  
-  // Saltos de paginas no existentes
   {
-    path: '**',
-    loadComponent: () => import('./error/error/error.page').then( m => m.ErrorPage)
-  },  {
     path: 'ajustes',
     loadComponent: () => import('./pages/ajustes/ajustes.page').then( m => m.AjustesPage)
   },
@@ -99,6 +87,11 @@ export const routes: Routes = [
   {
     path: 'correo-contrasena',
     loadComponent: () => import('./auth/correo-contrasena/correo-contrasena.page').then( m => m.CorreoContrasenaPage)
+  },
+  // Saltos de paginas no existentes
+  {
+    path: '**',
+    loadComponent: () => import('./error/error/error.page').then( m => m.ErrorPage)
   }
 
 ];
