@@ -1,0 +1,329 @@
+<ion-content [fullscreen]="true">
+
+  <div class="rec-container">
+
+    <!-- Header -->
+    <div class="rec-header">
+
+      <button class="rec-back" type="button" (click)="volver()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </button>
+
+      <div class="rec-header-text">
+        <h1>Recordatorios</h1>
+        <p>Medicinas y actividades diarias</p>
+      </div>
+
+      <button class="rec-add" type="button" (click)="abrirNueva()">
+        <ion-icon name="add"></ion-icon>
+      </button>
+
+    </div>
+
+    <!-- Alarma sonando -->
+    @if (sonando.length > 0) {
+
+      <div class="alarma-sonando">
+
+        @for (alarma of sonando; track alarma.id) {
+
+          <div class="alarma-sonando-card">
+
+            <div class="alarma-sonando-icon">
+              <ion-icon name="alarm"></ion-icon>
+            </div>
+
+            <div class="alarma-sonando-info">
+              <strong>{{ alarma.nombre }}</strong>
+              <span>{{ alarma.descripcion || 'Tienes un recordatorio ahora' }}</span>
+            </div>
+
+            <button class="btn-apagar" type="button" (click)="apagar(alarma)">
+              Apagar alarma
+            </button>
+
+          </div>
+
+        }
+
+      </div>
+
+    }
+
+    <!-- Mensaje de bienvenida -->
+    @if (alarmas.length === 0) {
+
+      <div class="rec-vacio">
+        <ion-icon name="alarm-outline"></ion-icon>
+        <h2>No tienes recordatorios</h2>
+        <p>
+          Pulsa el botón + para crear tu primer
+          recordatorio de medicina o actividad.
+        </p>
+
+        <ion-button expand="block" (click)="abrirNueva()" class="btn-primario">
+          Crear recordatorio
+        </ion-button>
+      </div>
+
+    }
+
+    <!-- Lista de alarmas -->
+    @if (alarmas.length > 0) {
+
+      <div class="alarmas-list">
+
+        @for (alarma of alarmas; track alarma.id) {
+
+          <div class="alarma-item" [class.inactiva]="!alarma.activa">
+
+            <div class="alarma-toggle">
+              <ion-toggle
+                [checked]="alarma.activa"
+                (ionChange)="cambiarActivacion(alarma, $event.detail.checked)"
+                color="success">
+              </ion-toggle>
+            </div>
+
+            <div class="alarma-info">
+              <div class="alarma-hora">
+                {{ horaTexto(alarma) }}
+              </div>
+              <strong>{{ alarma.nombre }}</strong>
+              <span>{{ alarma.descripcion || 'Sin descripción' }}</span>
+              <small>
+                {{ alarma.activa ? diasTexto(alarma) : 'Apagada' }}
+              </small>
+            </div>
+
+            <div class="alarma-acciones">
+
+              <button class="alarma-editar" type="button" (click)="abrirEditar(alarma)">
+                <ion-icon name="create-outline"></ion-icon>
+              </button>
+
+              <button class="alarma-borrar" type="button" (click)="eliminar(alarma)">
+                <ion-icon name="trash-outline"></ion-icon>
+              </button>
+
+            </div>
+
+          </div>
+
+        }
+
+      </div>
+
+    }
+
+    <!-- Botón inferior grande -->
+    @if (alarmas.length > 0) {
+
+      <div class="rec-footer-btn">
+        <ion-button expand="block" (click)="abrirNueva()" class="btn-primario">
+          <ion-icon name="add" slot="start"></ion-icon>
+          Agregar recordatorio
+        </ion-button>
+      </div>
+
+    }
+
+  </div>
+
+
+  <!-- Modal: nueva alarma -->
+  <ion-modal [isOpen]="mostrarModal" (didDismiss)="cerrarNueva()">
+
+    <ng-template>
+
+      <ion-header>
+        <ion-toolbar>
+          <ion-title>{{ modalTitulo }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="cerrarNueva()">
+              <ion-icon name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content>
+
+        <div class="nueva-form">
+
+          <label class="campo">
+            <span>Nombre</span>
+            <ion-input
+              type="text"
+              placeholder="Ej. Tomar medicina"
+              [(ngModel)]="nuevoNombre">
+            </ion-input>
+          </label>
+
+          <label class="campo">
+            <span>Hora de la alarma</span>
+
+            <div class="modo-hora" role="group" aria-label="Cómo elegir la hora">
+              <button
+                type="button"
+                class="modo-btn"
+                [class.activo]="modoFlechas"
+                (click)="cambiarModo(true)">
+                <ion-icon name="chevron-up"></ion-icon>
+                Flechas
+              </button>
+              <button
+                type="button"
+                class="modo-btn"
+                [class.activo]="!modoFlechas"
+                (click)="cambiarModo(false)">
+                <ion-icon name="hand-left"></ion-icon>
+                Deslizar
+              </button>
+            </div>
+
+            @if (modoFlechas) {
+
+              <div class="flechas-selectores">
+
+                <div class="columna-flecha">
+                  <button
+                    type="button"
+                    class="flecha-btn"
+                    aria-label="Subir la hora (mantén presionado para avanzar rápido)"
+                    (pointerdown)="iniciarRepeticion(subirHora)"
+                    (pointerup)="detenerRepeticion()"
+                    (pointerleave)="detenerRepeticion()"
+                    (pointercancel)="detenerRepeticion()">
+                    <ion-icon name="chevron-up"></ion-icon>
+                  </button>
+                  <div class="flecha-valor" aria-live="polite">{{ dosDigitos(nuevaHoraSel) }}</div>
+                  <button
+                    type="button"
+                    class="flecha-btn"
+                    aria-label="Bajar la hora (mantén presionado para avanzar rápido)"
+                    (pointerdown)="iniciarRepeticion(bajarHora)"
+                    (pointerup)="detenerRepeticion()"
+                    (pointerleave)="detenerRepeticion()"
+                    (pointercancel)="detenerRepeticion()">
+                    <ion-icon name="chevron-down"></ion-icon>
+                  </button>
+                </div>
+
+                <span class="rueda-sep">:</span>
+
+                <div class="columna-flecha">
+                  <button
+                    type="button"
+                    class="flecha-btn"
+                    aria-label="Subir los minutos (mantén presionado para avanzar rápido)"
+                    (pointerdown)="iniciarRepeticion(subirMinuto)"
+                    (pointerup)="detenerRepeticion()"
+                    (pointerleave)="detenerRepeticion()"
+                    (pointercancel)="detenerRepeticion()">
+                    <ion-icon name="chevron-up"></ion-icon>
+                  </button>
+                  <div class="flecha-valor" aria-live="polite">{{ dosDigitos(nuevoMinutoSel) }}</div>
+                  <button
+                    type="button"
+                    class="flecha-btn"
+                    aria-label="Bajar los minutos (mantén presionado para avanzar rápido)"
+                    (pointerdown)="iniciarRepeticion(bajarMinuto)"
+                    (pointerup)="detenerRepeticion()"
+                    (pointerleave)="detenerRepeticion()"
+                    (pointercancel)="detenerRepeticion()">
+                    <ion-icon name="chevron-down"></ion-icon>
+                  </button>
+                </div>
+
+              </div>
+
+            } @else {
+
+              <div class="rueda-selectores">
+                <app-rueda
+                  [items]="horas"
+                  [valor]="nuevaHoraSel"
+                  [reiniciar]="sesionRueda"
+                  (valorChange)="nuevaHoraSel = $event">
+                </app-rueda>
+
+                <span class="rueda-sep">:</span>
+
+                <app-rueda
+                  [items]="minutos"
+                  [valor]="nuevoMinutoSel"
+                  [reiniciar]="sesionRueda"
+                  (valorChange)="nuevoMinutoSel = $event">
+                </app-rueda>
+              </div>
+
+            }
+
+            <p class="prevista">
+              @if (previstaTexto) {
+                🔊 Sonará: {{ previstaTexto }}
+              } @else {
+                🔊 Elige la hora para saber cuándo sonará
+              }
+            </p>
+          </label>
+
+          <label class="campo">
+            <span>Días de la semana</span>
+
+            <div class="dias-selector">
+
+              @for (dia of diasOpciones; track dia.valor) {
+
+                <button
+                  type="button"
+                  class="dia-btn"
+                  [class.seleccionado]="esDiaSeleccionado(dia.valor)"
+                  (click)="alternarDia(dia.valor)">
+
+                  {{ dia.nombre }}
+
+                </button>
+
+              }
+
+            </div>
+
+            <button
+              type="button"
+              class="dia-todos"
+              [class.seleccionado]="todosLosDias()"
+              (click)="alternarTodos()">
+
+              {{ todosLosDias() ? 'Todos los días' : 'Seleccionar todos' }}
+
+            </button>
+          </label>
+
+          <label class="campo">
+            <span>Descripción</span>
+            <ion-textarea
+              placeholder="Ej. Después del desayuno"
+              rows="3"
+              [(ngModel)]="nuevaDescripcion">
+            </ion-textarea>
+          </label>
+
+          <ion-button expand="block" (click)="guardarNueva()" class="btn-primario">
+            {{ botonGuardarTitulo }}
+          </ion-button>
+
+          <ion-button expand="block" fill="outline" (click)="cerrarNueva()">
+            Cancelar
+          </ion-button>
+
+        </div>
+
+      </ion-content>
+
+    </ng-template>
+
+  </ion-modal>
+
+</ion-content>

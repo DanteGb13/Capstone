@@ -301,6 +301,65 @@ ion-content {
     }
 }
 
+/* ALARMA SONANDO (RECORDATORIOS) */
+.alarma-sonando {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.alarma-sonando-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #dc2626;
+    color: #ffffff;
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: 0 10px 25px rgba(220, 38, 38, 0.35);
+    animation: parpadeo 1.2s infinite;
+}
+
+@keyframes parpadeo {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+.alarma-sonando-icon {
+    font-size: 38px;
+    flex: 0 0 42px;
+    display: flex;
+}
+
+.alarma-sonando-info {
+    flex: 1;
+
+    strong {
+        display: block;
+        font-size: 19px;
+        font-weight: 800;
+    }
+
+    span {
+        display: block;
+        font-size: 14px;
+        opacity: 0.95;
+        margin-top: 2px;
+    }
+}
+
+.btn-apagar {
+    background: #ffffff;
+    color: #b91c1c;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 16px;
+    font-size: 15px;
+    font-weight: 800;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
 /* MENÚ INFERIOR FLOTANTE */
 .bottom-menu {
     position: fixed;

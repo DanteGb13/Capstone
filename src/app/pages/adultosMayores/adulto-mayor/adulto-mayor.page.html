@@ -12,10 +12,7 @@
           <p>Tu familia te cuida</p>
         </div>
 
-        <button
-          class="avatar"
-          type="button"
-          (click)="abrirPerfil()">
+        <button class="avatar" type="button" (click)="abrirPerfil()">
 
           <ion-icon name="person"></ion-icon>
 
@@ -27,10 +24,7 @@
       <!-- Botón vincular cuidador -->
       <div class="vincular-cuidador">
 
-        <button
-          type="button"
-          class="vincular-button"
-          (click)="abrirVinculacion()">
+        <button type="button" class="vincular-button" (click)="abrirVinculacion()">
 
           <div class="vincular-icon-wrap">
             <ion-icon name="people-outline"></ion-icon>
@@ -38,9 +32,7 @@
 
           <span>Vincular cuidador</span>
 
-          <ion-icon
-            name="chevron-forward-outline"
-            class="vincular-arrow">
+          <ion-icon name="chevron-forward-outline" class="vincular-arrow">
           </ion-icon>
 
         </button>
@@ -78,23 +70,57 @@
       -->
       @if (nombreCuidadorActivo) {
 
-        <div class="cuidador-activo-card">
+      <div class="cuidador-activo-card">
 
-          <div class="cuidador-avatar-circle">
-            <ion-icon name="shield-checkmark"></ion-icon>
-          </div>
-
-          <div class="cuidador-activo-info">
-            <small>TU CUIDADOR ASIGNADO</small>
-            <strong>{{ nombreCuidadorActivo }}</strong>
-            <span>Puede ver tu ubicación en tiempo real</span>
-          </div>
-
+        <div class="cuidador-avatar-circle">
+          <ion-icon name="shield-checkmark"></ion-icon>
         </div>
+
+        <div class="cuidador-activo-info">
+          <small>TU CUIDADOR ASIGNADO</small>
+          <strong>{{ nombreCuidadorActivo }}</strong>
+          <span>Puede ver tu ubicación en tiempo real</span>
+        </div>
+
+      </div>
 
       }
 
     </div>
+
+
+    <!-- ================================================= -->
+    <!-- ALARMA SONANDO (RECORDATORIOS) -->
+    <!-- ================================================= -->
+
+    @if (alarmasSonando.length > 0) {
+
+    <div class="alarma-sonando">
+
+      @for (alarma of alarmasSonando; track alarma.id) {
+
+      <div class="alarma-sonando-card">
+
+        <div class="alarma-sonando-icon">
+          <ion-icon name="alarm"></ion-icon>
+        </div>
+
+        <div class="alarma-sonando-info">
+          <strong>{{ alarma.nombre }}</strong>
+          <span>{{ alarma.descripcion || 'Tienes un recordatorio ahora' }}</span>
+        </div>
+
+        <button class="btn-apagar" type="button" (click)="apagarAlarma(alarma)">
+          Apagar alarma
+        </button>
+
+      </div>
+
+      }
+
+    </div>
+
+    }
 
 
     <!-- ================================================= -->
@@ -103,58 +129,52 @@
 
     @if (cargandoSolicitudes) {
 
-      <div class="solicitudes-loading">
-        <p>Cargando solicitudes...</p>
-      </div>
+    <div class="solicitudes-loading">
+      <p>Cargando solicitudes...</p>
+    </div>
 
     }
 
     @if (!cargandoSolicitudes && solicitudes.length > 0) {
 
-      <h2 class="section-title" style="color: #d32f2f;">
-        🔔 Solicitudes pendientes
-      </h2>
+    <h2 class="section-title" style="color: #d32f2f;">
+      🔔 Solicitudes pendientes
+    </h2>
 
-      @for (sol of solicitudes; track sol.id) {
+    @for (sol of solicitudes; track sol.id) {
 
-        <div class="solicitud-card">
+    <div class="solicitud-card">
 
-          <div class="solicitud-icon">
-            <ion-icon name="person-add-outline"></ion-icon>
-          </div>
+      <div class="solicitud-icon">
+        <ion-icon name="person-add-outline"></ion-icon>
+      </div>
 
-          <div class="solicitud-info">
-            <strong>
-              @if (sol.cuidador?.usuario?.nombre) {
-                {{ sol.cuidador.usuario.nombre }} {{ sol.cuidador.usuario.apellidopa || '' }} quiere vincularse
-              } @else {
-                Un cuidador quiere vincularse
-              }
-            </strong>
-            <span>¿Aceptas que cuide de ti?</span>
-          </div>
+      <div class="solicitud-info">
+        <strong>
+          @if (sol.cuidador?.usuario?.nombre) {
+          {{ sol.cuidador.usuario.nombre }} {{ sol.cuidador.usuario.apellidopa || '' }} quiere vincularse
+          } @else {
+          Un cuidador quiere vincularse
+          }
+        </strong>
+        <span>¿Aceptas que cuide de ti?</span>
+      </div>
 
-          <div class="solicitud-actions">
+      <div class="solicitud-actions">
 
-            <button
-              class="btn-aceptar"
-              type="button"
-              (click)="aceptarSolicitud(sol.id)">
-              ✓
-            </button>
+        <button class="btn-aceptar" type="button" (click)="aceptarSolicitud(sol.id)">
+          ✓
+        </button>
 
-            <button
-              class="btn-rechazar"
-              type="button"
-              (click)="rechazarSolicitud(sol.id)">
-              ✕
-            </button>
+        <button class="btn-rechazar" type="button" (click)="rechazarSolicitud(sol.id)">
+          ✕
+        </button>
 
-          </div>
+      </div>
 
-        </div>
+    </div>
 
-      }
+    }
 
     }
 
@@ -169,10 +189,7 @@
     <div class="menu-grid">
 
 
-      <div
-        class="menu-card ripple"
-        (click)="abrirSOS()"
-        style="
+      <div class="menu-card ripple" (click)="abrirSOS()" style="
           background: linear-gradient(135deg, #ff4d4f, #ff7875);
           box-shadow: 0 10px 25px rgba(255, 77, 79, 0.35);
           border:none
@@ -188,10 +205,8 @@
 
 
 
-      <div
-        class="menu-card ripple"
-        style="
-          background: linear-gradient(135deg, #c0793e, #977545);
+      <div class="menu-card ripple" (click)="abrirEstoyAqui()" style="
+          background: linear-gradient(135deg, #FFD54F, #FFC107);
           box-shadow: 0 10px 25px rgba(191, 199, 191, 0.35);
           border:none
         ">
@@ -199,16 +214,14 @@
         <ion-icon name="home"></ion-icon>
 
         <h3 style="color: black;">
-          Estoy en Casa
+          {{ estadoEstoyAqui }}
         </h3>
 
       </div>
 
 
 
-      <div
-        class="menu-card ripple"
-        style="
+      <div class="menu-card ripple" style="
           background: linear-gradient(135deg, #2196f3, #64b5f6);
           box-shadow: 0 10px 25px rgba(33, 150, 243, 0.35);
           border:none
@@ -224,45 +237,8 @@
 
 
 
-      <div
-        class="menu-card ripple"
-        style="
-          background: linear-gradient(135deg, #ff9800, #ffb74d);
-          box-shadow: 0 10px 25px rgba(255, 152, 0, 0.35);
-          border:none
-        ">
 
-        <ion-icon name="share-social"></ion-icon>
-
-        <h3>
-          Compartir
-        </h3>
-
-      </div>
-
-
-
-      <div
-        class="menu-card ripple"
-        style="
-          background: linear-gradient(135deg, #4caf50, #81c784);
-          box-shadow: 0 10px 25px rgba(156, 39, 176, 0.35);
-          border:none
-        ">
-
-        <ion-icon name="shield-checkmark"></ion-icon>
-
-        <h3>
-          Zona Segura
-        </h3>
-
-      </div>
-
-
-
-      <div
-        class="menu-card ripple"
-        style="
+      <div class="menu-card ripple" style="
           background: linear-gradient(135deg, rgb(198, 100, 218), rgb(175, 108, 219));
           box-shadow: 0 10px 25px rgba(191, 199, 191, 0.35);
           border:none
@@ -276,6 +252,33 @@
 
       </div>
 
+      <div class="menu-card ripple" (click)="abrirRecordatorios()" style="
+          background: linear-gradient(135deg, #ff9800, #ffb74d);
+          box-shadow: 0 10px 25px rgba(255, 152, 0, 0.35);
+          border:none
+        ">
+
+        <ion-icon name="calendar"></ion-icon>
+
+        <h3>
+          Recordatorios
+        </h3>
+
+      </div>
+
+      <div class="menu-card ripple" style="
+          background: linear-gradient(135deg, #4caf50, #81c784);
+          box-shadow: 0 10px 25px rgba(156, 39, 176, 0.35);
+          border:none
+        ">
+
+        <ion-icon name="shield-checkmark"></ion-icon>
+
+        <h3>
+          Zona Segura
+        </h3>
+
+      </div>
 
     </div>
 
@@ -287,9 +290,7 @@
   <!-- MODAL DE VINCULACIÓN -->
   <!-- ================================================= -->
 
-  <ion-modal
-    [isOpen]="mostrarModal"
-    (didDismiss)="cerrarModal()">
+  <ion-modal [isOpen]="mostrarModal" (didDismiss)="cerrarModal()">
 
     <ng-template>
 
@@ -305,11 +306,9 @@
 
           <ion-buttons slot="end">
 
-            <ion-button
-              (click)="cerrarModal()">
+            <ion-button (click)="cerrarModal()">
 
-              <ion-icon
-                name="close-outline">
+              <ion-icon name="close-outline">
               </ion-icon>
 
             </ion-button>
@@ -325,8 +324,7 @@
 
       <ion-content>
 
-        <div
-          style="
+        <div style="
             padding: 25px;
             text-align: center;
           ">
@@ -356,25 +354,20 @@
 
           @if (qrCodeUrl) {
 
-            <div
-              style="
+          <div style="
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 margin: 20px 0;
               ">
 
-              <img
-                [src]="qrCodeUrl"
-                alt="Código QR de vinculación"
-                style="
+            <img [src]="qrCodeUrl" alt="Código QR de vinculación" style="
                   width: 230px;
                   height: 230px;
                   max-width: 100%;
-                "
-              />
+                " />
 
-            </div>
+          </div>
 
           }
 
@@ -385,9 +378,9 @@
 
           @if (generando) {
 
-            <p>
-              Generando código...
-            </p>
+          <p>
+            Generando código...
+          </p>
 
           }
 
@@ -398,28 +391,26 @@
 
           @if (codigo) {
 
-            <div
-              style="
+          <div style="
                 margin: 20px 0;
               ">
 
-              <p>
-                Código de vinculación
-              </p>
+            <p>
+              Código de vinculación
+            </p>
 
-              <h1
-                style="
+            <h1 style="
                   letter-spacing: 6px;
                   font-size: 30px;
                   font-weight: bold;
                   margin: 10px 0;
                 ">
 
-                {{ codigo }}
+              {{ codigo }}
 
-              </h1>
+            </h1>
 
-            </div>
+          </div>
 
           }
 
@@ -430,19 +421,17 @@
 
           @if (fechaExpiracion) {
 
-            <p
-              style="
+          <p style="
                 font-size: 13px;
                 opacity: 0.7;
               ">
 
-              <ion-icon
-                name="time-outline">
-              </ion-icon>
+            <ion-icon name="time-outline">
+            </ion-icon>
 
-              Código temporal
+            Código temporal
 
-            </p>
+          </p>
 
           }
 
@@ -453,15 +442,14 @@
 
           @if (mensajeError) {
 
-            <p
-              style="
+          <p style="
                 color: #d32f2f;
                 margin-top: 15px;
               ">
 
-              {{ mensajeError }}
+            {{ mensajeError }}
 
-            </p>
+          </p>
 
           }
 
@@ -472,15 +460,14 @@
 
           @if (mensaje) {
 
-            <p
-              style="
+          <p style="
                 color: #2e7d32;
                 margin-top: 15px;
               ">
 
-              {{ mensaje }}
+            {{ mensaje }}
 
-            </p>
+          </p>
 
           }
 
@@ -489,24 +476,18 @@
           <!-- GENERAR NUEVO CÓDIGO -->
           <!-- ===================================== -->
 
-          <ion-button
-            expand="block"
-            fill="outline"
-            (click)="generarCodigo()"
-            [disabled]="generando">
+          <ion-button expand="block" fill="outline" (click)="generarCodigo()" [disabled]="generando">
 
-            <ion-icon
-              name="refresh-outline"
-              slot="start">
+            <ion-icon name="refresh-outline" slot="start">
             </ion-icon>
 
             @if (generando) {
 
-              Generando...
+            Generando...
 
             } @else {
 
-              Generar nuevo código
+            Generar nuevo código
 
             }
 
@@ -517,10 +498,7 @@
           <!-- CERRAR -->
           <!-- ===================================== -->
 
-          <ion-button
-            expand="block"
-            (click)="cerrarModal()"
-            style="margin-top: 10px;">
+          <ion-button expand="block" (click)="cerrarModal()" style="margin-top: 10px;">
 
             Cerrar
 
@@ -552,9 +530,7 @@
     </button>-->
 
 
-    <button
-      class="menu-item"
-      type="button">
+    <button class="menu-item" type="button">
 
       <div class="icon-wrapper">
 
@@ -572,9 +548,7 @@
 
     <!-- Botón central -->
 
-    <button
-      class="menu-item menu-center"
-      type="button">
+    <button class="menu-item menu-center" type="button">
 
       <ion-icon name="home"></ion-icon>
 
@@ -594,9 +568,7 @@
 
 
 
-    <button
-      class="menu-item"
-      type="button">
+    <button class="menu-item" type="button">
 
       <div class="icon-wrapper">
 
@@ -614,10 +586,7 @@
   </nav>
 
   <!-- Modal SOS: confirmación de aviso -->
-  <ion-modal
-    [isOpen]="mostrarModalSOS"
-    (didDismiss)="cerrarModalSOS()"
-    class="sos-modal">
+  <ion-modal [isOpen]="mostrarModalSOS" (didDismiss)="cerrarModalSOS()" class="sos-modal">
 
     <ng-template>
 
@@ -631,19 +600,45 @@
       </div>
 
       <div class="sos-acciones">
-        <ion-button
-          expand="block"
-          fill="solid"
-          class="sos-alerta"
-          (click)="confirmarSOS()">
+        <ion-button expand="block" fill="solid" class="sos-alerta" (click)="confirmarSOS()">
           Alertar
         </ion-button>
 
-        <ion-button
-          expand="block"
-          fill="solid"
-          class="sos-cancelar"
-          (click)="cerrarModalSOS()">
+        <ion-button expand="block" fill="solid" class="sos-cancelar" (click)="cerrarModalSOS()">
+          Cancelar
+        </ion-button>
+      </div>
+
+    </ng-template>
+
+  </ion-modal>
+
+  <!-- Modal Estoy aquí: selección de estado -->
+  <ion-modal [isOpen]="mostrarModalEstoyAqui" (didDismiss)="cerrarModalEstoyAqui()" class="sos-modal">
+
+    <ng-template>
+
+      <div class="sos-modal-header">
+        <h3 style="color: #2e7d32;">
+          Estoy aquí
+        </h3>
+        <p>
+          ¿Dónde te encuentras?
+        </p>
+      </div>
+
+      <div class="sos-acciones">
+        <ion-button expand="block" fill="solid" class="estoy-aqui-en-casa" (click)="marcarEnCasa()">
+          Estoy en casa
+        </ion-button>
+
+        <ion-button expand="block" fill="solid" class="estoy-aqui-sali" (click)="marcarSaliDeCasa()">
+          Salí de casa
+        </ion-button>
+      </div>
+
+      <div class="sos-acciones" style="padding-top: 0;">
+        <ion-button expand="block" fill="solid" class="estoy-aqui-cancelar" (click)="cerrarModalEstoyAqui()">
           Cancelar
         </ion-button>
       </div>

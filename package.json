@@ -25,6 +25,7 @@
     "@capacitor/geolocation": "^8.2.2",
     "@capacitor/haptics": "8.0.2",
     "@capacitor/keyboard": "8.0.5",
+    "@capacitor/local-notifications": "^8.3.1",
     "@capacitor/status-bar": "8.0.3",
     "@ionic/angular": "^9.0.0",
     "@supabase/supabase-js": "^2.112.3",

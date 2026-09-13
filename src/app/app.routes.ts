@@ -72,6 +72,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'recordatorios',
+    loadComponent: () => import('./pages/adultosMayores/recordatorios/recordatorios.page').then( m => m.RecordatoriosPage),
+    canActivate: [authGuard]
+  },
+  {
     path: 'estado',
     loadComponent: () => import('./pages/cuidadores/estado/estado.page').then( m => m.EstadoPage),
     canActivate: [authGuard]

@@ -1,0 +1,10 @@
+<div class="rueda-cont" (pointerdown)="onStart($event)">
+  <div class="rueda-linea"></div>
+  <div #strip class="rueda-strip">
+    @for (item of filas; track $index; let i = $index) {
+      <div class="rueda-item" [class.seleccion]="i === centroGlobal">
+        {{ formato(item) }}
+      </div>
+    }
+  </div>
+</div>

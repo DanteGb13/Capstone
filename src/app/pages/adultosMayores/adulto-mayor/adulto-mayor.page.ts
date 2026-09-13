@@ -37,6 +37,7 @@ import * as icons from 'ionicons/icons';
 import * as QRCode from 'qrcode';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { Gps } from '../../../services/Backend/gps/gps';
+import { AlarmasService, AlarmaRecordatorio } from '../../../services/alarmas/alarmas';
 
 
 @Component({
@@ -122,6 +123,13 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
 
   // =====================================================
+  // ALARMAS DE RECORDATORIOS
+  // =====================================================
+
+  alarmasSonando: AlarmaRecordatorio[] = [];
+
+
+  // =====================================================
   // MENSAJES
   // =====================================================
 
@@ -141,6 +149,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     private vinculacionService: Vinculacion,
 
     private gpsService: Gps,
+
+    private alarmasService: AlarmasService,
 
     private changeDetectorRef: ChangeDetectorRef,
 
@@ -189,6 +199,16 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.reportarUbicacion();
 
 
+    // 5. Recordatorios: repone las alarmas programadas y escucha el toque
+    //    en las notificaciones para abrir el panel de consolar con "Apagar".
+    this.actualizarSonando();
+
+    this.alarmasService.escucharTap(() => {
+      this.actualizarSonando();
+      this.router.navigate(['/recordatorios']);
+    });
+
+
     // Refrescar solicitudes y cuidadores vinculados cada 30 segundos
     // para que aparezcan sin recargar la página
 
@@ -198,6 +218,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
         this.cargarSolicitudes(),
         this.cargarCuidadoresVinculados()
       ]);
+
+      this.actualizarSonando();
 
       this.changeDetectorRef.detectChanges();
 
@@ -297,6 +319,57 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.mostrarModalSOS = false;
     // TODO: implementar lógica de emergencia (avisar al cuidador)
     console.log('SOS confirmado: avisar al cuidador');
+  }
+
+
+
+  // =====================================================
+  // ESTOY AQUÍ
+  // =====================================================
+
+  mostrarModalEstoyAqui: boolean = false;
+
+  estadoEstoyAqui: string = 'Estoy aquí';
+
+  abrirEstoyAqui() {
+    (document.activeElement as HTMLElement)?.blur();
+    this.mostrarModalEstoyAqui = true;
+  }
+
+  cerrarModalEstoyAqui() {
+    this.mostrarModalEstoyAqui = false;
+  }
+
+  marcarEnCasa() {
+    this.mostrarModalEstoyAqui = false;
+    this.estadoEstoyAqui = 'Estoy en casa';
+    console.log('Estado: Estoy en casa');
+  }
+
+  marcarSaliDeCasa() {
+    this.mostrarModalEstoyAqui = false;
+    this.estadoEstoyAqui = 'Salí de casa';
+    console.log('Estado: Salí de casa');
+  }
+
+
+
+  // =====================================================
+  // RECORDATORIOS
+  // =====================================================
+
+  abrirRecordatorios() {
+    (document.activeElement as HTMLElement)?.blur();
+    this.router.navigate(['/recordatorios']);
+  }
+
+  actualizarSonando() {
+    this.alarmasSonando = this.alarmasService.estanSonando();
+  }
+
+  apagarAlarma(alarma: AlarmaRecordatorio) {
+    this.alarmasService.apagarAlarma(alarma);
+    this.actualizarSonando();
   }
 
 
