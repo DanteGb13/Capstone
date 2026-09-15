@@ -59,7 +59,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   sonando: AlarmaRecordatorio[] = [];
 
   mostrarModal = false;
-  editandoId: number | null = null;
+  editandoId: string | null = null;
   nuevoNombre = '';
   nuevaHoraSel = 0;
   nuevoMinutoSel = 0;
@@ -181,9 +181,9 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.detenerRepeticion();
   }
 
-  cargar() {
-    this.alarmas = this.alarmasService.getAlarmas();
-    this.sonando = this.alarmasService.estanSonando();
+  async cargar() {
+    this.alarmas = await this.alarmasService.getAlarmas();
+    this.sonando = await this.alarmasService.estanSonando();
   }
 
   volver() {
@@ -255,7 +255,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
       if (!activo) {
         await this.mostrarInfo(
           'Activación pendiente',
-          'No se activó el permiso de alarmas exactas. La alarma puede sonar con retraso. Puedes activarlo más tarde en Ajustes → Apps → SiempreCerca → Alarmas y recordatorios.'
+          'No se activó el permiso de alarmas exactas, así que la alarma puede sonar con retraso. Puedes activarlo más tarde en Ajustes → Apps → SiempreCerca → Alarmas y recordatorios.'
         );
       }
     }
@@ -331,6 +331,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.detenerRepeticion();
     this.mostrarModal = false;
   }
+
 
   // =====================================================
   // ELECCIÓN DE HORA: FLECHAS O DESLIZAR
@@ -454,35 +455,31 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
       hora: this.nuevaHoraSel,
       minuto: this.nuevoMinutoSel
     };
-    const lista = this.alarmasService.getAlarmas();
 
     if (this.editandoId !== null) {
-      const actualizada = lista.map((a) => a.id === this.editandoId
-        ? {
-            ...a,
-            nombre,
-            hora,
-            minuto,
-            descripcion: this.nuevaDescripcion.trim(),
-            dias
-          }
-        : a);
-
-      this.alarmasService.guardarAlarmas(actualizada);
-      const editada = actualizada.find((a) => a.id === this.editandoId);
+      const ok = await this.alarmasService.actualizarAlarma(this.editandoId, {
+        nombre,
+        hora,
+        minuto,
+        descripcion: this.nuevaDescripcion.trim(),
+        dias
+      });
 
       this.mostrarModal = false;
-      this.cargar();
+      await this.cargar();
 
-      if (editada && editada.activa) {
-        await this.activarConPermisos(editada);
-      } else if (editada) {
-        await this.alarmasService.activarDesactivar(editada, false);
+      if (ok) {
+        const editada = this.alarmas.find((a) => a.id === this.editandoId);
+        if (editada && editada.activa) {
+          await this.activarConPermisos(editada);
+        } else if (editada) {
+          await this.alarmasService.activarDesactivar(editada, false);
+        }
       }
       return;
     }
 
-    const alarma = this.alarmasService.crearAlarma(
+    const alarma = await this.alarmasService.crearAlarma(
       nombre,
       hora,
       minuto,
@@ -491,14 +488,12 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
       dias
     );
 
-    this.alarmasService.guardarAlarmas([
-      ...lista,
-      alarma
-    ]);
-
     this.mostrarModal = false;
-    this.cargar();
-    await this.activarConPermisos(alarma);
+    await this.cargar();
+
+    if (alarma) {
+      await this.activarConPermisos(alarma);
+    }
   }
 
   private async activarConPermisos(alarma: AlarmaRecordatorio) {
@@ -521,15 +516,13 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     }
 
     await this.alarmasService.activarDesactivar(alarma, true);
-    this.cargar();
+    await this.cargar();
   }
 
   private async desactivarAlarma(alarma: AlarmaRecordatorio) {
     await this.alarmasService.cancelarAlarma(alarma);
-    const lista = this.alarmasService.getAlarmas()
-      .map((a) => a.id === alarma.id ? { ...a, activa: false } : a);
-    this.alarmasService.guardarAlarmas(lista);
-    this.cargar();
+    await this.alarmasService.actualizarAlarma(alarma.id, { activa: false });
+    await this.cargar();
   }
 
   horaTexto(alarma: AlarmaRecordatorio): string {
@@ -614,12 +607,12 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     }
 
     await this.alarmasService.activarDesactivar(alarma, true);
-    this.cargar();
+    await this.cargar();
     return;
   }
 
   await this.alarmasService.activarDesactivar(alarma, false);
-  this.cargar();
+  await this.cargar();
 }
 
 
@@ -630,7 +623,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   async apagar(alarma: AlarmaRecordatorio) {
     this.sonando = this.sonando.filter((a) => a.id !== alarma.id);
     await this.alarmasService.apagarAlarma(alarma);
-    this.cargar();
+    await this.cargar();
   }
 
 
@@ -649,10 +642,8 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
           role: 'destructive',
           handler: async () => {
             await this.alarmasService.cancelarAlarma(alarma);
-            const lista = this.alarmasService.getAlarmas()
-              .filter((a) => a.id !== alarma.id);
-            this.alarmasService.guardarAlarmas(lista);
-            this.cargar();
+            await this.alarmasService.eliminarAlarma(alarma.id);
+            await this.cargar();
           }
         }
       ]

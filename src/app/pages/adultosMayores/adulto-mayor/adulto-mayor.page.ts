@@ -363,13 +363,13 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.router.navigate(['/recordatorios']);
   }
 
-  actualizarSonando() {
-    this.alarmasSonando = this.alarmasService.estanSonando();
+  async actualizarSonando() {
+    this.alarmasSonando = await this.alarmasService.estanSonando();
   }
 
-  apagarAlarma(alarma: AlarmaRecordatorio) {
-    this.alarmasService.apagarAlarma(alarma);
-    this.actualizarSonando();
+  async apagarAlarma(alarma: AlarmaRecordatorio) {
+    await this.alarmasService.apagarAlarma(alarma);
+    await this.actualizarSonando();
   }
 
 

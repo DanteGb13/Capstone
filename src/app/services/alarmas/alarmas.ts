@@ -2,9 +2,11 @@ import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { SiempreCerca } from './siempre-cerca';
+import { SupabaseService } from '../supabase/supabase';
 
 export interface AlarmaRecordatorio {
-  id: number;
+  id: string;
+  id_usuario: string;
   nombre: string;
   hora: number;
   minuto: number;
@@ -12,65 +14,157 @@ export interface AlarmaRecordatorio {
   activa: boolean;
   confirmado: string | null;
   dias: number[];
+  fecha_creacion?: string;
+  fecha_actualizacion?: string;
 }
 
 export const DIAS_SEMANA_TODOS = [1, 2, 3, 4, 5, 6, 7];
 
-const CLAVE = 'sc_recordatorios_v1';
 const CANAL = 'recordatorios-alarma';
+const TABLA = 'alarma_recordatorio';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AlarmasService {
 
-  private tapHandler: ((idAlarma: number) => void) | null = null;
+  private tapHandler: ((idAlarma: string) => void) | null = null;
   private disparoHandler: (() => void) | null = null;
   private suscripcion: any = null;
 
+  private alarmasCache: AlarmaRecordatorio[] = [];
+
+  constructor(private supabaseService: SupabaseService) {}
+
 
   // =====================================================
-  // ALMACENAMIENTO LOCAL
+  // USUARIO ACTUAL
   // =====================================================
 
-  getAlarmas(): AlarmaRecordatorio[] {
-    try {
-      const raw = localStorage.getItem(CLAVE);
-      const lista: AlarmaRecordatorio[] = raw ? JSON.parse(raw) : [];
-      return lista.map((a) => ({
-        ...a,
-        dias: Array.isArray(a.dias) && a.dias.length > 0
-          ? a.dias
-          : [...DIAS_SEMANA_TODOS]
-      }));
-    } catch {
+  private async obtenerUsuarioId(): Promise<string | null> {
+    const supabase = this.supabaseService.getClient();
+    const { data } = await supabase.auth.getUser();
+    return data?.user?.id ?? null;
+  }
+
+
+  // =====================================================
+  // CONSULTA A BD
+  // =====================================================
+
+  async getAlarmas(): Promise<AlarmaRecordatorio[]> {
+    const userId = await this.obtenerUsuarioId();
+    if (!userId) {
       return [];
     }
+
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from(TABLA)
+      .select('*')
+      .eq('id_usuario', userId)
+      .order('hora', { ascending: true })
+      .order('minuto', { ascending: true });
+
+    if (error) {
+      console.error('Error al obtener alarmas:', error.message);
+      return this.alarmasCache;
+    }
+
+    this.alarmasCache = (data || []).map((row: any) => ({
+      ...row,
+      dias: Array.isArray(row.dias) && row.dias.length > 0
+        ? row.dias
+        : [...DIAS_SEMANA_TODOS]
+    }));
+
+    return this.alarmasCache;
   }
 
-  guardarAlarmas(lista: AlarmaRecordatorio[]) {
-    localStorage.setItem(CLAVE, JSON.stringify(lista));
+  getAlarmasCache(): AlarmaRecordatorio[] {
+    return this.alarmasCache;
   }
 
-  crearAlarma(
+
+  // =====================================================
+  // CREAR ALARMA
+  // =====================================================
+
+  async crearAlarma(
     nombre: string,
     hora: number,
     minuto: number,
     descripcion: string,
     activa = true,
     dias: number[] = DIAS_SEMANA_TODOS
-  ): AlarmaRecordatorio {
-    const maxId = this.getAlarmas().reduce((m, a) => Math.max(m, a.id), 0);
-    return {
-      id: maxId + 1,
-      nombre,
-      hora,
-      minuto,
-      descripcion,
-      activa,
-      confirmado: null,
-      dias: dias.length > 0 ? [...dias] : [...DIAS_SEMANA_TODOS]
-    };
+  ): Promise<AlarmaRecordatorio | null> {
+    const userId = await this.obtenerUsuarioId();
+    if (!userId) {
+      return null;
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const { data, error } = await supabase
+      .from(TABLA)
+      .insert({
+        id_usuario: userId,
+        nombre,
+        hora,
+        minuto,
+        descripcion,
+        activa,
+        dias: dias.length > 0 ? dias : [...DIAS_SEMANA_TODOS]
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error al crear alarma:', error.message);
+      return null;
+    }
+
+    return data as AlarmaRecordatorio;
+  }
+
+
+  // =====================================================
+  // ACTUALIZAR ALARMA
+  // =====================================================
+
+  async actualizarAlarma(
+    id: string,
+    cambios: Partial<Pick<AlarmaRecordatorio, 'nombre' | 'hora' | 'minuto' | 'descripcion' | 'activa' | 'dias' | 'confirmado'>>
+  ): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from(TABLA)
+      .update(cambios)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error al actualizar alarma:', error.message);
+      return false;
+    }
+    return true;
+  }
+
+
+  // =====================================================
+  // ELIMINAR ALARMA
+  // =====================================================
+
+  async eliminarAlarma(id: string): Promise<boolean> {
+    const supabase = this.supabaseService.getClient();
+    const { error } = await supabase
+      .from(TABLA)
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error al eliminar alarma:', error.message);
+      return false;
+    }
+    return true;
   }
 
 
@@ -183,9 +277,9 @@ export class AlarmasService {
     return fecha;
   }
 
-  estanSonando(ahora = new Date()): AlarmaRecordatorio[] {
-    return this.getAlarmas()
-      .filter((alarma) => this.ocurrenciaSonando(alarma, ahora) !== null);
+  async estanSonando(ahora = new Date()): Promise<AlarmaRecordatorio[]> {
+    const alarmas = await this.getAlarmas();
+    return alarmas.filter((alarma) => this.ocurrenciaSonando(alarma, ahora) !== null);
   }
 
 
@@ -195,12 +289,23 @@ export class AlarmasService {
 
   private readonly VENTANA_DIAS = 8;
 
+  private idNumerico(id: string): number {
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+      const char = id.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return Math.abs(hash) % 900000 + 100000;
+  }
+
   private idsNotificacion(alarma: AlarmaRecordatorio): number[] {
+    const base = this.idNumerico(alarma.id);
     const nuevos = Array.from(
       { length: this.VENTANA_DIAS },
-      (_, i) => alarma.id * 1000 + i
+      (_, i) => base * 1000 + i
     );
-    const viejos = alarma.dias.map((d) => alarma.id * 10 + d);
+    const viejos = alarma.dias.map((d) => base * 10 + d);
     return [...nuevos, ...viejos];
   }
 
@@ -245,9 +350,8 @@ export class AlarmasService {
   async apagarAlarma(alarma: AlarmaRecordatorio, ahora = new Date()) {
     const ocurrencia = this.ocurrenciaEnCurso(alarma, ahora) ?? this.fechaOcurrencia(alarma, ahora);
     const fecha = this.fechaClave(ocurrencia);
-    const lista = this.getAlarmas()
-      .map((a) => a.id === alarma.id ? { ...a, confirmado: fecha } : a);
-    this.guardarAlarmas(lista);
+
+    await this.actualizarAlarma(alarma.id, { confirmado: fecha });
 
     if (!Capacitor.isNativePlatform()) {
       return;
@@ -404,7 +508,7 @@ export class AlarmasService {
       });
 
       const notificaciones = ocurrencias.map((fecha, i) => ({
-        id: alarma.id * 1000 + i,
+        id: this.idNumerico(alarma.id) * 1000 + i,
         title: `🔔 ${alarma.nombre}`,
         body: alarma.descripcion || 'Tienes un recordatorio programado',
         channelId: CANAL,
@@ -450,9 +554,7 @@ export class AlarmasService {
   }
 
   async activarDesactivar(alarma: AlarmaRecordatorio, activa: boolean) {
-    const lista = this.getAlarmas()
-      .map((a) => a.id === alarma.id ? { ...a, activa } : a);
-    this.guardarAlarmas(lista);
+    await this.actualizarAlarma(alarma.id, { activa });
 
     if (activa) {
       await this.programar({ ...alarma, activa: true });
@@ -462,8 +564,8 @@ export class AlarmasService {
   }
 
   async sincronizar() {
-    const lista = this.getAlarmas();
-    for (const alarma of lista) {
+    const alarmas = await this.getAlarmas();
+    for (const alarma of alarmas) {
       if (alarma.activa) {
         await this.programar(alarma);
       } else {
@@ -481,7 +583,7 @@ export class AlarmasService {
     this.disparoHandler = handler;
   }
 
-  escucharTap(handler: (idAlarma: number) => void) {
+  escucharTap(handler: (idAlarma: string) => void) {
     this.tapHandler = handler;
 
     if (!Capacitor.isNativePlatform() || this.suscripcion) {
@@ -492,7 +594,7 @@ export class AlarmasService {
       'localNotificationActionPerformed',
       (data: any) => {
         const idAlarma = data?.notification?.extra?.idAlarma;
-        if (typeof idAlarma === 'number' && this.tapHandler) {
+        if (typeof idAlarma === 'string' && this.tapHandler) {
           this.tapHandler(idAlarma);
         }
       }
