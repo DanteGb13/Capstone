@@ -86,6 +86,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/ajustes/ajustes.page').then( m => m.AjustesPage)
   },
   {
+    path: 'permisos',
+    loadComponent: () => import('./pages/ajustes/permisos/permisos.page').then( m => m.PermisosPage)
+  },
+  {
     path: 'recuperar-contrasena',
     loadComponent: () => import('./auth/recuperar-contrasena/recuperar-contrasena.page').then( m => m.RecuperarContrasenaPage)
   },
@@ -93,6 +97,13 @@ export const routes: Routes = [
     path: 'correo-contrasena',
     loadComponent: () => import('./auth/correo-contrasena/correo-contrasena.page').then( m => m.CorreoContrasenaPage)
   },
+ 
+ 
+ 
+ 
+ 
+ 
+ 
   // Saltos de paginas no existentes
   {
     path: '**',

@@ -1,0 +1,70 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Permisos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+
+  <div class="permisos-container">
+
+    <div class="permiso-card" *ngFor="let permiso of permisos">
+      <div class="permiso-header">
+        <div class="permiso-icono">
+          <ion-icon [name]="permiso.icono"></ion-icon>
+        </div>
+        <div class="permiso-info">
+          <span class="permiso-nombre">{{ permiso.nombre }}</span>
+          <span class="permiso-desc">{{ permiso.descripcion }}</span>
+        </div>
+        <ion-toggle
+          [checked]="permiso.concedido"
+          [disabled]="permisoProcesando === permiso.id"
+          (ionChange)="onToggleChange(permiso, $event)"
+          color="success">
+        </ion-toggle>
+      </div>
+
+      <div class="permiso-detalle" *ngIf="permiso.id === 'ubicacion'">
+        <p>Permite que la app acceda a tu ubicación actual para mostrarla en el mapa y rastrear tu posición.</p>
+        <p class="permiso-nota">Para el monitoreo continuo, selecciona "Permitir todo el tiempo" en los ajustes de ubicación.</p>
+      </div>
+
+      <div class="permiso-detalle" *ngIf="permiso.id === 'camara'">
+        <p>Permite tomar fotos para el perfil de usuario.</p>
+      </div>
+
+      <div class="permiso-detalle" *ngIf="permiso.id === 'fotos'">
+        <p>Permite acceder a la galería para seleccionar fotos o videos existentes.</p>
+      </div>
+
+      <div class="permiso-detalle" *ngIf="permiso.id === 'notificaciones'">
+        <p>Permite recibir alertas de seguridad, recordatorios de medicinas y avisos importantes.</p>
+      </div>
+
+      <div class="permiso-detalle" *ngIf="permiso.id === 'telefono'">
+        <p>Permite realizar llamadas de emergencia directamente desde la app.</p>
+      </div>
+
+      <div class="permiso-detalle" *ngIf="permiso.id === 'contactos'">
+        <p>Permite acceder a tu lista de contactos para seleccionar personas de emergencia.</p>
+      </div>
+
+      <div class="permiso-detalle" *ngIf="permiso.id === 'bateria'">
+        <p>Permite que la app funcione en segundo plano sin que Android la cierre automáticamente.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="toast" *ngIf="showToast">
+    <ion-icon name="information-circle-outline"></ion-icon>
+    <span>{{ toastMensaje }}</span>
+  </div>
+
+</ion-content>

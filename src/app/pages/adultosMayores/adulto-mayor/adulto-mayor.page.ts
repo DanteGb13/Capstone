@@ -287,6 +287,10 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   }
 
+  irAjustes() {
+    this.router.navigate(['/ajustes']);
+  }
+
 
 
   // =====================================================

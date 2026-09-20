@@ -8,6 +8,8 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(SiempreCercaPlugin.class);
+        registerPlugin(UbicacionForegroundPlugin.class);
+        registerPlugin(PermisosExtraPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

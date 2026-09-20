@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { SupabaseService } from '../../supabase/supabase';
+import { UbicacionForeground } from '../ubicacion-foreground/ubicacion-foreground';
 
 export interface UbicacionInfo {
   latitud: number;
@@ -297,6 +298,73 @@ export class Gps {
       console.warn('Error geocodificando:', e);
     }
     return null;
+  }
+
+
+  // =====================================================
+  // FOREGROUND SERVICE (UBICACIÓN EN SEGUNDO PLANO)
+  // =====================================================
+
+  async iniciarUbicacionForeground(intervaloMs: number = 30000, distanciaMinimaM: number = 20): Promise<boolean> {
+    try {
+      const resultado = await UbicacionForeground.iniciar({
+        intervaloMs,
+        distanciaMinimaM
+      });
+      return resultado.iniciado;
+    } catch (error: any) {
+      if (error?.message?.includes('PERMISO_BACKGROUND_REQUERIDO')) {
+        console.warn('Permiso de ubicación "Todo el tiempo" requerido. Se abrió Ajustes.');
+      } else {
+        console.warn('Error iniciando foreground service:', error);
+      }
+      return false;
+    }
+  }
+
+  async detenerUbicacionForeground(): Promise<boolean> {
+    try {
+      const resultado = await UbicacionForeground.detener();
+      return resultado.detenido;
+    } catch (error) {
+      console.warn('Error deteniendo foreground service:', error);
+      return false;
+    }
+  }
+
+  async estaForegroundActivo(): Promise<boolean> {
+    try {
+      const resultado = await UbicacionForeground.estaActivo();
+      return resultado.activo;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  async verificarPermisosUbicacion(): Promise<{
+    ubicacionForeground: boolean;
+    ubicacionBackground: boolean;
+    notificaciones: boolean;
+    todosConcedidos: boolean;
+  }> {
+    try {
+      return await UbicacionForeground.verificarPermisos();
+    } catch (error) {
+      return {
+        ubicacionForeground: false,
+        ubicacionBackground: false,
+        notificaciones: false,
+        todosConcedidos: false
+      };
+    }
+  }
+
+  async abrirAjustesUbicacion(): Promise<void> {
+    try {
+      await UbicacionForeground.abrirAjustes();
+    } catch (error) {
+      console.warn('Error abriendo ajustes:', error);
+    }
   }
 
 }
