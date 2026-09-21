@@ -38,6 +38,61 @@ public class PermisosExtraPlugin extends Plugin {
     private String permisoPendiente;
 
     // =====================================================
+    // REALIZAR LLAMADA TELEFÓNICA
+    // =====================================================
+
+    @PluginMethod
+    public void realizarLlamada(PluginCall call) {
+        String telefono = call.getString("telefono", "");
+        if (telefono.isEmpty()) {
+            call.reject("No se proporcionó número de teléfono");
+            return;
+        }
+
+        try {
+            Intent intent = new Intent(Intent.ACTION_CALL);
+            intent.setData(Uri.parse("tel:" + telefono));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+
+            JSObject ret = new JSObject();
+            ret.put("llamada", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("No se pudo realizar la llamada", e);
+        }
+    }
+
+    // =====================================================
+    // ENVIAR SMS
+    // =====================================================
+
+    @PluginMethod
+    public void enviarSMS(PluginCall call) {
+        String telefono = call.getString("telefono", "");
+        String mensaje = call.getString("mensaje", "");
+
+        if (telefono.isEmpty()) {
+            call.reject("No se proporcionó número de teléfono");
+            return;
+        }
+
+        try {
+            Intent intent = new Intent(Intent.ACTION_SENDTO);
+            intent.setData(Uri.parse("smsto:" + telefono));
+            intent.putExtra("sms_body", mensaje);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+
+            JSObject ret = new JSObject();
+            ret.put("sms", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            call.reject("No se pudo enviar el SMS", e);
+        }
+    }
+
+    // =====================================================
     // SOLICITAR PERMISO DE TELÉFONO
     // =====================================================
 

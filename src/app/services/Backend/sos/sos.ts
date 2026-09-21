@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
-import { PushNotificationService } from '../push-notification/push-notification';
-import { Browser } from '@capacitor/browser';
+import { PushNotificationService } from '../../Backend/push-notification/push-notification';
+import { PermisosExtra } from '../../Backend/permisos-extra/permisos-extra';
 import { Capacitor } from '@capacitor/core';
 import { Haptics } from '@capacitor/haptics';
 
@@ -128,16 +128,16 @@ export class SOSService {
       smsEnviado: false
     };
 
-    await this.vibrar();
+    this.vibrar().catch(() => {});
 
-    const cuidadores = await this.obtenerCuidadores();
+    const cuidadores = await this.obtenerCuidadores().catch(() => []);
     if (cuidadores.length === 0) {
       console.warn('No hay cuidadores vinculados');
       return resultado;
     }
 
-    const ubicacion = await this.obtenerUbicacionActual();
-    const nombreAdulto = await this.obtenerNombreAdulto();
+    const ubicacion = await this.obtenerUbicacionActual().catch(() => null);
+    const nombreAdulto = await this.obtenerNombreAdulto().catch(() => 'Desconocido');
 
     const ubicacionTexto = ubicacion
       ? `https://maps.google.com/?q=${ubicacion.lat},${ubicacion.lng}`
@@ -162,39 +162,46 @@ export class SOSService {
     }
 
     const cuidadorConTelefono = cuidadores.find(c => c.telefono && c.telefono.length >= 9);
+
     if (cuidadorConTelefono) {
-      resultado.llamadaIniciada = await this.realizarLlamada(cuidadorConTelefono.telefono);
+      try {
+        await this.realizarLlamada(cuidadorConTelefono.telefono);
+        resultado.llamadaIniciada = true;
+      } catch (e) {
+        console.error('Error en llamada:', e);
+      }
     }
 
     if (cuidadorConTelefono) {
-      const mensajeSMS = `SOS! ${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`;
-      resultado.smsEnviado = await this.enviarSMS(cuidadorConTelefono.telefono, mensajeSMS);
+      try {
+        const mensajeSMS = `SOS! ${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`;
+        await this.enviarSMS(cuidadorConTelefono.telefono, mensajeSMS);
+        resultado.smsEnviado = true;
+      } catch (e) {
+        console.error('Error en SMS:', e);
+      }
     }
 
     return resultado;
   }
 
-  async realizarLlamada(telefono: string): Promise<boolean> {
-    try {
-      const telLimpio = this.limpiarTelefono(telefono);
-      const url = `tel:${telLimpio}`;
-      await Browser.open({ url });
-      return true;
-    } catch (e) {
-      console.error('Error realizando llamada:', e);
-      return false;
+  async realizarLlamada(telefono: string): Promise<void> {
+    const telLimpio = this.limpiarTelefono(telefono);
+
+    if (this.isNative) {
+      await PermisosExtra.realizarLlamada({ telefono: telLimpio });
+    } else {
+      window.location.href = `tel:${telLimpio}`;
     }
   }
 
-  async enviarSMS(telefono: string, mensaje: string): Promise<boolean> {
-    try {
-      const telLimpio = this.limpiarTelefono(telefono);
-      const url = `sms:${telLimpio}?body=${encodeURIComponent(mensaje)}`;
-      await Browser.open({ url });
-      return true;
-    } catch (e) {
-      console.error('Error enviando SMS:', e);
-      return false;
+  async enviarSMS(telefono: string, mensaje: string): Promise<void> {
+    const telLimpio = this.limpiarTelefono(telefono);
+
+    if (this.isNative) {
+      await PermisosExtra.enviarSMS({ telefono: telLimpio, mensaje });
+    } else {
+      window.location.href = `sms:${telLimpio}?body=${encodeURIComponent(mensaje)}`;
     }
   }
 
