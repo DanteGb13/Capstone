@@ -26,21 +26,33 @@ public class SiempreCercaPlugin extends Plugin {
     public void crearCanalSOS(PluginCall call) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager nm = getContext().getSystemService(NotificationManager.class);
-            NotificationChannel canal = nm.getNotificationChannel(CANAL_SOS_ID);
-            if (canal == null) {
-                canal = new NotificationChannel(
-                    CANAL_SOS_ID,
-                    "Alertas SOS",
-                    NotificationManager.IMPORTANCE_HIGH
-                );
-                canal.setDescription("Alertas de emergencia del adulto mayor");
-                canal.enableVibration(true);
-                canal.setVibrationPattern(new long[] { 0, 500, 200, 500, 200, 500 });
-                canal.enableLights(true);
-                canal.setLightColor(Color.RED);
-                canal.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
-                nm.createNotificationChannel(canal);
+
+            // Eliminar canal viejo para recrear con nuevos ajustes
+            NotificationChannel viejo = nm.getNotificationChannel(CANAL_SOS_ID);
+            if (viejo != null) {
+                nm.deleteNotificationChannel(CANAL_SOS_ID);
             }
+
+            NotificationChannel canal = new NotificationChannel(
+                CANAL_SOS_ID,
+                "Alertas SOS",
+                NotificationManager.IMPORTANCE_HIGH
+            );
+            canal.setDescription("Alertas de emergencia del adulto mayor");
+            canal.enableVibration(true);
+            canal.setVibrationPattern(new long[] { 0, 1000, 500, 1000, 500, 1000 });
+            canal.enableLights(true);
+            canal.setLightColor(Color.RED);
+            canal.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
+
+            Uri defaultAlarm = android.media.RingtoneManager.getDefaultUri(
+                android.media.RingtoneManager.TYPE_ALARM);
+            canal.setSound(defaultAlarm, new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build());
+
+            nm.createNotificationChannel(canal);
         }
         call.resolve();
     }

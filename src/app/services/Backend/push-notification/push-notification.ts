@@ -71,6 +71,7 @@ export class PushNotificationService {
     PushNotifications.addListener('pushNotificationReceived', (notification: PushNotification) => {
       console.log('Notificación recibida:', notification);
       this.mostrarAlerta(notification);
+      this.publicarEnBarra(notification);
     });
 
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
@@ -236,6 +237,22 @@ export class PushNotificationService {
       buttons: ['OK']
     });
     await alert.present();
+  }
+
+  private async publicarEnBarra(notification: PushNotification): Promise<void> {
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      await LocalNotifications.schedule({
+        notifications: [{
+          title: notification.title || 'Alerta SOS',
+          body: notification.body || 'Emergencia detectada',
+          id: Date.now() % 2147483647,
+          channelId: 'sos-alertas'
+        }]
+      });
+    } catch (e) {
+      console.warn('Error publicando en barra:', e);
+    }
   }
 
   getToken(): string | null {
