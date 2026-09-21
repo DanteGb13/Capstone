@@ -55,11 +55,13 @@ export class SOSService {
 
       if (error || !vinculaciones) return [];
 
+      const vistos = new Set<string>();
       const cuidadores: CuidadorVinculado[] = [];
 
       for (const v of vinculaciones) {
         const cuidador = (v as any).cuidador;
-        if (cuidador?.usuario) {
+        if (cuidador?.usuario && !vistos.has(cuidador.usuario.id)) {
+          vistos.add(cuidador.usuario.id);
           cuidadores.push({
             id: cuidador.usuario.id,
             nombre: cuidador.usuario.nombre,

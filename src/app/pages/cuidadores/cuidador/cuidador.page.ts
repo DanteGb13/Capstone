@@ -100,12 +100,6 @@ export class CuidadorPage implements OnInit, OnDestroy {
   async ngOnInit() {
     this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
 
-    // Crear canal SOS + inicializar push para recibir alertas
-    if (Capacitor.isNativePlatform()) {
-      SiempreCerca.crearCanalSOS().catch(() => {});
-      this.pushService.inicializar().catch(() => {});
-    }
-
     await this.cargarAdultos();
 
     this.changeDetectorRef.detectChanges();
@@ -115,6 +109,14 @@ export class CuidadorPage implements OnInit, OnDestroy {
       await this.cargarAdultos();
       this.changeDetectorRef.detectChanges();
     }, 30000);
+
+    // Crear canal SOS + push después de cargar la página (no bloquear)
+    setTimeout(() => {
+      if (Capacitor.isNativePlatform()) {
+        SiempreCerca.crearCanalSOS().catch(() => {});
+        this.pushService.inicializar().catch(() => {});
+      }
+    }, 2000);
   }
 
 

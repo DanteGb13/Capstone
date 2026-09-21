@@ -26,40 +26,59 @@ export class PushNotificationService {
   async inicializar(): Promise<void> {
     if (!this.isNative || !this.pushHabilitado) return;
 
-    try {
-      const permiso = await PushNotifications.requestPermissions();
-      if (permiso.receive !== 'granted') {
-        console.warn('Permiso de push notifications no concedido');
-        return;
-      }
-
-      await PushNotifications.register();
-
-      PushNotifications.addListener('registration', (token: Token) => {
-        this.tokenFCM = token.value;
-        console.log('Token FCM:', token.value);
-        this.guardarToken(token.value);
-      });
-
-      PushNotifications.addListener('registrationError', (error: any) => {
-        console.error('Error de registro push:', error);
-      });
-
-      PushNotifications.addListener('pushNotificationReceived', (notification: PushNotification) => {
-        console.log('Notificación recibida:', notification);
-        this.mostrarAlerta(notification);
-      });
-
-      PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-        console.log('Acción en notificación:', action);
-        this.ngZone.run(() => {
-          this.router.navigate(['/adulto-mayor']);
-        });
-      });
-
-    } catch (e) {
-      console.warn('Push notifications no disponible:', e);
+    if (!Capacitor.isPluginAvailable('PushNotifications')) {
+      console.warn('Plugin PushNotifications no disponible');
+      return;
     }
+
+    let permiso;
+    try {
+      const permisoResult = await Promise.race([
+        PushNotifications.requestPermissions(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+      ]);
+      permiso = permisoResult;
+    } catch (e) {
+      console.warn('Error/timeout pidiendo permiso push:', e);
+      return;
+    }
+
+    if (permiso.receive !== 'granted') {
+      console.warn('Permiso de push notifications no concedido');
+      return;
+    }
+
+    try {
+      await Promise.race([
+        PushNotifications.register(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000))
+      ]);
+    } catch (e) {
+      console.warn('Error/timeout en PushNotifications.register:', e);
+      return;
+    }
+
+    PushNotifications.addListener('registration', (token: Token) => {
+      this.tokenFCM = token.value;
+      console.log('Token FCM:', token.value);
+      this.guardarToken(token.value);
+    });
+
+    PushNotifications.addListener('registrationError', (error: any) => {
+      console.error('Error de registro push:', error);
+    });
+
+    PushNotifications.addListener('pushNotificationReceived', (notification: PushNotification) => {
+      console.log('Notificación recibida:', notification);
+      this.mostrarAlerta(notification);
+    });
+
+    PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+      console.log('Acción en notificación:', action);
+      this.ngZone.run(() => {
+        this.router.navigate(['/adulto-mayor']);
+      });
+    });
   }
 
   async solicitarPermisoNotificaciones(): Promise<boolean> {
@@ -104,6 +123,33 @@ export class PushNotificationService {
 
       if (error) {
         console.error('Error guardando token:', error);
+        return;
+      }
+
+      // Si es adulto mayor, también guardar token para sus cuidadores vinculados
+      // (para que el SOS pueda enviar push al cuidador desde el mismo celular)
+      const { data: vinculos } = await client
+        .from('cuidador_usuario')
+        .select('cuidador(id_usuario)')
+        .eq('id_usuario', user.id);
+
+      if (vinculos) {
+        for (const v of vinculos) {
+          const cuidadorUserId = (v as any).cuidador?.id_usuario;
+          if (cuidadorUserId && cuidadorUserId !== user.id) {
+            await client
+              .from('push_tokens')
+              .upsert(
+                {
+                  id_usuario: cuidadorUserId,
+                  token: token,
+                  plataforma: 'android',
+                  updated_at: new Date().toISOString()
+                },
+                { onConflict: 'id_usuario,token' }
+              );
+          }
+        }
       }
     } catch (e) {
       console.error('Error guardando token:', e);

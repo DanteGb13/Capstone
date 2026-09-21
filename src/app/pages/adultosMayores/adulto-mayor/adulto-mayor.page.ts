@@ -179,11 +179,6 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   async ngOnInit() {
 
-    // Crear canal de notificaciones SOS
-    if (Capacitor.isNativePlatform()) {
-      SiempreCerca.crearCanalSOS().catch(() => {});
-    }
-
     // 1. Cargar datos del usuario UNA sola vez (nombre + id + dirección)
     const usuario = await this.cuidadoresService.cargarUsuario();
     if (usuario) {
@@ -219,6 +214,13 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       this.actualizarSonando();
       this.router.navigate(['/recordatorios']);
     });
+
+    // Crear canal SOS después de cargar la página
+    setTimeout(() => {
+      if (Capacitor.isNativePlatform()) {
+        SiempreCerca.crearCanalSOS().catch(() => {});
+      }
+    }, 2000);
 
 
     // Refrescar solicitudes y cuidadores vinculados cada 30 segundos
