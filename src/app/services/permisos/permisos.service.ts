@@ -25,6 +25,7 @@ export class PermisosService {
       await this.verificarCamara(),
       await this.verificarFotos(),
       await this.verificarNotificaciones(),
+      await this.verificarAlarmaExacta(),
       await this.verificarTelefono(),
       await this.verificarContactos(),
       await this.verificarBateria()
@@ -37,6 +38,7 @@ export class PermisosService {
       { id: 'camara', nombre: 'Cámara', descripcion: 'Tomar fotos de perfil', icono: 'camera-outline', concedido: false },
       { id: 'fotos', nombre: 'Fotos y videos', descripcion: 'Acceder a galería', icono: 'images-outline', concedido: false },
       { id: 'notificaciones', nombre: 'Notificaciones', descripcion: 'Alertas y avisos', icono: 'notifications-outline', concedido: false },
+      { id: 'alarma-exacta', nombre: 'Alarma exacta', descripcion: 'Recordatorios a tiempo', icono: 'time-outline', concedido: false },
       { id: 'telefono', nombre: 'Teléfono', descripcion: 'Llamar contactos de emergencia', icono: 'call-outline', concedido: false },
       { id: 'contactos', nombre: 'Contactos', descripcion: 'Acceder a tu lista de contactos', icono: 'people-outline', concedido: false },
       { id: 'bateria', nombre: 'Batería', descripcion: 'Funcionar en segundo plano', icono: 'battery-charging-outline', concedido: false }
@@ -52,6 +54,7 @@ export class PermisosService {
         case 'camara': return await this.solicitarCamara();
         case 'fotos': return await this.solicitarFotos();
         case 'notificaciones': return await this.solicitarNotificaciones();
+        case 'alarma-exacta': return await this.solicitarAlarmaExacta();
         case 'telefono': return await this.solicitarTelefono();
         case 'contactos': return await this.solicitarContactos();
         case 'bateria': return await this.solicitarBateria();
@@ -116,6 +119,21 @@ export class PermisosService {
       if (r.display === 'granted') return true;
       const s = await LocalNotifications.requestPermissions();
       return s.display === 'granted';
+    } catch { return false; }
+  }
+
+  // =====================================================
+  // ALARMA EXACTA (recordatorios que no se atrasan)
+  // =====================================================
+
+  private async solicitarAlarmaExacta(): Promise<boolean> {
+    try {
+      const { LocalNotifications } = await import('@capacitor/local-notifications');
+      const r = await LocalNotifications.checkExactNotificationSetting();
+      if (r.exact_alarm === 'granted') return true;
+      await LocalNotifications.changeExactNotificationSetting();
+      const s = await LocalNotifications.checkExactNotificationSetting();
+      return s.exact_alarm === 'granted';
     } catch { return false; }
   }
 
@@ -207,6 +225,18 @@ export class PermisosService {
       }
     } catch { concedido = false; }
     return { id: 'notificaciones', nombre: 'Notificaciones', descripcion: 'Alertas y avisos', icono: 'notifications-outline', concedido };
+  }
+
+  private async verificarAlarmaExacta(): Promise<PermisoInfo> {
+    let concedido = false;
+    try {
+      if (this.isNative) {
+        const { LocalNotifications } = await import('@capacitor/local-notifications');
+        const r = await LocalNotifications.checkExactNotificationSetting();
+        concedido = r.exact_alarm === 'granted';
+      }
+    } catch { concedido = false; }
+    return { id: 'alarma-exacta', nombre: 'Alarma exacta', descripcion: 'Recordatorios a tiempo', icono: 'time-outline', concedido };
   }
 
   private async verificarTelefono(): Promise<PermisoInfo> {

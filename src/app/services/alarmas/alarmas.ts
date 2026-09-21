@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { SiempreCerca } from './siempre-cerca';
 import { SupabaseService } from '../supabase/supabase';
@@ -22,6 +23,8 @@ export const DIAS_SEMANA_TODOS = [1, 2, 3, 4, 5, 6, 7];
 
 const CANAL = 'recordatorios-alarma';
 const TABLA = 'alarma_recordatorio';
+const TIPO_ACCION = 'apagar-alarma';
+const ACCION_APAGAR = 'apagar';
 
 @Injectable({
   providedIn: 'root'
@@ -31,6 +34,10 @@ export class AlarmasService {
   private tapHandler: ((idAlarma: string) => void) | null = null;
   private disparoHandler: (() => void) | null = null;
   private suscripcion: any = null;
+  private accionesRegistradas = false;
+  private apagadas = new Set<string>();
+  private apagadasCargadas = false;
+  private readonly CLAVE_APAGADAS = 'alarmas.apagadas';
 
   private alarmasCache: AlarmaRecordatorio[] = [];
 
@@ -173,7 +180,9 @@ export class AlarmasService {
   // =====================================================
 
   private fechaClave(fecha: Date): string {
-    return `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    return `${fecha.getFullYear()}-${mm}-${dd}`;
   }
 
   fechaOcurrencia(alarma: AlarmaRecordatorio, base = new Date()): Date {
@@ -270,6 +279,9 @@ export class AlarmasService {
     }
 
     const fecha = this.fechaClave(ocurrencia);
+    if (this.estaApagada(`${alarma.id}:${fecha}`)) {
+      return null;
+    }
     if (alarma.confirmado === fecha) {
       return null;
     }
@@ -277,9 +289,40 @@ export class AlarmasService {
     return fecha;
   }
 
-  async estanSonando(ahora = new Date()): Promise<AlarmaRecordatorio[]> {
-    const alarmas = await this.getAlarmas();
-    return alarmas.filter((alarma) => this.ocurrenciaSonando(alarma, ahora) !== null);
+  async estanSonando(alarmas?: AlarmaRecordatorio[], ahora = new Date()): Promise<AlarmaRecordatorio[]> {
+    const lista = alarmas ?? (await this.getAlarmas());
+    return lista.filter((alarma) => this.ocurrenciaSonando(alarma, ahora) !== null);
+  }
+
+  private cargarApagadas(): void {
+    if (this.apagadasCargadas) {
+      return;
+    }
+    this.apagadasCargadas = true;
+    try {
+      const raw = localStorage.getItem(this.CLAVE_APAGADAS);
+      if (raw) {
+        this.apagadas = new Set<string>(JSON.parse(raw));
+      }
+    } catch {
+      this.apagadas = new Set<string>();
+    }
+  }
+
+  private marcarApagada(clave: string): void {
+    this.cargarApagadas();
+    this.apagadas.add(clave);
+    try {
+      const vivas = [...this.apagadas].slice(-200);
+      localStorage.setItem(this.CLAVE_APAGADAS, JSON.stringify(vivas));
+    } catch {
+      // sin persistencia: solo memoria
+    }
+  }
+
+  private estaApagada(clave: string): boolean {
+    this.cargarApagadas();
+    return this.apagadas.has(clave);
   }
 
 
@@ -299,14 +342,21 @@ export class AlarmasService {
     return Math.abs(hash) % 900000 + 100000;
   }
 
+  private idOcurrencia(base: number, fecha: Date): number {
+    const dia = Math.floor(fecha.getTime() / 86400000) % 2147;
+    return dia * 1000000 + base;
+  }
+
   private idsNotificacion(alarma: AlarmaRecordatorio): number[] {
     const base = this.idNumerico(alarma.id);
-    const nuevos = Array.from(
+    const estables = this.generarOcurrencias(alarma, new Date())
+      .map((fecha) => this.idOcurrencia(base, fecha));
+    const viejos = alarma.dias.map((d) => base * 10 + d);
+    const masViejos = Array.from(
       { length: this.VENTANA_DIAS },
       (_, i) => base * 1000 + i
     );
-    const viejos = alarma.dias.map((d) => base * 10 + d);
-    return [...nuevos, ...viejos];
+    return [...estables, ...viejos, ...masViejos];
   }
 
   private generarOcurrencias(
@@ -348,26 +398,28 @@ export class AlarmasService {
   // =====================================================
 
   async apagarAlarma(alarma: AlarmaRecordatorio, ahora = new Date()) {
-    const ocurrencia = this.ocurrenciaEnCurso(alarma, ahora) ?? this.fechaOcurrencia(alarma, ahora);
-    const fecha = this.fechaClave(ocurrencia);
-
-    await this.actualizarAlarma(alarma.id, { confirmado: fecha });
-
-    if (!Capacitor.isNativePlatform()) {
+    const ocurrencia = this.ocurrenciaEnCurso(alarma, ahora);
+    if (!ocurrencia) {
       return;
     }
 
-    try {
-      const entregadas = await LocalNotifications.getDeliveredNotifications();
-      const aRemover = entregadas.notifications
-        .filter((n) => n.extra?.idAlarma === alarma.id)
-        .map((n) => n.id);
-      if (aRemover.length > 0) {
-        await LocalNotifications.removeDeliveredNotificationsById({ ids: aRemover });
+    const fecha = this.fechaClave(ocurrencia);
+    this.marcarApagada(`${alarma.id}:${fecha}`);
+
+    this.alarmasCache = this.alarmasCache.map((a) =>
+      a.id === alarma.id ? { ...a, confirmado: fecha } : a
+    );
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const idEntregada = this.idOcurrencia(this.idNumerico(alarma.id), ocurrencia);
+        await LocalNotifications.removeDeliveredNotificationsById({ ids: [idEntregada] });
+      } catch (e) {
+        console.error('No se pudo quitar la notificación', e);
       }
-    } catch (e) {
-      console.error('No se pudo quitar la notificación', e);
     }
+
+    await this.actualizarAlarma(alarma.id, { confirmado: fecha });
   }
 
 
@@ -462,16 +514,12 @@ export class AlarmasService {
     }
 
     try {
-      let permiso = await LocalNotifications.checkPermissions();
-      if (permiso.display !== 'granted') {
-        permiso = await LocalNotifications.requestPermissions();
-      }
-
+      const permiso = await LocalNotifications.checkPermissions();
       if (permiso.display !== 'granted') {
         return false;
       }
     } catch (e) {
-      console.error('No se pudo pedir permiso de notificaciones', e);
+      console.error('No se pudo comprobar el permiso de notificaciones', e);
       return false;
     }
 
@@ -507,12 +555,13 @@ export class AlarmasService {
         notifications: this.idsNotificacion(alarma).map((id) => ({ id }))
       });
 
-      const notificaciones = ocurrencias.map((fecha, i) => ({
-        id: this.idNumerico(alarma.id) * 1000 + i,
+      const notificaciones = ocurrencias.map((fecha) => ({
+        id: this.idOcurrencia(this.idNumerico(alarma.id), fecha),
         title: `🔔 ${alarma.nombre}`,
         body: alarma.descripcion || 'Tienes un recordatorio programado',
         channelId: CANAL,
         sound: 'alarmmelodia',
+        actionTypeId: TIPO_ACCION,
         schedule: {
           at: fecha,
           allowWhileIdle: true
@@ -572,6 +621,28 @@ export class AlarmasService {
         await this.cancelarAlarma(alarma);
       }
     }
+    await this.limpiarApagadas(alarmas);
+  }
+
+  private async limpiarApagadas(alarmas: AlarmaRecordatorio[]) {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    for (const alarma of alarmas) {
+      const ocurrencia = this.ocurrenciaEnCurso(alarma, new Date());
+      if (!ocurrencia) {
+        continue;
+      }
+      const fecha = this.fechaClave(ocurrencia);
+      if (this.estaApagada(`${alarma.id}:${fecha}`)) {
+        try {
+          const idEntregada = this.idOcurrencia(this.idNumerico(alarma.id), ocurrencia);
+          await LocalNotifications.removeDeliveredNotificationsById({ ids: [idEntregada] });
+        } catch {
+          // ignorar: no estaba entregada
+        }
+      }
+    }
   }
 
 
@@ -586,29 +657,71 @@ export class AlarmasService {
   escucharTap(handler: (idAlarma: string) => void) {
     this.tapHandler = handler;
 
-    if (!Capacitor.isNativePlatform() || this.suscripcion) {
-      return;
+    if (Capacitor.isNativePlatform() && !this.suscripcion) {
+      this.suscripcion = LocalNotifications.addListener(
+        'localNotificationActionPerformed',
+        (data: any) => {
+          const idAlarma = data?.notification?.extra?.idAlarma;
+          const fechaMs = data?.notification?.extra?.fecha;
+          if (data?.actionId === ACCION_APAGAR && typeof idAlarma === 'string') {
+            this.apagarDesdeNotificacion(idAlarma, typeof fechaMs === 'number' ? fechaMs : undefined);
+          } else if (typeof idAlarma === 'string' && this.tapHandler) {
+            this.tapHandler(idAlarma);
+          }
+        }
+      );
+
+      LocalNotifications.addListener(
+        'localNotificationReceived',
+        () => {
+          if (this.disparoHandler) {
+            this.disparoHandler();
+          }
+        }
+      );
+
+      App.addListener('appStateChange', (estado) => {
+        if (estado.isActive) {
+          this.sincronizar();
+        }
+      });
     }
 
-    this.suscripcion = LocalNotifications.addListener(
-      'localNotificationActionPerformed',
-      (data: any) => {
-        const idAlarma = data?.notification?.extra?.idAlarma;
-        if (typeof idAlarma === 'string' && this.tapHandler) {
-          this.tapHandler(idAlarma);
-        }
-      }
-    );
-
-    LocalNotifications.addListener(
-      'localNotificationReceived',
-      () => {
-        if (this.disparoHandler) {
-          this.disparoHandler();
-        }
-      }
-    );
-
+    this.registrarAccionApagar();
     this.sincronizar();
+  }
+
+  private async registrarAccionApagar() {
+    if (!Capacitor.isNativePlatform() || this.accionesRegistradas) {
+      return;
+    }
+    try {
+      await LocalNotifications.registerActionTypes({
+        types: [
+          {
+            id: TIPO_ACCION,
+            actions: [
+              { id: ACCION_APAGAR, title: 'Apagar alarma' }
+            ]
+          }
+        ]
+      });
+      this.accionesRegistradas = true;
+    } catch (e) {
+      console.error('No se pudo registrar la acción de apagado', e);
+    }
+  }
+
+  private async apagarDesdeNotificacion(idAlarma: string, fechaMs?: number) {
+    if (fechaMs) {
+      this.marcarApagada(`${idAlarma}:${this.fechaClave(new Date(fechaMs))}`);
+    }
+    const alarma =
+      this.alarmasCache.find((a) => a.id === idAlarma) ||
+      (await this.getAlarmas()).find((a) => a.id === idAlarma);
+    if (!alarma) {
+      return;
+    }
+    await this.apagarAlarma(alarma, fechaMs ? new Date(fechaMs) : new Date());
   }
 }

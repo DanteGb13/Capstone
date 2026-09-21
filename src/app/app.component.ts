@@ -1,5 +1,7 @@
 import { Component } from '@angular/core';
 import { IonApp, IonRouterOutlet } from '@ionic/angular';
+import { Router } from '@angular/router';
+import { AlarmasService } from './services/alarmas/alarmas';
 
 @Component({
   selector: 'app-root',
@@ -7,5 +9,12 @@ import { IonApp, IonRouterOutlet } from '@ionic/angular';
   imports: [IonApp, IonRouterOutlet],
 })
 export class AppComponent {
-  constructor() {}
+  constructor(
+    private router: Router,
+    private alarmasService: AlarmasService
+  ) {
+    this.alarmasService.escucharTap(() => {
+      this.router.navigate(['/recordatorios']);
+    });
+  }
 }

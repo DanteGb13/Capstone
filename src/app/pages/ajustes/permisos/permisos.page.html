@@ -13,6 +13,11 @@
 
   <div class="permisos-container">
 
+    <div class="permiso-nota-recordatorios">
+      <ion-icon name="notifications-outline"></ion-icon>
+      <span><strong>Para que los recordatorios suenen</strong> (aunque cierres la app o apagues la pantalla) activa estos 3: Notificaciones, Alarma exacta y Batería.</span>
+    </div>
+
     <div class="permiso-card" *ngFor="let permiso of permisos">
       <div class="permiso-header">
         <div class="permiso-icono">
@@ -44,7 +49,11 @@
       </div>
 
       <div class="permiso-detalle" *ngIf="permiso.id === 'notificaciones'">
-        <p>Permite recibir alertas de seguridad, recordatorios de medicinas y avisos importantes.</p>
+        <p>Permite recibir alertas de seguridad, recordatorios de medicinas y avisos importantes. Necesario para que aparezca el aviso del recordatorio en la barra.</p>
+      </div>
+
+      <div class="permiso-detalle" *ngIf="permiso.id === 'alarma-exacta'">
+        <p>Permite que el recordatorio suene EXACTAMENTE a la hora marcada y no llegue con retraso por el modo reposo del teléfono.</p>
       </div>
 
       <div class="permiso-detalle" *ngIf="permiso.id === 'telefono'">
@@ -56,7 +65,7 @@
       </div>
 
       <div class="permiso-detalle" *ngIf="permiso.id === 'bateria'">
-        <p>Permite que la app funcione en segundo plano sin que Android la cierre automáticamente.</p>
+        <p>Permite que la app funcione en segundo plano sin que Android la cierre automáticamente. Esencial para que la alarma suene con el teléfono en reposo y pantalla apagada.</p>
       </div>
     </div>
 

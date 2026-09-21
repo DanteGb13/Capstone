@@ -142,7 +142,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.timer = setInterval(() => {
       this.cargar();
       this.changeDetectorRef.detectChanges();
-    }, 1000);
+    }, 3000);
   }
 
   private detenerTimer() {
@@ -163,12 +163,12 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
         if (estado === 'sinNotif') {
           this.mostrarInfo(
             'Permiso de notificaciones',
-            'Sin el permiso las alarmas no podrán avisarte. Puedes activarlo después en Ajustes → Apps → SiempreCerca → Notificaciones.'
+            'Sin el permiso las alarmas no podrán avisarte. Actívalo en Ajustes → Permisos.'
           );
         } else if (estado === 'inexacta') {
           this.mostrarInfo(
             'Activación pendiente',
-            'La alarma puede sonar tarde si no activas el permiso de alarmas exactas. Puedes activarlo después en Ajustes → Apps → SiempreCerca → Alarmas y recordatorios.'
+            'La alarma puede sonar tarde si no activas el permiso de alarmas exactas. Actívalo en Ajustes → Permisos.'
           );
         }
       });
@@ -183,7 +183,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
 
   async cargar() {
     this.alarmas = await this.alarmasService.getAlarmas();
-    this.sonando = await this.alarmasService.estanSonando();
+    this.sonando = await this.alarmasService.estanSonando(this.alarmas);
   }
 
   volver() {
@@ -208,91 +208,11 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     });
   }
 
-  private preguntarAccion(header: string, message: string): Promise<string> {
-    return new Promise(async (resolve) => {
-      const alerta = await this.alertController.create({
-        header,
-        message,
-        buttons: [
-          { text: 'Ahora no', role: 'cancel', handler: () => resolve('cancel') },
-          { text: 'Sí, activar', handler: () => resolve('ok') }
-        ]
-      });
-      await alerta.present();
-      await alerta.onDidDismiss().then(() => resolve('cancel'));
-    });
-  }
-
-  private async preguntarPermisoNotificacion(): Promise<boolean> {
-    if (await this.alarmasService.notifPermitidas()) {
-      return true;
-    }
-
-    const respuesta = await this.preguntarAccion(
-      'Permiso de notificaciones',
-      'Para avisarte cuando toque el recordatorio, la app necesita mostrar notificaciones. ¿Permito enviarlas?'
-    );
-
-    if (respuesta === 'ok') {
-      await this.alarmasService.pedirPermisoNotif();
-    }
-
-    return await this.alarmasService.notifPermitidas();
-  }
-
-  private async preguntarAlarmaExacta(): Promise<boolean> {
-    if (await this.alarmasService.checarAlarmaExacta()) {
-      return true;
-    }
-
-    const respuesta = await this.preguntarAccion(
-      'Alarmas a tiempo',
-      'Para que el recordatorio suene EXACTAMENTE a la hora marcada (y no llegue tarde), Android pide activar el permiso de alarmas exactas. Se abrirá la pantalla de Ajustes para activarlo.'
-    );
-
-    if (respuesta === 'ok') {
-      const activo = await this.alarmasService.abrirAjustesAlarmaExacta();
-      if (!activo) {
-        await this.mostrarInfo(
-          'Activación pendiente',
-          'No se activó el permiso de alarmas exactas, así que la alarma puede sonar con retraso. Puedes activarlo más tarde en Ajustes → Apps → SiempreCerca → Alarmas y recordatorios.'
-        );
-      }
-    }
-
-    return await this.alarmasService.checarAlarmaExacta();
-  }
-
-  private async preguntarBateria() {
-    const ignorada = await this.alarmasService.bateriaIgnorada();
-    if (ignorada) {
-      return;
-    }
-
-    const respuesta = await this.preguntarAccion(
-      'Funcionar en segundo plano',
-      'Para que la alarma suene aunque no estés usando la app (con el celular apagado de pantalla), conviene que Android no ahorre batería en esta app. Se abrirá la pantalla de batería para permitirlo.'
-    );
-
-    if (respuesta === 'ok') {
-      const activo = await this.alarmasService.pedirIgnorarBateria();
-      if (!activo) {
-        await this.mostrarInfo(
-          'Optimización de batería',
-          'No se desactivó el ahorro de batería. La alarma puede atrasarse con el teléfono en reposo. Puedes cambiarlo después en Ajustes → Apps → SiempreCerca → Batería.'
-        );
-      }
-    }
-  }
-
   async prepararAlarma(): Promise<'ok' | 'sinNotif' | 'inexacta'> {
-    const notif = await this.preguntarPermisoNotificacion();
+    const notif = await this.alarmasService.notifPermitidas();
     if (!notif) {
       return 'sinNotif';
     }
-
-    await this.preguntarAlarmaExacta();
-    await this.preguntarBateria();
 
     const exacta = await this.alarmasService.checarAlarmaExacta();
     return exacta ? 'ok' : 'inexacta';
@@ -466,15 +386,23 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
       });
 
       this.mostrarModal = false;
+
+      if (!ok) {
+        await this.mostrarInfo(
+          'No se pudo guardar',
+          'Hubo un problema al guardar los cambios. Revisa tu conexión e inténtalo de nuevo.'
+        );
+        await this.cargar();
+        return;
+      }
+
       await this.cargar();
 
-      if (ok) {
-        const editada = this.alarmas.find((a) => a.id === this.editandoId);
-        if (editada && editada.activa) {
-          await this.activarConPermisos(editada);
-        } else if (editada) {
-          await this.alarmasService.activarDesactivar(editada, false);
-        }
+      const editada = this.alarmas.find((a) => a.id === this.editandoId);
+      if (editada && editada.activa) {
+        await this.activarConPermisos(editada);
+      } else if (editada) {
+        await this.alarmasService.activarDesactivar(editada, false);
       }
       return;
     }
@@ -489,11 +417,18 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     );
 
     this.mostrarModal = false;
-    await this.cargar();
 
-    if (alarma) {
-      await this.activarConPermisos(alarma);
+    if (!alarma) {
+      await this.mostrarInfo(
+        'No se pudo guardar',
+        'Hubo un problema al crear el recordatorio. Revisa tu conexión e inténtalo de nuevo.'
+      );
+      await this.cargar();
+      return;
     }
+
+    await this.cargar();
+    await this.activarConPermisos(alarma);
   }
 
   private async activarConPermisos(alarma: AlarmaRecordatorio) {
@@ -502,7 +437,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     if (estado === 'sinNotif') {
       await this.mostrarInfo(
         'Permiso de notificaciones',
-        'Sin el permiso la alarma no podrá avisarte. El recordatorio quedó guardado pero apagado hasta que actives el permiso en Ajustes → Apps → SiempreCerca → Notificaciones.'
+        'Sin el permiso la alarma no podrá avisarte. El recordatorio quedó guardado pero apagado hasta que actives el permiso en Ajustes → Permisos.'
       );
       this.desactivarAlarma(alarma);
       return;
@@ -511,7 +446,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     if (estado === 'inexacta') {
       await this.mostrarInfo(
         'Activación pendiente',
-        'El permiso de alarmas exactas no está activado, así que la alarma puede sonar con retraso. Se programará igual; puedes activarlo después en Ajustes → Apps → SiempreCerca → Alarmas y recordatorios.'
+        'El permiso de alarmas exactas no está activado, así que la alarma puede sonar con retraso. Se programará igual; puedes activarlo después en Ajustes → Permisos.'
       );
     }
 
@@ -593,7 +528,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     if (estado === 'sinNotif') {
       await this.mostrarInfo(
         'Permiso de notificaciones',
-        'Sin el permiso la alarma no podrá avisarte. Puedes activarlo en Ajustes → Apps → SiempreCerca → Notificaciones.'
+        'Sin el permiso la alarma no podrá avisarte. Puedes activarlo en Ajustes → Permisos.'
       );
       await this.desactivarAlarma({ ...alarma, activa: false });
       return;
@@ -602,7 +537,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     if (estado === 'inexacta') {
       await this.mostrarInfo(
         'Activación pendiente',
-        'El permiso de alarmas exactas no está activado, así que puede sonar con retraso. Puedes activarlo en Ajustes → Apps → SiempreCerca → Alarmas y recordatorios.'
+        'El permiso de alarmas exactas no está activado, así que puede sonar con retraso. Puedes activarlo en Ajustes → Permisos.'
       );
     }
 
@@ -622,6 +557,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
 
   async apagar(alarma: AlarmaRecordatorio) {
     this.sonando = this.sonando.filter((a) => a.id !== alarma.id);
+    this.changeDetectorRef.detectChanges();
     await this.alarmasService.apagarAlarma(alarma);
     await this.cargar();
   }
@@ -642,7 +578,13 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
           role: 'destructive',
           handler: async () => {
             await this.alarmasService.cancelarAlarma(alarma);
-            await this.alarmasService.eliminarAlarma(alarma.id);
+            const ok = await this.alarmasService.eliminarAlarma(alarma.id);
+            if (!ok) {
+              await this.mostrarInfo(
+                'No se pudo eliminar',
+                'Hubo un problema al eliminar el recordatorio. Revisa tu conexión e inténtalo de nuevo.'
+              );
+            }
             await this.cargar();
           }
         }
