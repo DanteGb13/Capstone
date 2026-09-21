@@ -3,6 +3,7 @@ import { SupabaseService } from '../../supabase/supabase';
 import { PushNotificationService } from '../push-notification/push-notification';
 import { PermisosExtra } from '../permisos-extra/permisos-extra';
 import { Capacitor } from '@capacitor/core';
+import { AlertController } from '@ionic/angular';
 
 export interface CuidadorVinculado {
   id: string;
@@ -28,7 +29,8 @@ export class SOSService {
 
   constructor(
     private supabaseService: SupabaseService,
-    private pushService: PushNotificationService
+    private pushService: PushNotificationService,
+    private alertCtrl: AlertController
   ) {}
 
   async obtenerCuidadores(): Promise<CuidadorVinculado[]> {
@@ -127,45 +129,68 @@ export class SOSService {
       smsEnviado: false
     };
 
+    console.log('SOS: Iniciando...');
+
     let cuidadores: CuidadorVinculado[] = [];
     try {
       cuidadores = await this.obtenerCuidadores();
     } catch (e) {
-      console.error('Error obteniendo cuidadores:', e);
+      console.error('SOS: Error obteniendo cuidadores:', e);
     }
 
+    console.log('SOS: Cuidadores encontrados:', cuidadores.length);
+
     if (cuidadores.length === 0) {
-      console.warn('No hay cuidadores vinculados');
+      const alert = await this.alertCtrl.create({
+        header: 'SOS Error',
+        message: 'No hay cuidadores vinculados. No se puede enviar la alerta.',
+        buttons: ['OK']
+      });
+      await alert.present();
       return resultado;
     }
 
+    console.log('SOS: Cuidadores:', JSON.stringify(cuidadores.map(c => ({ id: c.id, nombre: c.nombre, telefono: c.telefono }))));
+
     let ubicacion = null;
     let nombreAdulto = 'Desconocido';
-    try { ubicacion = await this.obtenerUbicacionActual(); } catch (e) { console.warn('Error ubicación:', e); }
-    try { nombreAdulto = await this.obtenerNombreAdulto(); } catch (e) { console.warn('Error nombre:', e); }
+    try { ubicacion = await this.obtenerUbicacionActual(); } catch (e) { console.warn('SOS: Error ubicación:', e); }
+    try { nombreAdulto = await this.obtenerNombreAdulto(); } catch (e) { console.warn('SOS: Error nombre:', e); }
+
+    console.log('SOS: Ubicación:', JSON.stringify(ubicacion));
+    console.log('SOS: Nombre:', nombreAdulto);
 
     const ubicacionTexto = ubicacion
       ? `https://maps.google.com/?q=${ubicacion.lat},${ubicacion.lng}`
       : 'Ubicación no disponible';
 
     for (const cuidador of cuidadores) {
-      this.pushService.enviarPushAUsuario(
-        cuidador.id,
-        'SOS - Alerta de Emergencia',
-        `${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`,
-        { tipo: 'sos', latitud: ubicacion?.lat, longitud: ubicacion?.lng }
-      ).then(ok => { if (ok) resultado.pushEnviado = true; })
-       .catch(e => console.error('Error push:', e));
+      console.log('SOS: Enviando push a:', cuidador.id, cuidador.nombre);
+      try {
+        const ok = await this.pushService.enviarPushAUsuario(
+          cuidador.id,
+          'SOS - Alerta de Emergencia',
+          `${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`,
+          { tipo: 'sos', latitud: ubicacion?.lat?.toString() || '', longitud: ubicacion?.lng?.toString() || '' }
+        );
+        console.log('SOS: Push resultado para', cuidador.nombre, ':', ok);
+        if (ok) resultado.pushEnviado = true;
+      } catch (e) {
+        console.error('SOS: Error push para', cuidador.nombre, ':', e);
+      }
     }
 
     const cuidadorConTelefono = cuidadores.find(c => c.telefono && c.telefono.length >= 9);
     if (cuidadorConTelefono) {
+      console.log('SOS: Llamando a:', cuidadorConTelefono.telefono);
       try {
         await this.realizarLlamada(cuidadorConTelefono.telefono);
         resultado.llamadaIniciada = true;
       } catch (e) {
-        console.error('Error llamada:', e);
+        console.error('SOS: Error llamada:', e);
       }
+    } else {
+      console.warn('SOS: No hay cuidador con teléfono válido');
     }
 
     return resultado;
