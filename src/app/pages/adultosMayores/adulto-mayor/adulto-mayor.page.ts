@@ -25,7 +25,8 @@ import {
   IonIcon,
   IonButton,
   IonModal,
-  IonButtons
+  IonButtons,
+  IonSpinner
 } from '@ionic/angular';
 
 import {
@@ -38,6 +39,7 @@ import * as QRCode from 'qrcode';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { Gps } from '../../../services/Backend/gps/gps';
 import { AlarmasService, AlarmaRecordatorio } from '../../../services/alarmas/alarmas';
+import { SOSService, ResultadoSOS } from '../../../services/backend/sos/sos';
 
 
 @Component({
@@ -59,6 +61,7 @@ import { AlarmasService, AlarmaRecordatorio } from '../../../services/alarmas/al
     IonButton,
     IonModal,
     IonButtons,
+    IonSpinner,
 
     CommonModule,
     FormsModule
@@ -154,7 +157,9 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
     private changeDetectorRef: ChangeDetectorRef,
 
-    private router: Router
+    private router: Router,
+
+    private sosService: SOSService
 
   ) {
 
@@ -311,6 +316,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   mostrarModalSOS: boolean = false;
 
+  ejecutandoSOS: boolean = false;
+
   abrirSOS() {
     this.mostrarModalSOS = true;
   }
@@ -319,10 +326,20 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.mostrarModalSOS = false;
   }
 
-  confirmarSOS() {
+  async confirmarSOS() {
     this.mostrarModalSOS = false;
-    // TODO: implementar lógica de emergencia (avisar al cuidador)
-    console.log('SOS confirmado: avisar al cuidador');
+    this.ejecutandoSOS = true;
+    this.changeDetectorRef.detectChanges();
+
+    try {
+      const resultado = await this.sosService.ejecutarSOS();
+      console.log('SOS ejecutado:', resultado);
+    } catch (e) {
+      console.error('Error ejecutando SOS:', e);
+    }
+
+    this.ejecutandoSOS = false;
+    this.changeDetectorRef.detectChanges();
   }
 
 

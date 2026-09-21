@@ -594,18 +594,28 @@
         <h3>
           S.O.S
         </h3>
-        <p>
+        <p *ngIf="!ejecutandoSOS">
           ¿Estás seguro de dar aviso a tu cuidador?
+        </p>
+        <p *ngIf="ejecutandoSOS">
+          Enviando alerta de emergencia...
         </p>
       </div>
 
-      <div class="sos-acciones">
+      <div class="sos-acciones" *ngIf="!ejecutandoSOS">
         <ion-button expand="block" fill="solid" class="sos-alerta" (click)="confirmarSOS()">
           Alertar
         </ion-button>
 
         <ion-button expand="block" fill="solid" class="sos-cancelar" (click)="cerrarModalSOS()">
           Cancelar
+        </ion-button>
+      </div>
+
+      <div class="sos-acciones" *ngIf="ejecutandoSOS">
+        <ion-button expand="block" fill="solid" class="sos-alerta" disabled>
+          <ion-spinner name="crescent"></ion-spinner>
+          Enviando...
         </ion-button>
       </div>
 

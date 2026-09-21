@@ -1,0 +1,198 @@
+import { Injectable, NgZone } from '@angular/core';
+import { PushNotifications, Token, PushNotification } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
+import { SupabaseService } from '../../supabase/supabase';
+import { Router } from '@angular/router';
+import { AlertController } from '@ionic/angular';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class PushNotificationService {
+
+  private tokenFCM: string | null = null;
+  private isNative = Capacitor.isNativePlatform();
+
+  // CAMBIAR A true CUANDO FIREBASE ESTÉ CONFIGURADO
+  private pushHabilitado = true;
+
+  constructor(
+    private supabaseService: SupabaseService,
+    private router: Router,
+    private ngZone: NgZone,
+    private alertCtrl: AlertController
+  ) {}
+
+  async inicializar(): Promise<void> {
+    if (!this.isNative || !this.pushHabilitado) return;
+
+    try {
+      const permiso = await PushNotifications.requestPermissions();
+      if (permiso.receive !== 'granted') {
+        console.warn('Permiso de push notifications no concedido');
+        return;
+      }
+
+      await PushNotifications.register();
+
+      PushNotifications.addListener('registration', (token: Token) => {
+        this.tokenFCM = token.value;
+        console.log('Token FCM:', token.value);
+        this.guardarToken(token.value);
+      });
+
+      PushNotifications.addListener('registrationError', (error: any) => {
+        console.error('Error de registro push:', error);
+      });
+
+      PushNotifications.addListener('pushNotificationReceived', (notification: PushNotification) => {
+        console.log('Notificación recibida:', notification);
+        this.mostrarAlerta(notification);
+      });
+
+      PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+        console.log('Acción en notificación:', action);
+        this.ngZone.run(() => {
+          this.router.navigate(['/adulto-mayor']);
+        });
+      });
+
+    } catch (e) {
+      console.warn('Push notifications no disponible:', e);
+    }
+  }
+
+  async solicitarPermisoNotificaciones(): Promise<boolean> {
+    if (!this.isNative || !this.pushHabilitado) return true;
+
+    try {
+      const permiso = await PushNotifications.requestPermissions();
+      return permiso.receive === 'granted';
+    } catch {
+      return false;
+    }
+  }
+
+  async verificarPermisoNotificaciones(): Promise<boolean> {
+    if (!this.isNative || !this.pushHabilitado) return true;
+
+    try {
+      const permiso = await PushNotifications.checkPermissions();
+      return permiso.receive === 'granted';
+    } catch {
+      return false;
+    }
+  }
+
+  private async guardarToken(token: string): Promise<void> {
+    try {
+      const client = this.supabaseService.getClient();
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) return;
+
+      const { error } = await client
+        .from('push_tokens')
+        .upsert(
+          {
+            id_usuario: user.id,
+            token: token,
+            plataforma: 'android',
+            updated_at: new Date().toISOString()
+          },
+          { onConflict: 'id_usuario,token' }
+        );
+
+      if (error) {
+        console.error('Error guardando token:', error);
+      }
+    } catch (e) {
+      console.error('Error guardando token:', e);
+    }
+  }
+
+  async eliminarToken(): Promise<void> {
+    if (!this.tokenFCM) return;
+
+    try {
+      const client = this.supabaseService.getClient();
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) return;
+
+      await client
+        .from('push_tokens')
+        .delete()
+        .eq('id_usuario', user.id)
+        .eq('token', this.tokenFCM);
+
+      this.tokenFCM = null;
+    } catch (e) {
+      console.error('Error eliminando token:', e);
+    }
+  }
+
+  async enviarPushAUsuario(
+    idUsuarioDestino: string,
+    titulo: string,
+    cuerpo: string,
+    data?: any
+  ): Promise<boolean> {
+    if (!this.pushHabilitado) return false;
+
+    try {
+      const client = this.supabaseService.getClient();
+
+      const { data: tokens, error } = await client
+        .from('push_tokens')
+        .select('token')
+        .eq('id_usuario', idUsuarioDestino);
+
+      if (error || !tokens || tokens.length === 0) {
+        console.warn('No se encontraron tokens para el usuario:', idUsuarioDestino);
+        return false;
+      }
+
+      for (const t of tokens) {
+        await this.enviarPushFirebase(t.token, titulo, cuerpo, data);
+      }
+
+      return true;
+    } catch (e) {
+      console.error('Error enviando push:', e);
+      return false;
+    }
+  }
+
+  private async enviarPushFirebase(
+    token: string,
+    titulo: string,
+    cuerpo: string,
+    data?: any
+  ): Promise<void> {
+    const client = this.supabaseService.getClient();
+    const { error } = await client.functions.invoke('enviar-push', {
+      body: {
+        token,
+        titulo,
+        cuerpo,
+        data: data || {}
+      }
+    });
+
+    if (error) {
+      console.error('Error en Edge Function push:', error);
+    }
+  }
+
+  private async mostrarAlerta(notification: PushNotification): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header: notification.title || 'Alerta',
+      message: notification.body || '',
+      buttons: ['OK']
+    });
+    await alert.present();
+  }
+
+  getToken(): string | null {
+    return this.tokenFCM;
+  }
+}
