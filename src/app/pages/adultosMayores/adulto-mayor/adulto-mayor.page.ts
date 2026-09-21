@@ -39,7 +39,9 @@ import * as QRCode from 'qrcode';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { Gps } from '../../../services/Backend/gps/gps';
 import { AlarmasService, AlarmaRecordatorio } from '../../../services/alarmas/alarmas';
-import { SOSService, ResultadoSOS } from '../../../services/backend/sos/sos';
+import { SOSService, ResultadoSOS } from '../../../services/Backend/sos/sos';
+import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
+import { Capacitor } from '@capacitor/core';
 
 
 @Component({
@@ -176,6 +178,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   // =====================================================
 
   async ngOnInit() {
+
+    // Crear canal de notificaciones SOS
+    if (Capacitor.isNativePlatform()) {
+      SiempreCerca.crearCanalSOS().catch(() => {});
+    }
 
     // 1. Cargar datos del usuario UNA sola vez (nombre + id + dirección)
     const usuario = await this.cuidadoresService.cargarUsuario();
@@ -333,9 +340,9 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
     try {
       const resultado = await this.sosService.ejecutarSOS();
-      console.log('SOS ejecutado:', resultado);
-    } catch (e) {
-      console.error('Error ejecutando SOS:', e);
+      console.log('SOS resultado:', JSON.stringify(resultado));
+    } catch (e: any) {
+      console.error('SOS error:', e);
     }
 
     this.ejecutandoSOS = false;

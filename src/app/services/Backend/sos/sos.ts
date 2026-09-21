@@ -1,9 +1,8 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
-import { PushNotificationService } from '../../Backend/push-notification/push-notification';
-import { PermisosExtra } from '../../Backend/permisos-extra/permisos-extra';
+import { PushNotificationService } from '../push-notification/push-notification';
+import { PermisosExtra } from '../permisos-extra/permisos-extra';
 import { Capacitor } from '@capacitor/core';
-import { Haptics } from '@capacitor/haptics';
 
 export interface CuidadorVinculado {
   id: string;
@@ -128,57 +127,44 @@ export class SOSService {
       smsEnviado: false
     };
 
-    this.vibrar().catch(() => {});
+    let cuidadores: CuidadorVinculado[] = [];
+    try {
+      cuidadores = await this.obtenerCuidadores();
+    } catch (e) {
+      console.error('Error obteniendo cuidadores:', e);
+    }
 
-    const cuidadores = await this.obtenerCuidadores().catch(() => []);
     if (cuidadores.length === 0) {
       console.warn('No hay cuidadores vinculados');
       return resultado;
     }
 
-    const ubicacion = await this.obtenerUbicacionActual().catch(() => null);
-    const nombreAdulto = await this.obtenerNombreAdulto().catch(() => 'Desconocido');
+    let ubicacion = null;
+    let nombreAdulto = 'Desconocido';
+    try { ubicacion = await this.obtenerUbicacionActual(); } catch (e) { console.warn('Error ubicación:', e); }
+    try { nombreAdulto = await this.obtenerNombreAdulto(); } catch (e) { console.warn('Error nombre:', e); }
 
     const ubicacionTexto = ubicacion
       ? `https://maps.google.com/?q=${ubicacion.lat},${ubicacion.lng}`
       : 'Ubicación no disponible';
 
     for (const cuidador of cuidadores) {
-      try {
-        await this.pushService.enviarPushAUsuario(
-          cuidador.id,
-          'SOS - Alerta de Emergencia',
-          `${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`,
-          {
-            tipo: 'sos',
-            latitud: ubicacion?.lat,
-            longitud: ubicacion?.lng
-          }
-        );
-        resultado.pushEnviado = true;
-      } catch (e) {
-        console.error('Error enviando push a cuidador:', cuidador.nombre, e);
-      }
+      this.pushService.enviarPushAUsuario(
+        cuidador.id,
+        'SOS - Alerta de Emergencia',
+        `${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`,
+        { tipo: 'sos', latitud: ubicacion?.lat, longitud: ubicacion?.lng }
+      ).then(ok => { if (ok) resultado.pushEnviado = true; })
+       .catch(e => console.error('Error push:', e));
     }
 
     const cuidadorConTelefono = cuidadores.find(c => c.telefono && c.telefono.length >= 9);
-
     if (cuidadorConTelefono) {
       try {
         await this.realizarLlamada(cuidadorConTelefono.telefono);
         resultado.llamadaIniciada = true;
       } catch (e) {
-        console.error('Error en llamada:', e);
-      }
-    }
-
-    if (cuidadorConTelefono) {
-      try {
-        const mensajeSMS = `SOS! ${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`;
-        await this.enviarSMS(cuidadorConTelefono.telefono, mensajeSMS);
-        resultado.smsEnviado = true;
-      } catch (e) {
-        console.error('Error en SMS:', e);
+        console.error('Error llamada:', e);
       }
     }
 
@@ -202,18 +188,6 @@ export class SOSService {
       await PermisosExtra.enviarSMS({ telefono: telLimpio, mensaje });
     } else {
       window.location.href = `sms:${telLimpio}?body=${encodeURIComponent(mensaje)}`;
-    }
-  }
-
-  private async vibrar(): Promise<void> {
-    try {
-      if (this.isNative) {
-        await Haptics.vibrate({ duration: 2000 });
-      } else if ('vibrate' in navigator) {
-        navigator.vibrate(2000);
-      }
-    } catch (e) {
-      console.warn('Error vibrando:', e);
     }
   }
 

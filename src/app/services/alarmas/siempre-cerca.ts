@@ -2,6 +2,7 @@ import { registerPlugin } from '@capacitor/core';
 
 export interface SiempreCercaPlugin {
   crearCanalAlarma(): Promise<void>;
+  crearCanalSOS(): Promise<void>;
   pedirIgnorarOptimizacion(): Promise<void>;
   ignorandoBateria(): Promise<{ si: boolean }>;
 }

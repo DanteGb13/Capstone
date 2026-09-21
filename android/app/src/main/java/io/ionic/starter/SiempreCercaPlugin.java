@@ -20,6 +20,30 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 public class SiempreCercaPlugin extends Plugin {
 
     public static final String CANAL_ALARMA_ID = "recordatorios-alarma";
+    public static final String CANAL_SOS_ID = "sos-alertas";
+
+    @PluginMethod
+    public void crearCanalSOS(PluginCall call) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager nm = getContext().getSystemService(NotificationManager.class);
+            NotificationChannel canal = nm.getNotificationChannel(CANAL_SOS_ID);
+            if (canal == null) {
+                canal = new NotificationChannel(
+                    CANAL_SOS_ID,
+                    "Alertas SOS",
+                    NotificationManager.IMPORTANCE_HIGH
+                );
+                canal.setDescription("Alertas de emergencia del adulto mayor");
+                canal.enableVibration(true);
+                canal.setVibrationPattern(new long[] { 0, 500, 200, 500, 200, 500 });
+                canal.enableLights(true);
+                canal.setLightColor(Color.RED);
+                canal.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
+                nm.createNotificationChannel(canal);
+            }
+        }
+        call.resolve();
+    }
 
     @PluginMethod
     public void crearCanalAlarma(PluginCall call) {

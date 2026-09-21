@@ -17,6 +17,9 @@ import {
 
 import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
+import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
+import { PushNotificationService } from '../../../services/Backend/push-notification/push-notification';
+import { Capacitor } from '@capacitor/core';
 
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
@@ -83,7 +86,8 @@ export class CuidadorPage implements OnInit, OnDestroy {
     private vinculacionService: Vinculacion,
     private cuidadoresService: CuidadoresService,
     private changeDetectorRef: ChangeDetectorRef,
-    private router: Router
+    private router: Router,
+    private pushService: PushNotificationService
   ) {
     addIcons(icons);
   }
@@ -95,6 +99,12 @@ export class CuidadorPage implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
+
+    // Crear canal SOS + inicializar push para recibir alertas
+    if (Capacitor.isNativePlatform()) {
+      SiempreCerca.crearCanalSOS().catch(() => {});
+      this.pushService.inicializar().catch(() => {});
+    }
 
     await this.cargarAdultos();
 

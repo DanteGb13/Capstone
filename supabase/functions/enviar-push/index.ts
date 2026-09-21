@@ -60,6 +60,7 @@ serve(async (req) => {
             priority: "max",
             default_vibrate_timings: true,
             default_sound: true,
+            vibrate: [0, 500, 200, 500, 200, 500],
           },
         },
       },
