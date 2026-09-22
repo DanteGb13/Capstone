@@ -4,6 +4,7 @@ import { Capacitor } from '@capacitor/core';
 import { SupabaseService } from '../../supabase/supabase';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
+import { NavegacionRolService } from '../../navegacion-rol/navegacion-rol';
 
 @Injectable({
   providedIn: 'root'
@@ -20,7 +21,8 @@ export class PushNotificationService {
     private supabaseService: SupabaseService,
     private router: Router,
     private ngZone: NgZone,
-    private alertCtrl: AlertController
+    private alertCtrl: AlertController,
+    private navRol: NavegacionRolService
   ) {}
 
   async inicializar(): Promise<void> {
@@ -76,8 +78,8 @@ export class PushNotificationService {
 
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       console.log('Acción en notificación:', action);
-      this.ngZone.run(() => {
-        this.router.navigate(['/adulto-mayor']);
+      this.ngZone.run(async () => {
+        await this.navRol.irAPanelPrincipal();
       });
     });
   }
@@ -242,6 +244,10 @@ export class PushNotificationService {
   private async publicarEnBarra(notification: PushNotification): Promise<void> {
     try {
       const { LocalNotifications } = await import('@capacitor/local-notifications');
+      const perm = await LocalNotifications.checkPermissions();
+      if (perm.display !== 'granted') {
+        await LocalNotifications.requestPermissions();
+      }
       await LocalNotifications.schedule({
         notifications: [{
           title: notification.title || 'Alerta SOS',
@@ -250,6 +256,7 @@ export class PushNotificationService {
           channelId: 'sos-alertas'
         }]
       });
+      console.log('Notificación publicada en barra');
     } catch (e) {
       console.warn('Error publicando en barra:', e);
     }

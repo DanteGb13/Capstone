@@ -18,6 +18,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'cuidado',
+    loadComponent: () => import('./pages/cuidadores/cuidado/cuidado.page').then( m => m.CuidadoPage),
+    canActivate: [authGuard]
+  },
+  {
     path: 'ubicacion',
     loadComponent: () => import('./pages/cuidadores/ubicacion/ubicacion.page').then( m => m.UbicacionPage),
     canActivate: [authGuard]
@@ -67,8 +72,8 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    path: 'editar-informacion',
-    loadComponent: () => import('./pages/adultosMayores/editar-informacion/editar-informacion.page').then( m => m.EditarInformacionPage),
+    path: 'perfil',
+    loadComponent: () => import('./pages/perfil/perfil.page').then( m => m.PerfilPage),
     canActivate: [authGuard]
   },
   {

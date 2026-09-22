@@ -1,0 +1,217 @@
+:host {
+    --primary: #7715c7;
+    --primary-light: rgba(119, 21, 199, 0.1);
+    --background: #f8f7fc;
+    --text-main: #1a1d26;
+    --text-muted: #8c92a4;
+}
+
+ion-content {
+    --background: var(--background);
+}
+
+.page-container {
+    padding: 24px 18px 100px;
+}
+
+.header {
+    margin-bottom: 24px;
+
+    h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    p {
+        margin: 4px 0 0;
+        color: var(--text-muted);
+        font-size: 14px;
+    }
+}
+
+.loading-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 60px 0;
+    color: var(--text-muted);
+
+    .spin-icon {
+        font-size: 28px;
+        animation: spin 1s linear infinite;
+    }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.adultos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.adulto-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+    cursor: pointer;
+    transition: transform 0.15s ease;
+
+    &:active {
+        transform: scale(0.98);
+    }
+
+    .adulto-avatar {
+        flex-shrink: 0;
+
+        ion-icon {
+            font-size: 42px;
+            color: var(--primary);
+        }
+    }
+
+    .adulto-datos {
+        flex: 1;
+        min-width: 0;
+
+        h3 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .adulto-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 3px;
+
+            .badge-activo {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 10px;
+                font-weight: 600;
+                color: #27ae60;
+                background: rgba(46, 204, 113, 0.12);
+                padding: 2px 8px;
+                border-radius: 8px;
+
+                .badge-dot {
+                    width: 6px;
+                    height: 6px;
+                    border-radius: 50%;
+                    background: #27ae60;
+                }
+            }
+
+            .meta-text {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                font-size: 11px;
+                color: var(--text-muted);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+
+                ion-icon {
+                    font-size: 12px;
+                }
+            }
+        }
+    }
+
+    .adulto-acciones {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+
+        .btn-mini {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.15s ease;
+
+            ion-icon {
+                font-size: 16px;
+            }
+
+            &:active {
+                transform: scale(0.9);
+            }
+        }
+
+        .btn-ubicacion {
+            background: rgba(33, 150, 243, 0.1);
+            color: #2196f3;
+        }
+
+        .btn-llamar {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4caf50;
+        }
+
+        .btn-historial {
+            background: rgba(255, 152, 0, 0.1);
+            color: #ff9800;
+        }
+    }
+}
+
+.empty-card {
+    background: white;
+    border-radius: 20px;
+    padding: 50px 30px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+
+    .empty-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--primary-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 16px;
+
+        ion-icon {
+            font-size: 28px;
+            color: var(--primary);
+        }
+    }
+
+    h3 {
+        margin: 0 0 8px;
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+}

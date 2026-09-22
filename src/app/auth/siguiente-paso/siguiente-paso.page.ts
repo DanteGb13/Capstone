@@ -30,6 +30,7 @@ import {
 } from 'ionicons/icons';
 import { registro } from '../../services/guards/registro/registro';
 import { SupabaseService } from '../../services/supabase/supabase';
+import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
 import {
   validarNombreOApellido,
   validarRutChileno,
@@ -58,7 +59,6 @@ import {
 })
 export class SiguientePasoPage implements OnInit {
 
-  // Datos personales
   nombre: string = '';
   apellidopa: string = '';
   apellidoma: string = '';
@@ -66,7 +66,6 @@ export class SiguientePasoPage implements OnInit {
   fechaNacimiento: string = '';
   telefono: string = '';
 
-  // Datos de dirección
   region: string = '';
   comuna: string = '';
   calle: string = '';
@@ -76,18 +75,15 @@ export class SiguientePasoPage implements OnInit {
   mensajeError: string = '';
   cargando: boolean = false;
 
-  // Campos de contraseña (solo para usuarios de Google)
   esUsuarioGoogle: boolean = false;
   contrasena: string = '';
   contrasenaConfirmacion: string = '';
   mostrarContrasena: boolean = false;
   mostrarContrasenaConfirmacion: boolean = false;
 
-  // Control modal de fecha para móvil
   mostrarModalFecha: boolean = false;
   fechaMaxima: string = new Date().toISOString();
 
-  // Errores por campo
   errores: {
     rut?: string;
     fechaNacimiento?: string;
@@ -110,7 +106,8 @@ export class SiguientePasoPage implements OnInit {
     private supabaseService: SupabaseService,
     private router: Router,
     private navCtrl: NavController,
-    private changeDetectorRef: ChangeDetectorRef
+    private changeDetectorRef: ChangeDetectorRef,
+    private navRol: NavegacionRolService
   ) {
     addIcons({
       arrowBackOutline,
@@ -131,24 +128,20 @@ export class SiguientePasoPage implements OnInit {
   }
 
   async ngOnInit() {
-    // 1. Verificar sesión activa
     try {
       const supabase = this.supabaseService.getClient();
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError || !session?.user) {
-        // No hay sesión -> no puede estar en siguiente-paso
         await this.navCtrl.navigateRoot('/login', { replaceUrl: true });
         return;
       }
 
       const user = session.user;
 
-      // 1.5. Detectar si el usuario se registró con Google
       const providers = user.app_metadata?.['providers'] || [];
       this.esUsuarioGoogle = providers.includes('google') && !providers.includes('email');
 
-      // 2. Verificar si el usuario ya tiene su perfil completo en la BD
       const { data: usuario } = await supabase
         .from('usuario')
         .select(`
@@ -170,18 +163,13 @@ export class SiguientePasoPage implements OnInit {
         .maybeSingle();
 
       if (usuario && usuario.rut && usuario.id_direccion) {
-        // Si el perfil ya está completo, redirigir a su pantalla principal sin dejarlo en siguiente-paso
         const rolData = usuario.rol as any;
         const rolNombre = Array.isArray(rolData) ? rolData[0]?.nombre : rolData?.nombre;
-        if (rolNombre === 'Familiar') {
-          await this.navCtrl.navigateRoot('/cuidador', { replaceUrl: true });
-        } else {
-          await this.navCtrl.navigateRoot('/adulto-mayor', { replaceUrl: true });
-        }
+        this.navRol.limpiarCache();
+        await this.navCtrl.navigateRoot(this.navRol.rutaPrincipal(rolNombre), { replaceUrl: true });
         return;
       }
 
-      // 3. Precargar datos temporales o de la sesión existente si el perfil aún está incompleto
       const datosTemp = this.registroService.obtenerDatosRegistroTemporal();
       if (datosTemp) {
         if (datosTemp.nombreCompleto) {
@@ -221,10 +209,7 @@ export class SiguientePasoPage implements OnInit {
       }
 
     } catch {
-      // Permanecer en la vista para completar datos
     } finally {
-      // Forzar la actualización de la vista para que los datos
-      // precargados desde el registro aparezcan de inmediato
       this.changeDetectorRef.detectChanges();
     }
   }
@@ -243,7 +228,6 @@ export class SiguientePasoPage implements OnInit {
     }
   }
 
-  // Validaciones de Datos Personales
   validarCampoRut() {
     if (!this.rut || this.rut.trim().length === 0) {
       this.errores.rut = 'El RUT es obligatorio.';
@@ -289,7 +273,6 @@ export class SiguientePasoPage implements OnInit {
   onFechaSeleccionada(event: any) {
     const valor = event.detail.value;
     if (valor) {
-      // Formato YYYY-MM-DD
       this.fechaNacimiento = valor.split('T')[0];
       this.validarCampoFecha();
     }
@@ -365,7 +348,6 @@ export class SiguientePasoPage implements OnInit {
     this.validarCampoTelefono();
   }
 
-  // Validaciones de Dirección
   validarCampoRegion() {
     if (!validarTextoBasico(this.region, 2)) {
       this.errores.region = 'Ingresa una región válida.';
@@ -402,7 +384,6 @@ export class SiguientePasoPage implements OnInit {
     return true;
   }
 
-  // Validaciones de Contraseña (solo Google)
   validarCampoContrasena() {
     if (!this.esUsuarioGoogle) return true;
     const resultado = validarPassword(this.contrasena);
@@ -473,7 +454,6 @@ export class SiguientePasoPage implements OnInit {
         tipoCuenta: this.tipoCuenta
       });
 
-      // Si es usuario de Google, crear contraseña para poder login con email/password
       if (this.esUsuarioGoogle && this.contrasena) {
         const supabase = this.supabaseService.getClient();
         const { error: passError } = await supabase.auth.updateUser({
@@ -485,7 +465,8 @@ export class SiguientePasoPage implements OnInit {
         }
       }
 
-      // Redirección segura según rol impidiendo volver atrás al formulario
+      this.navRol.limpiarCache();
+
       if (resultado.tipoCuenta === 'Usuario') {
         await this.navCtrl.navigateRoot('/adulto-mayor', { replaceUrl: true });
       } else if (resultado.tipoCuenta === 'Familiar') {

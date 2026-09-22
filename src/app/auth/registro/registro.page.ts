@@ -17,6 +17,7 @@ import {
 import { registro } from '../../services/guards/registro/registro';
 import { Login } from '../../services/guards/login/login';
 import { SupabaseService } from '../../services/supabase/supabase';
+import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
 import {
   validarNombreOApellido,
   validarEmail,
@@ -70,7 +71,8 @@ export class RegistroPage implements OnInit, OnDestroy {
     private loginService: Login,
     private supabaseService: SupabaseService,
     private router: Router,
-    private navCtrl: NavController
+    private navCtrl: NavController,
+    private navRol: NavegacionRolService
   ) {
     addIcons({
       arrowBackOutline,
@@ -98,11 +100,8 @@ export class RegistroPage implements OnInit, OnDestroy {
         if (usuario && usuario.rut && usuario.id_direccion) {
           const rolData = usuario.rol as any;
           const rol = Array.isArray(rolData) ? rolData[0]?.nombre : rolData?.nombre;
-          if (rol === 'Familiar') {
-            await this.navCtrl.navigateRoot('/cuidador', { replaceUrl: true });
-          } else {
-            await this.navCtrl.navigateRoot('/adulto-mayor', { replaceUrl: true });
-          }
+          this.navRol.limpiarCache();
+          await this.navCtrl.navigateRoot(this.navRol.rutaPrincipal(rol), { replaceUrl: true });
         } else {
           await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
         }
@@ -164,6 +163,7 @@ export class RegistroPage implements OnInit, OnDestroy {
     try {
       await this.loginService.completarRegistroGoogle(tipoCuenta);
       localStorage.removeItem('tipo_cuenta_google');
+      this.navRol.limpiarCache();
       await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
     } catch (error: any) {
       this.procesandoGoogle = false;

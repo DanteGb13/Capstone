@@ -516,74 +516,7 @@
 
 
   <!-- Barra inferior -->
-  <nav class="bottom-menu">
-
-
-    <!--<button class="menu-item active" type="button">
-
-      <div class="icon-wrapper">
-        <ion-icon name="grid"></ion-icon>
-      </div>
-
-      <span>Inicio</span>
-
-    </button>-->
-
-
-    <button class="menu-item" type="button">
-
-      <div class="icon-wrapper">
-
-        <ion-icon name="people"></ion-icon>
-
-      </div>
-
-      <span>
-        Contactos
-      </span>
-
-    </button>
-
-
-
-    <!-- Botón central -->
-
-    <button class="menu-item menu-center" type="button">
-
-      <ion-icon name="home"></ion-icon>
-
-    </button>
-
-
-
-    <!--<button class="menu-item" type="button">
-
-      <div class="icon-wrapper">
-        <ion-icon name="notifications"></ion-icon>
-      </div>
-
-      <span>Alertas</span>
-
-    </button>-->
-
-
-
-    <button class="menu-item" type="button" (click)="irAjustes()">
-
-      <div class="icon-wrapper">
-
-        <ion-icon name="settings"></ion-icon>
-
-      </div>
-
-      <span>
-        Ajustes
-      </span>
-
-    </button>
-
-
-  </nav>
+  <app-footer tipo="adulto-mayor"></app-footer>
 
   <!-- Modal SOS: confirmación de aviso -->
   <ion-modal [isOpen]="mostrarModalSOS" (didDismiss)="cerrarModalSOS()" class="sos-modal">

@@ -1,0 +1,94 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Personas a tu cuidado</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+
+  <div class="page-container">
+
+    <!-- Header -->
+    <div class="header">
+      <h1>Personas a tu cuidado</h1>
+      <p>Adultos mayores vinculados</p>
+    </div>
+
+    <!-- Lista -->
+    @if (cargandoAdultos) {
+      <div class="loading-box">
+        <ion-icon name="sync-outline" class="spin-icon"></ion-icon>
+        <p>Cargando...</p>
+      </div>
+    }
+
+    @if (!cargandoAdultos && adultosACargo.length > 0) {
+
+      <div class="adultos-list">
+
+        @for (item of adultosACargo; track item.id) {
+
+          <div class="adulto-card" (click)="verUbicacion(item)">
+
+            <div class="adulto-avatar">
+              <ion-icon name="person-circle"></ion-icon>
+            </div>
+
+            <div class="adulto-datos">
+              <h3>{{ item.adulto_mayor?.nombre }} {{ item.adulto_mayor?.apellidopa }}</h3>
+              <div class="adulto-meta">
+                <span class="badge-activo">
+                  <span class="badge-dot"></span>
+                  Activo
+                </span>
+                @if (item.adulto_mayor?.direccion?.comuna) {
+                  <span class="meta-text">
+                    <ion-icon name="location-outline"></ion-icon>
+                    {{ item.adulto_mayor.direccion.comuna }}
+                  </span>
+                }
+              </div>
+            </div>
+
+            <div class="adulto-acciones">
+              <button class="btn-mini btn-ubicacion" type="button" (click)="verUbicacion(item); $event.stopPropagation()">
+                <ion-icon name="location-outline"></ion-icon>
+              </button>
+              @if (item.adulto_mayor?.telefono) {
+                <button class="btn-mini btn-llamar" type="button" (click)="llamarAdulto(item.adulto_mayor.telefono); $event.stopPropagation()">
+                  <ion-icon name="call-outline"></ion-icon>
+                </button>
+              }
+              <button class="btn-mini btn-historial" type="button" (click)="verHistorial(); $event.stopPropagation()">
+                <ion-icon name="time-outline"></ion-icon>
+              </button>
+            </div>
+
+          </div>
+
+        }
+
+      </div>
+
+    }
+
+    @if (!cargandoAdultos && adultosACargo.length === 0) {
+
+      <div class="empty-card">
+        <div class="empty-icon">
+          <ion-icon name="people-outline"></ion-icon>
+        </div>
+        <h3>Sin personas vinculadas</h3>
+        <p>Vincula un adulto mayor desde el menú principal para comenzar a cuidarlo.</p>
+      </div>
+
+    }
+
+  </div>
+
+</ion-content>

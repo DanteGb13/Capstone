@@ -12,6 +12,7 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
+import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
 
 @Component({
   selector: 'app-ajustes',
@@ -30,7 +31,10 @@ import * as icons from 'ionicons/icons';
 })
 export class AjustesPage implements OnInit {
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private navRol: NavegacionRolService
+  ) {
     addIcons(icons);
   }
 
@@ -40,7 +44,7 @@ export class AjustesPage implements OnInit {
     this.router.navigate(['/permisos']);
   }
 
-  volver() {
-    this.router.navigate(['/adulto-mayor']);
+  async volver() {
+    await this.navRol.irAPanelPrincipal();
   }
 }

@@ -80,130 +80,29 @@
     <!-- PERSONAS QUE ESTÁ CUIDANDO -->
     <!-- ================================================= -->
 
-    <h2 class="section-title">
-      Personas a tu cuidado
-    </h2>
+    <div class="cuidado-card" (click)="verCuidado()">
 
-    @if (cargandoAdultos) {
-
-      <div class="loading-box">
-        <ion-icon name="sync-outline" class="spin-icon"></ion-icon>
-        <p>Cargando información...</p>
-      </div>
-
-    }
-
-    @if (!cargandoAdultos && adultosACargo.length > 0) {
-
-      <div class="adultos-list">
-
-        @for (item of adultosACargo; track item.id) {
-
-          <div class="adulto-card">
-
-            <div class="adulto-card-header">
-
-              <div class="adulto-avatar">
-                <ion-icon name="person-circle-outline"></ion-icon>
-              </div>
-
-              <div class="adulto-datos">
-
-                <h3>
-                  {{ item.adulto_mayor?.nombre }} {{ item.adulto_mayor?.apellidopa }} {{ item.adulto_mayor?.apellidoma || '' }}
-                </h3>
-
-                <div class="estado-badge">
-                  <span class="badge-dot"></span>
-                  Protección activa
-                </div>
-
-              </div>
-
-            </div>
-
-            <div class="adulto-info-row">
-
-              @if (item.adulto_mayor?.telefono) {
-                <div class="info-chip">
-                  <ion-icon name="call-outline"></ion-icon>
-                  <span>{{ item.adulto_mayor.telefono }}</span>
-                </div>
-              }
-
-              @if (item.adulto_mayor?.direccion?.comuna) {
-                <div class="info-chip">
-                  <ion-icon name="home-outline"></ion-icon>
-                  <span>{{ item.adulto_mayor.direccion.comuna }}</span>
-                </div>
-              }
-
-            </div>
-
-            <!-- Botones de acción rápida para este adulto -->
-            <div class="adulto-card-actions">
-
-              <button
-                class="btn-action btn-ubicacion"
-                type="button"
-                (click)="verUbicacion(item)">
-                <ion-icon name="location-outline"></ion-icon>
-                <span>Ubicación</span>
-              </button>
-
-              @if (item.adulto_mayor?.telefono) {
-                <button
-                  class="btn-action btn-llamar"
-                  type="button"
-                  (click)="llamarAdulto(item.adulto_mayor.telefono)">
-                  <ion-icon name="call-outline"></ion-icon>
-                  <span>Llamar</span>
-                </button>
-              }
-
-              <button
-                class="btn-action btn-historial"
-                type="button"
-                (click)="verHistorial(item)">
-                <ion-icon name="time-outline"></ion-icon>
-                <span>Historial</span>
-              </button>
-
-            </div>
-
-          </div>
-
+      <div class="cuidado-icono">
+        <ion-icon name="people"></ion-icon>
+        @if (adultosACargo.length > 0) {
+          <span class="cuidado-badge">{{ adultosACargo.length }}</span>
         }
-
       </div>
 
-    }
-
-    @if (!cargandoAdultos && adultosACargo.length === 0) {
-
-      <div class="empty-card">
-
-        <div class="empty-icon">
-          <ion-icon name="heart-dislike-outline"></ion-icon>
-        </div>
-
-        <h3>No tienes adultos mayores a tu cargo</h3>
-
+      <div class="cuidado-info">
+        <h3>Personas a tu cuidado</h3>
         <p>
-          Ingresa el código que aparece en la app del adulto mayor para comenzar a cuidarlo y ver su ubicación.
+          @if (adultosACargo.length > 0) {
+            {{ adultosACargo.length }} {{ adultosACargo.length === 1 ? 'adulto vinculado' : 'adultos vinculados' }}
+          } @else {
+            Sin adultos vinculados
+          }
         </p>
-
-        <button
-          type="button"
-          class="btn-vincular-empty"
-          (click)="abrirVinculacion()">
-          <ion-icon name="add-circle-outline"></ion-icon>
-          Vincular ahora
-        </button>
-
       </div>
 
-    }
+      <ion-icon name="chevron-forward-outline" class="cuidado-arrow"></ion-icon>
+
+    </div>
 
 
     <!-- ================================================= -->
@@ -287,6 +186,9 @@
     </div>
 
   </div>
+
+  <!-- Barra inferior -->
+  <app-footer tipo="cuidador"></app-footer>
 
 
   <!-- ================================================= -->

@@ -31,6 +31,7 @@ import {
 } from 'ionicons/icons';
 import { AlarmaRecordatorio, AlarmasService, DIAS_SEMANA_TODOS } from '../../../services/alarmas/alarmas';
 import { RuedaComponent } from '../../../components/rueda/rueda.component';
+import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
 
 @Component({
   selector: 'app-recordatorios',
@@ -89,7 +90,8 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     private alarmasService: AlarmasService,
     private alertController: AlertController,
     private changeDetectorRef: ChangeDetectorRef,
-    private router: Router
+    private router: Router,
+    private navRol: NavegacionRolService
   ) {
     addIcons({
       alarm,
@@ -186,8 +188,8 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.sonando = await this.alarmasService.estanSonando(this.alarmas);
   }
 
-  volver() {
-    this.router.navigate(['/adulto-mayor']);
+  async volver() {
+    await this.navRol.irAPanelPrincipal();
   }
 
 

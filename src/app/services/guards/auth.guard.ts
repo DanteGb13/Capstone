@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { SupabaseService } from '../supabase/supabase';
+import { NavegacionRolService, RUTAS_CUIDADOR, RUTAS_ADULTO_MAYOR } from '../navegacion-rol/navegacion-rol';
 
 /**
  * Obtiene el estado actual de la sesión y el perfil del usuario utilizando getSession (rápido y local).
@@ -52,16 +53,13 @@ async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
 export const noAuthGuard: CanActivateFn = async () => {
   const supabaseService = inject(SupabaseService);
   const router = inject(Router);
+  const navRol = inject(NavegacionRolService);
 
   const estado = await obtenerEstadoUsuario(supabaseService);
 
   if (estado.autenticado) {
     if (estado.perfilCompleto) {
-      if (estado.rol === 'Familiar') {
-        router.navigate(['/cuidador'], { replaceUrl: true });
-      } else {
-        router.navigate(['/adulto-mayor'], { replaceUrl: true });
-      }
+      router.navigate([navRol.rutaPrincipal(estado.rol)], { replaceUrl: true });
       return false;
     } else {
       // Perfil incompleto: distinguir cuenta nueva (ej. Google sin elegir tipo)
@@ -87,6 +85,7 @@ export const noAuthGuard: CanActivateFn = async () => {
 export const siguientePasoGuard: CanActivateFn = async () => {
   const supabaseService = inject(SupabaseService);
   const router = inject(Router);
+  const navRol = inject(NavegacionRolService);
 
   const estado = await obtenerEstadoUsuario(supabaseService);
 
@@ -96,11 +95,7 @@ export const siguientePasoGuard: CanActivateFn = async () => {
   }
 
   if (estado.perfilCompleto) {
-    if (estado.rol === 'Familiar') {
-      router.navigate(['/cuidador'], { replaceUrl: true });
-    } else {
-      router.navigate(['/adulto-mayor'], { replaceUrl: true });
-    }
+    router.navigate([navRol.rutaPrincipal(estado.rol)], { replaceUrl: true });
     return false;
   }
 
@@ -111,11 +106,13 @@ export const siguientePasoGuard: CanActivateFn = async () => {
  * Guard para páginas protegidas (cuidador, adulto-mayor, etc.).
  * - Si no está autenticado -> redirige a /login.
  * - Si está autenticado pero no ha completado el perfil -> redirige a /siguiente-paso.
- * - Si está autenticado y perfil completo -> permite acceso.
+ * - Si está autenticado y perfil completo -> verifica que el rol coincida con la ruta.
+ *   - Si el rol no coincide, redirige a su panel correcto.
  */
 export const authGuard: CanActivateFn = async () => {
   const supabaseService = inject(SupabaseService);
   const router = inject(Router);
+  const navRol = inject(NavegacionRolService);
 
   const estado = await obtenerEstadoUsuario(supabaseService);
 
@@ -126,6 +123,13 @@ export const authGuard: CanActivateFn = async () => {
 
   if (!estado.perfilCompleto) {
     router.navigate(['/siguiente-paso'], { replaceUrl: true });
+    return false;
+  }
+
+  // Verificar que el rol coincida con la ruta que intenta acceder
+  const rutaIncorrecta = await navRol.verificarAcceso(router.url);
+  if (rutaIncorrecta) {
+    router.navigate([rutaIncorrecta], { replaceUrl: true });
     return false;
   }
 

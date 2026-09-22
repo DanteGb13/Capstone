@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
+import { NavegacionRolService } from '../../navegacion-rol/navegacion-rol';
 
 @Injectable({
   providedIn: 'root'
@@ -7,7 +8,8 @@ import { SupabaseService } from '../../supabase/supabase';
 export class Login {
 
   constructor(
-    private supabaseService: SupabaseService
+    private supabaseService: SupabaseService,
+    private navRol: NavegacionRolService
   ) {}
 
 
@@ -260,6 +262,8 @@ export class Login {
 
     const { error } =
       await supabase.auth.signOut();
+
+    this.navRol.limpiarCache();
 
     if (error) {
       throw error;

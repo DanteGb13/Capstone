@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController, IonModal } from '@ionic/angular';
-import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
+import { CuidadoresService } from '../../services/Backend/cuidadores/cuidadores';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
 
@@ -31,8 +31,9 @@ import {
   eyeOutline,
   eyeOffOutline
 } from 'ionicons/icons';
-import { SupabaseService } from '../../../services/supabase/supabase';
-import { environment } from '../../../../environments/environment';
+import { SupabaseService } from '../../services/supabase/supabase';
+import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
+import { environment } from '../../../environments/environment';
 import {
   validarNombreOApellido,
   validarTelefonoChileno,
@@ -40,12 +41,12 @@ import {
   validarTextoBasico,
   validarEmail,
   validarPassword
-} from '../../../services/utils/validators';
+} from '../../services/utils/validators';
 
 @Component({
-  selector: 'app-editar-informacion',
-  templateUrl: './editar-informacion.page.html',
-  styleUrls: ['./editar-informacion.page.scss'],
+  selector: 'app-perfil',
+  templateUrl: './perfil.page.html',
+  styleUrls: ['./perfil.page.scss'],
   imports: [
     IonContent,
     IonHeader,
@@ -61,14 +62,15 @@ import {
     IonModal
   ]
 })
-export class EditarInformacionPage implements OnInit {
+export class PerfilPage implements OnInit {
 
   constructor(
     private cuidadoresService: CuidadoresService,
     private router: Router,
-    private changeDetectorRef: ChangeDetectorRef, 
+    private changeDetectorRef: ChangeDetectorRef,
     private supabaseService: SupabaseService,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private navRol: NavegacionRolService
   ) {
     addIcons({
       arrowBackOutline, person, personOutline, cardOutline, mailOutline,
@@ -86,7 +88,6 @@ export class EditarInformacionPage implements OnInit {
   modoEditar = false;
   cargandoPerfil: boolean = true;
 
-  // Cambio de correo
   mostrarModalCorreo: boolean = false;
   nuevoCorreo: string = '';
   codigoVerificacion: string = '';
@@ -97,7 +98,6 @@ export class EditarInformacionPage implements OnInit {
   bloqueadoCorreo: boolean = false;
   mensajeBloqueoCorreo: string = '';
 
-  // Cambio de contraseña
   mostrarModalContrasena: boolean = false;
   contrasenaActual: string = '';
   nuevaContrasena: string = '';
@@ -109,7 +109,6 @@ export class EditarInformacionPage implements OnInit {
   mostrarNuevaContrasena: boolean = false;
   mostrarConfirmarContrasena: boolean = false;
 
-  // Errores de validación por campo
   errores: {
     nombre?: string;
     apellidopa?: string;
@@ -126,13 +125,11 @@ export class EditarInformacionPage implements OnInit {
 
   async ngOnInit() {
     try {
-      // Una sola consulta trae nombre + dirección (cargarUsuario ya incluye el nombre)
       const datosUsuario = await this.cuidadoresService.cargarUsuario();
 
       if (datosUsuario) {
         this.usuario = datosUsuario;
         this.nombreUsuario = datosUsuario.nombre || '';
-        // Creamos una copia de respaldo profunda de los datos cargados (incluyendo la dirección)
         this.usuarioOriginal = JSON.parse(JSON.stringify(datosUsuario));
       }
 
@@ -150,25 +147,40 @@ export class EditarInformacionPage implements OnInit {
       if (!guardado) {
         return;
       }
+
+      const alert = await this.alertController.create({
+        cssClass: 'alerta-exito-guardar',
+        header: 'Guardado',
+        message: 'Tu perfil se actualizó correctamente.',
+        buttons: [
+          {
+            text: 'Seguir editando',
+            role: 'cancel',
+          },
+          {
+            text: 'Volver al perfil',
+            role: 'destructive',
+            handler: () => {
+              this.modoEditar = false;
+              this.changeDetectorRef.detectChanges();
+            }
+          }
+        ]
+      });
+
+      await alert.present();
+      return;
     }
     this.modoEditar = !this.modoEditar;
   }
 
-  // Función para cancelar la edición y restaurar los datos anteriores
   cancelarEdicion() {
-    // Limpiamos errores de validación
     this.errores = {};
     this.mensajeError = '';
-    // Restauramos los datos desde la copia de respaldo
     this.usuario = JSON.parse(JSON.stringify(this.usuarioOriginal));
-    // Salimos del modo edición
     this.modoEditar = false;
   }
 
-  /**
-   * Valida todos los campos editables usando los validadores compartidos.
-   * Retorna true si todo es válido, false en caso contrario (poblando `errores`).
-   */
   validarCampos(): boolean {
     this.errores = {};
     this.mensajeError = '';
@@ -184,7 +196,6 @@ export class EditarInformacionPage implements OnInit {
       this.errores.apellidopa = 'El apellido paterno solo debe contener letras y al menos 2 caracteres.';
     }
 
-    // El apellido materno es opcional: solo se valida si se ingresó algo
     if ((u.apellidoma ?? '').trim().length > 0 && !validarNombreOApellido(u.apellidoma)) {
       this.errores.apellidoma = 'El apellido materno solo debe contener letras.';
     }
@@ -220,15 +231,11 @@ export class EditarInformacionPage implements OnInit {
 
   async guardarCambios(): Promise<boolean> {
     try {
-      // 0. Validar campos antes de guardar
       if (!this.validarCampos()) {
         this.changeDetectorRef.detectChanges();
         return false;
       }
 
-      console.log("Datos a actualizar:", this.usuario);
-
-      // 1. Si el usuario tiene una dirección asociada, actualizamos la tabla 'direccion'
       if (this.usuario.id_direccion && this.usuario.direccion) {
         const { error: errorDireccion } = await this.supabaseService.getClient()
           .from('direccion')
@@ -246,7 +253,6 @@ export class EditarInformacionPage implements OnInit {
         }
       }
 
-      // 2. Actualizamos los datos personales en la tabla 'usuario'
       const { data, error } = await this.supabaseService.getClient()
         .from('usuario')
         .update({
@@ -263,10 +269,7 @@ export class EditarInformacionPage implements OnInit {
         return false;
       }
 
-      // Actualizamos también la copia original con los nuevos datos guardados con éxito
       this.usuarioOriginal = JSON.parse(JSON.stringify(this.usuario));
-
-      console.log("¡Perfil y dirección actualizados con éxito!");
       return true;
 
     } catch (err) {
@@ -274,10 +277,6 @@ export class EditarInformacionPage implements OnInit {
       return false;
     }
   }
-
-  // ==========================================
-  // CAMBIO DE CORREO
-  // ==========================================
 
   async abrirModalCorreo() {
     this.errorCorreo = '';
@@ -447,10 +446,6 @@ export class EditarInformacionPage implements OnInit {
     }
   }
 
-  // ==========================================
-  // CAMBIO DE CONTRASEÑA
-  // ==========================================
-
   abrirModalContrasena() {
     this.contrasenaActual = '';
     this.nuevaContrasena = '';
@@ -531,14 +526,10 @@ export class EditarInformacionPage implements OnInit {
     }
   }
 
-  volver() {
-    window.history.back();
+  async volver() {
+    await this.navRol.irAPanelPrincipal();
   }
 
-  /**
-   * Devuelve el nombre real del tipo de cuenta desde la relación 'rol'
-   * (maneja que Supabase a veces retorna la relación 1-1 como arreglo).
-   */
   get tipoCuentaTexto(): string {
     const rol = this.usuario?.rol;
     let nombre: string | undefined;
@@ -568,6 +559,7 @@ export class EditarInformacionPage implements OnInit {
           role: 'destructive',
           handler: async () => {
             try {
+              this.navRol.limpiarCache();
               await this.supabaseService.getClient().auth.signOut();
             } catch (err) {
               console.error('Error al cerrar sesión:', err);

@@ -23,6 +23,7 @@ import { Capacitor } from '@capacitor/core';
 
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
+import { FooterComponent } from '../../../components/footer/footer.component';
 
 
 @Component({
@@ -40,7 +41,8 @@ import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidador
     IonInput,
     IonIcon,
     CommonModule,
-    FormsModule
+    FormsModule,
+    FooterComponent
   ]
 })
 export class CuidadorPage implements OnInit, OnDestroy {
@@ -155,7 +157,7 @@ export class CuidadorPage implements OnInit, OnDestroy {
 
   abrirPerfil() {
     (document.activeElement as HTMLElement)?.blur();
-    this.router.navigate(['/editar-informacion']);
+    this.router.navigate(['/perfil']);
   }
 
   verUbicacion(adulto?: any) {
@@ -165,6 +167,10 @@ export class CuidadorPage implements OnInit, OnDestroy {
     } else {
       this.router.navigate(['/ubicacion']);
     }
+  }
+
+  verCuidado() {
+    this.router.navigate(['/cuidado']);
   }
 
   verHistorial(adulto?: any) {

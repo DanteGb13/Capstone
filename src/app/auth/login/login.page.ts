@@ -14,6 +14,7 @@ import {
 } from 'ionicons/icons';
 import { Login } from '../../services/guards/login/login';
 import { SupabaseService } from '../../services/supabase/supabase';
+import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
 import { validarEmail } from '../../services/utils/validators';
 
 @Component({
@@ -49,7 +50,8 @@ export class LoginPage implements OnInit, OnDestroy {
     private loginService: Login,
     private supabaseService: SupabaseService,
     private router: Router,
-    private navCtrl: NavController
+    private navCtrl: NavController,
+    private navRol: NavegacionRolService
   ) {
     addIcons({
       peopleOutline,
@@ -60,32 +62,21 @@ export class LoginPage implements OnInit, OnDestroy {
     });
   }
 
-  // ==========================================
-  // INICIO DE LA PÁGINA Y AUTO-LOGIN
-  // ==========================================
-
   async ngOnInit() {
     const supabase = this.supabaseService.getClient();
 
-    // 1. Comprobar retorno OAuth de Google
     const tipoCuenta = localStorage.getItem('tipo_cuenta_google');
     if (tipoCuenta === 'Usuario' || tipoCuenta === 'Familiar') {
       await this.completarRegistroGoogle(tipoCuenta);
       return;
     }
 
-    // Si venimos de Google sin tipo elegido (cuenta nueva), derivar según
-    // si ya existe el usuario en la BD o es la primera vez
     const { data: { session } } = await supabase.auth.getSession();
     if (session?.user) {
       await this.derivarTrasGoogle();
       return;
     }
 
-    // 2. Sin sesión aún: en móvil el intercambio PKCE puede ocurrir en el
-    //    listener de deep link (appUrlOpen) ANTES de que esta página se
-    //    suscriba, o justo después de getSession(). Reaccionamos al resultado
-    //    para no quedarnos pegados en /login.
     this.oauthSub = this.supabaseService.oauthResult$.subscribe(async (res) => {
       if (!res) {
         return;
@@ -101,7 +92,6 @@ export class LoginPage implements OnInit, OnDestroy {
       }
     });
 
-    // 3. Respaldo: escuchar cambios de autenticación (p.ej. retorno OAuth web)
     const authResult = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         const tipoGoogle = localStorage.getItem('tipo_cuenta_google');
@@ -120,10 +110,6 @@ export class LoginPage implements OnInit, OnDestroy {
     this.oauthSub?.unsubscribe();
     this.authSub?.unsubscribe();
   }
-
-  // ==========================================
-  // VALIDACIONES DE LOGIN
-  // ==========================================
 
   validarCorreo(): boolean {
     if (!this.correo || this.correo.trim().length === 0) {
@@ -146,10 +132,6 @@ export class LoginPage implements OnInit, OnDestroy {
     delete this.errores.contrasena;
     return true;
   }
-
-  // ==========================================
-  // LOGIN CON CORREO Y CONTRASEÑA
-  // ==========================================
 
   async ingresar() {
     this.mensajeError = '';
@@ -189,10 +171,6 @@ export class LoginPage implements OnInit, OnDestroy {
     }
   }
 
-  // ==========================================
-  // LOGIN CON GOOGLE
-  // ==========================================
-
   async ingresarConGoogle() {
     this.mensajeError = '';
     try {
@@ -202,15 +180,12 @@ export class LoginPage implements OnInit, OnDestroy {
     }
   }
 
-  // ==========================================
-  // COMPLETAR REGISTRO GOOGLE
-  // ==========================================
-
   private async completarRegistroGoogle(tipoCuenta: 'Usuario' | 'Familiar') {
     this.cargando = true;
     try {
       await this.loginService.completarRegistroGoogle(tipoCuenta);
       localStorage.removeItem('tipo_cuenta_google');
+      this.navRol.limpiarCache();
       await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
     } catch (error: any) {
       this.mensajeError = error?.message || 'No se pudo completar el registro.';
@@ -219,15 +194,6 @@ export class LoginPage implements OnInit, OnDestroy {
     }
   }
 
-  // ==========================================
-  // REDIRECCIÓN SEGÚN ROL / ESTADO DE PERFIL
-  // ==========================================
-
-  /**
-   * Para retornos de Google sin tipo preseleccionado:
-   * - Si ya existe la fila 'usuario' -> perfil completo o a completar (siguiente-paso).
-   * - Si NO existe (cuenta nueva) -> página para elegir Usuario/Familiar.
-   */
   private async derivarTrasGoogle() {
     try {
       const supabase = this.supabaseService.getClient();
@@ -245,17 +211,13 @@ export class LoginPage implements OnInit, OnDestroy {
         .maybeSingle();
 
       if (usuario) {
-        // Ya registrado: seguir flujo normal
         await this.redireccionarSegunRol();
       } else if (localStorage.getItem('datos_registro_temp')) {
-        // Registro de correo ya iniciado: ir a completar perfil
         await this.redireccionarSegunRol();
       } else {
-        // Cuenta nueva (ej. Google sin elegir tipo): preguntar el tipo
         this.navCtrl.navigateRoot('/elegir-tipo', { replaceUrl: true });
       }
     } catch {
-      // Ante dudas, mandar a login
       this.router.navigate(['/login'], { replaceUrl: true });
     }
   }
@@ -271,7 +233,6 @@ export class LoginPage implements OnInit, OnDestroy {
 
       const user = session.user;
 
-      // Verificar perfil en tabla usuario
       const { data: usuario, error: usuarioError } = await supabase
         .from('usuario')
         .select(`
@@ -287,7 +248,6 @@ export class LoginPage implements OnInit, OnDestroy {
         .eq('id', user.id)
         .maybeSingle();
 
-      // Si perfil incompleto -> enviar al siguiente paso
       if (!usuario || !usuario.rut || !usuario.id_direccion) {
         await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
         return;
@@ -296,14 +256,10 @@ export class LoginPage implements OnInit, OnDestroy {
       const rolData = usuario.rol as any;
       const rol = Array.isArray(rolData) ? rolData[0]?.nombre : rolData?.nombre;
 
-      if (rol === 'Familiar') {
-        await this.navCtrl.navigateRoot('/cuidador', { replaceUrl: true });
-      } else {
-        await this.navCtrl.navigateRoot('/adulto-mayor', { replaceUrl: true });
-      }
+      this.navRol.limpiarCache();
+      await this.navCtrl.navigateRoot(this.navRol.rutaPrincipal(rol), { replaceUrl: true });
 
     } catch (error) {
-      // Ignorar error y mantenerse en login si falla la consulta
     }
   }
 

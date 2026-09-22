@@ -42,6 +42,7 @@ import { AlarmasService, AlarmaRecordatorio } from '../../../services/alarmas/al
 import { SOSService, ResultadoSOS } from '../../../services/Backend/sos/sos';
 import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
 import { Capacitor } from '@capacitor/core';
+import { FooterComponent } from '../../../components/footer/footer.component';
 
 
 @Component({
@@ -66,7 +67,8 @@ import { Capacitor } from '@capacitor/core';
     IonSpinner,
 
     CommonModule,
-    FormsModule
+    FormsModule,
+    FooterComponent
 
   ]
 
@@ -284,7 +286,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     (document.activeElement as HTMLElement)?.blur();
 
     this.router.navigate([
-      '/editar-informacion'
+      '/perfil'
     ]);
 
   }
