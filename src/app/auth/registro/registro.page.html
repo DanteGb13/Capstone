@@ -120,6 +120,16 @@
       </div>
     }
 
+    <!-- Éxito General Banner -->
+    @if (mensajeExito) {
+      <div class="alert-box alert-box-exito">
+        <ion-icon name="checkmark-circle-outline"></ion-icon>
+        <p class="error-message">
+          {{ mensajeExito }}
+        </p>
+      </div>
+    }
+
     <!-- Registrarse -->
     <ion-button
       expand="block"

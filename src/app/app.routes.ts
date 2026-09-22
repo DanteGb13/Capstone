@@ -54,7 +54,8 @@ export const routes: Routes = [
   },
   {
     path: 'elegir-tipo',
-    loadComponent: () => import('./auth/elegir-tipo/elegir-tipo.page').then( m => m.ElegirTipoPage)
+    loadComponent: () => import('./auth/elegir-tipo/elegir-tipo.page').then( m => m.ElegirTipoPage),
+    canActivate: [siguientePasoGuard]
   },
   {
     path: 'adulto-mayor',

@@ -12,7 +12,8 @@ import {
   mailOutline,
   lockClosedOutline,
   logoGoogle,
-  alertCircleOutline
+  alertCircleOutline,
+  checkmarkCircleOutline
 } from 'ionicons/icons';
 import { registro } from '../../services/guards/registro/registro';
 import { Login } from '../../services/guards/login/login';
@@ -50,6 +51,7 @@ export class RegistroPage implements OnInit, OnDestroy {
   tipoCuenta: 'Usuario' | 'Familiar' = 'Usuario';
 
   mensajeError: string = '';
+  mensajeExito: string = '';
   cargando: boolean = false;
   private procesandoGoogle: boolean = false;
   private oauthSub?: Subscription;
@@ -81,7 +83,8 @@ export class RegistroPage implements OnInit, OnDestroy {
       mailOutline,
       lockClosedOutline,
       logoGoogle,
-      alertCircleOutline
+      alertCircleOutline,
+      checkmarkCircleOutline
     });
   }
 
@@ -270,6 +273,7 @@ export class RegistroPage implements OnInit, OnDestroy {
 
   async registrar() {
     this.mensajeError = '';
+    this.mensajeExito = '';
 
     if (!this.validarTodoElFormulario()) {
       this.mensajeError = 'Por favor corrige los campos marcados en rojo antes de continuar.';
@@ -290,8 +294,18 @@ export class RegistroPage implements OnInit, OnDestroy {
         tipoCuenta: this.tipoCuenta
       });
 
-      // Redirigir a la pantalla de elección de rol (el tipo se elige ahí)
-      await this.navCtrl.navigateRoot('/elegir-tipo', { replaceUrl: true });
+      // Si Supabase exige confirmar el correo, el signUp NO crea sesión.
+      // Ir a /elegir-tipo (que exige sesión) haría que esa pantalla nos
+      // devuelva al login y se percibe como "la app me saca sola".
+      const { data: { session } } = await this.supabaseService.getClient().auth.getSession();
+
+      if (session?.user) {
+        // Redirigir a la pantalla de elección de rol (el tipo se elige ahí)
+        await this.navCtrl.navigateRoot('/elegir-tipo', { replaceUrl: true });
+      } else {
+        this.mensajeExito =
+          'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.';
+      }
 
     } catch (error: any) {
       if (error?.message?.includes('User already registered') || error?.message?.includes('already exists')) {

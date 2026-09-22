@@ -182,6 +182,19 @@ ion-content {
   margin-top: 14px;
 }
 
+.alert-box-exito {
+  background-color: #dcfce7;
+  border-left-color: #22c55e;
+}
+
+.alert-box-exito ion-icon {
+  color: #16a34a;
+}
+
+.alert-box-exito .error-message {
+  color: #15803d;
+}
+
 .alert-box ion-icon {
   color: #dc2626;
   font-size: 20px;
