@@ -598,5 +598,57 @@ export class Vinculacion {
     
         return true;
       }
-    
+
+
+      // =====================================================
+      // DESVINCULAR (ELIMINAR VINCULACIÓN)
+      // =====================================================
+
+      async desvincular(
+        idCuidador: string,
+        idUsuario: string
+      ): Promise<boolean> {
+
+        console.log('Desvinculando:', { idCuidador, idUsuario });
+
+        // 1. Eliminar TODOS los registros de cuidador_usuario
+        const { data: cuEliminados, error: errorCU } = await this.supabase
+          .from('cuidador_usuario')
+          .delete()
+          .eq('id_cuidador', idCuidador)
+          .eq('id_usuario', idUsuario)
+          .select();
+
+        console.log('Eliminados de cuidador_usuario:', cuEliminados?.length || 0, cuEliminados);
+
+        if (errorCU) {
+          console.error('Error eliminando de cuidador_usuario:', errorCU.message);
+          throw new Error('Error al eliminar vínculo: ' + errorCU.message);
+        }
+
+        if (!cuEliminados || cuEliminados.length === 0) {
+          console.warn('No se eliminó ningún registro de cuidador_usuario — posible bloqueo RLS');
+        }
+
+        // 2. Actualizar TODAS las solicitudes aceptadas a rechazada
+        const { data: svActualizadas, error: errorSV } = await this.supabase
+          .from('solicitud_vinculacion')
+          .update({
+            estado: 'rechazada',
+            fecha_respuesta: new Date().toISOString()
+          })
+          .eq('id_cuidador', idCuidador)
+          .eq('id_usuario', idUsuario)
+          .eq('estado', 'aceptada')
+          .select();
+
+        console.log('Solicitudes actualizadas:', svActualizadas?.length || 0, svActualizadas);
+
+        if (errorSV) {
+          console.error('Error actualizando solicitud_vinculacion:', errorSV.message);
+        }
+
+        return true;
+      }
+
     }

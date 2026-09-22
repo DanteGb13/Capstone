@@ -25,6 +25,7 @@ import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
 import { FooterComponent } from '../../../components/footer/footer.component';
 import { SupabaseService } from '../../../services/supabase/supabase';
+import { BarcodeScanner, BarcodeFormat } from '@capacitor-mlkit/barcode-scanning';
 
 
 @Component({
@@ -266,6 +267,47 @@ export class CuidadorPage implements OnInit, OnDestroy {
     } finally {
       this.vinculando = false;
       this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  async escanearQR() {
+    if (!Capacitor.isNativePlatform()) {
+      this.mensajeError = 'El escaneo de QR solo funciona en la app móvil.';
+      return;
+    }
+
+    try {
+      const granted = await this.solicitarPermisosCamara();
+      if (!granted) {
+        this.mensajeError = 'Se requiere permiso de cámara para escanear el código.';
+        return;
+      }
+
+      const result = await BarcodeScanner.scan({
+        formats: [BarcodeFormat.QrCode]
+      });
+
+      if (result.barcodes.length > 0) {
+        const codigoEscaneado = result.barcodes[0].rawValue;
+        if (codigoEscaneado) {
+          this.codigo = codigoEscaneado.trim().toUpperCase();
+          this.changeDetectorRef.detectChanges();
+        }
+      }
+    } catch (error: any) {
+      if (error?.message !== 'User cancelled') {
+        console.error('Error al escanear QR:', error);
+        this.mensajeError = 'No se pudo escanear el código QR.';
+      }
+    }
+  }
+
+  private async solicitarPermisosCamara(): Promise<boolean> {
+    try {
+      const status = await BarcodeScanner.requestPermissions();
+      return status.camera === 'granted' || status.camera === 'limited';
+    } catch {
+      return false;
     }
   }
 

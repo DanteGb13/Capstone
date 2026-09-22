@@ -255,6 +255,16 @@
             style="margin-top: 10px; font-size: 18px; font-weight: bold; letter-spacing: 2px; text-align: center;">
           </ion-input>
 
+          <!-- Escanear QR -->
+          <ion-button
+            expand="block"
+            fill="clear"
+            style="margin-top: 12px; --color: #7715c7; font-size: 14px;"
+            (click)="escanearQR()">
+            <ion-icon name="scan-outline" slot="start"></ion-icon>
+            Escanear código QR
+          </ion-button>
+
           <!-- Error -->
           @if (mensajeError) {
 

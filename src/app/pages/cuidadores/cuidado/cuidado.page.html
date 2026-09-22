@@ -11,6 +11,11 @@
 
 <ion-content [fullscreen]="true">
 
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content pullingText="Desliza para actualizar" refreshingText="Actualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
   <div class="page-container">
 
     <!-- Header -->
@@ -35,7 +40,7 @@
 
           <div class="adulto-card" (click)="verUbicacion(item)">
 
-            <div class="adulto-avatar">
+            <div class="adulto-avatar" (click)="abrirOpcionesAdulto(item); $event.stopPropagation()">
               <img *ngIf="item.adulto_mayor?.foto_url" [src]="item.adulto_mayor.foto_url" alt="Foto de perfil" class="avatar-img">
               <ion-icon *ngIf="!item.adulto_mayor?.foto_url" name="person-circle"></ion-icon>
             </div>

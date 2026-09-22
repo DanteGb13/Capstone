@@ -8,6 +8,11 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content pullingText="Desliza para actualizar" refreshingText="Actualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
   <div class="container">
 
     @if (cargando) {
@@ -22,7 +27,7 @@
         @for (item of adultosACargo; track item.id) {
           <div class="adulto-card">
             <div class="card-header">
-              <div class="avatar-icon">
+              <div class="avatar-icon" (click)="abrirOpcionesAdulto(item); $event.stopPropagation()">
                 <img *ngIf="item.adulto_mayor?.foto_url" [src]="item.adulto_mayor.foto_url" alt="Foto de perfil" class="avatar-img">
                 <ion-icon *ngIf="!item.adulto_mayor?.foto_url" name="person-circle-outline"></ion-icon>
               </div>
