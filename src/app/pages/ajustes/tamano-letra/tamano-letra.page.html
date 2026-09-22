@@ -1,0 +1,44 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Tamaño de letra</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="tamano-container">
+
+    <p class="tamano-desc">Selecciona el tamaño de texto que prefieras para la aplicación.</p>
+
+    <div class="tamano-list">
+      <div
+        *ngFor="let opcion of fontService.opciones"
+        class="tamano-item"
+        [class.seleccionado]="seleccionActual === opcion.id"
+        (click)="seleccionar(opcion.id)">
+
+        <div class="tamano-preview" [style]="getScalePreview(opcion)">
+          Aa
+        </div>
+
+        <div class="tamano-info">
+          <span class="tamano-label">{{ opcion.label }}</span>
+          <span class="tamano-ejemplo" [style]="getScalePreview(opcion)">Texto de ejemplo</span>
+        </div>
+
+        <div class="tamano-check">
+          <ion-icon
+            *ngIf="seleccionActual === opcion.id"
+            name="checkmark-outline">
+          </ion-icon>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</ion-content>

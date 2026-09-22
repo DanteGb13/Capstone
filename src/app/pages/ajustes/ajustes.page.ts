@@ -44,6 +44,10 @@ export class AjustesPage implements OnInit {
     this.router.navigate(['/permisos']);
   }
 
+  irATamanoLetra() {
+    this.router.navigate(['/tamano-letra']);
+  }
+
   async volver() {
     await this.navRol.irAPanelPrincipal();
   }

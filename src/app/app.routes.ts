@@ -95,6 +95,10 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/ajustes/permisos/permisos.page').then( m => m.PermisosPage)
   },
   {
+    path: 'tamano-letra',
+    loadComponent: () => import('./pages/ajustes/tamano-letra/tamano-letra.page').then( m => m.TamanoLetraPage)
+  },
+  {
     path: 'recuperar-contrasena',
     loadComponent: () => import('./auth/recuperar-contrasena/recuperar-contrasena.page').then( m => m.RecuperarContrasenaPage)
   },

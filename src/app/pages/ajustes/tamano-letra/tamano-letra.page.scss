@@ -1,0 +1,88 @@
+ion-content {
+  --background: #f8f7fc;
+}
+
+.tamano-container {
+  padding: 20px;
+}
+
+.tamano-desc {
+  color: #666;
+  font-size: 14px;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.tamano-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tamano-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.seleccionado {
+    border-color: #7715c7;
+    background: #faf8fc;
+  }
+}
+
+.tamano-preview {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: #f0ecfa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #7715c7;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.tamano-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tamano-label {
+  font-weight: 600;
+  color: #1a1d26;
+  font-size: 15px;
+}
+
+.tamano-ejemplo {
+  color: #8c92a4;
+}
+
+.tamano-check {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #7715c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  ion-icon {
+    color: white;
+    font-size: 16px;
+  }
+}
