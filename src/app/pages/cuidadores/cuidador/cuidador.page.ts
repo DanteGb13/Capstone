@@ -24,6 +24,7 @@ import { Capacitor } from '@capacitor/core';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
 import { FooterComponent } from '../../../components/footer/footer.component';
+import { SupabaseService } from '../../../services/supabase/supabase';
 
 
 @Component({
@@ -52,6 +53,8 @@ export class CuidadorPage implements OnInit, OnDestroy {
   // =====================================================
 
   nombreUsuario: string = '';
+
+  fotoUrl: string | null = null;
 
 
   // =====================================================
@@ -89,7 +92,8 @@ export class CuidadorPage implements OnInit, OnDestroy {
     private cuidadoresService: CuidadoresService,
     private changeDetectorRef: ChangeDetectorRef,
     private router: Router,
-    private pushService: PushNotificationService
+    private pushService: PushNotificationService,
+    private supabaseService: SupabaseService
   ) {
     addIcons(icons);
   }
@@ -101,6 +105,7 @@ export class CuidadorPage implements OnInit, OnDestroy {
 
   async ngOnInit() {
     this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
+    await this.cargarFotoPerfil();
 
     await this.cargarAdultos();
 
@@ -121,10 +126,40 @@ export class CuidadorPage implements OnInit, OnDestroy {
     }, 2000);
   }
 
+  async cargarFotoPerfil() {
+    try {
+      const usuario = await this.cuidadoresService.cargarUsuario();
+      if (!usuario?.id) return;
+
+      const supabase = this.supabaseService.getClient();
+      const userId = usuario.id;
+
+      const { data } = await supabase.storage
+        .from('fotos-perfil')
+        .list(`${userId}/`, { limit: 1 });
+
+      if (data && data.length > 0) {
+        const { data: signedUrlData } = await supabase.storage
+          .from('fotos-perfil')
+          .createSignedUrl(`${userId}/${data[0].name}`, 3600);
+        this.fotoUrl = signedUrlData?.signedUrl || null;
+      } else {
+        this.fotoUrl = null;
+      }
+    } catch (error) {
+      this.fotoUrl = null;
+    }
+  }
+
 
   // =====================================================
   // DESTRUCCIÓN
   // =====================================================
+
+  async ionViewWillEnter() {
+    await this.cargarFotoPerfil();
+    this.changeDetectorRef.detectChanges();
+  }
 
   ngOnDestroy() {
     if (this.refreshInterval) {

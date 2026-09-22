@@ -36,7 +36,8 @@
           <div class="adulto-card" (click)="verUbicacion(item)">
 
             <div class="adulto-avatar">
-              <ion-icon name="person-circle"></ion-icon>
+              <img *ngIf="item.adulto_mayor?.foto_url" [src]="item.adulto_mayor.foto_url" alt="Foto de perfil" class="avatar-img">
+              <ion-icon *ngIf="!item.adulto_mayor?.foto_url" name="person-circle"></ion-icon>
             </div>
 
             <div class="adulto-datos">

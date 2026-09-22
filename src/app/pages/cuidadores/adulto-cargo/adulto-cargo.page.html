@@ -23,7 +23,8 @@
           <div class="adulto-card">
             <div class="card-header">
               <div class="avatar-icon">
-                <ion-icon name="person-circle-outline"></ion-icon>
+                <img *ngIf="item.adulto_mayor?.foto_url" [src]="item.adulto_mayor.foto_url" alt="Foto de perfil" class="avatar-img">
+                <ion-icon *ngIf="!item.adulto_mayor?.foto_url" name="person-circle-outline"></ion-icon>
               </div>
               <div class="info">
                 <h3>{{ item.adulto_mayor?.nombre }} {{ item.adulto_mayor?.apellidopa }} {{ item.adulto_mayor?.apellidoma || '' }}</h3>

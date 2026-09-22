@@ -55,8 +55,22 @@ ion-toolbar {
     gap: 12px;
 
     .avatar-icon {
-      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0ecfa;
       color: var(--primary);
+      font-size: 40px;
+
+      .avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
     }
 
     .info {

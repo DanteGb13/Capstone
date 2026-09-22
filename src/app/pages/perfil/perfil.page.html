@@ -32,9 +32,17 @@
   </div>
 
   <div class="perfil-container" *ngIf="!cargandoPerfil">
-    <!-- Avatar -->
-    <div class="avatar">
-      <ion-icon name="person"></ion-icon>
+    <!-- Avatar con foto de perfil -->
+    <div class="avatar-container">
+      <div class="avatar" (click)="abrirSelectorFoto()">
+        <img *ngIf="fotoUrl" [src]="fotoUrl" alt="Foto de perfil" class="avatar-img">
+        <ion-icon *ngIf="!fotoUrl" name="person"></ion-icon>
+        <div class="avatar-overlay" *ngIf="!cargandoFoto">
+          <ion-icon name="camera-outline"></ion-icon>
+        </div>
+        <ion-spinner *ngIf="cargandoFoto" name="crescent" class="avatar-spinner"></ion-spinner>
+      </div>
+      <span class="avatar-hint" *ngIf="!modoEditar">Toca para cambiar foto</span>
     </div>
     <!-- Información personal -->
     <div class="card">

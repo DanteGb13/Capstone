@@ -43,6 +43,7 @@ import { SOSService, ResultadoSOS } from '../../../services/Backend/sos/sos';
 import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
 import { Capacitor } from '@capacitor/core';
 import { FooterComponent } from '../../../components/footer/footer.component';
+import { SupabaseService } from '../../../services/supabase/supabase';
 
 
 @Component({
@@ -92,6 +93,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   nombreUsuario: string = '';
 
   idUsuarioActual: string = '';
+
+  fotoUrl: string | null = null;
 
 
   // =====================================================
@@ -163,7 +166,9 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
     private router: Router,
 
-    private sosService: SOSService
+    private sosService: SOSService,
+
+    private supabaseService: SupabaseService
 
   ) {
 
@@ -186,6 +191,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     if (usuario) {
       this.nombreUsuario = usuario.nombre || '';
       this.idUsuarioActual = usuario.id || '';
+      await this.cargarFotoPerfil();
     } else {
       this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
     }
@@ -243,6 +249,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   }
 
+  async ionViewWillEnter() {
+    await this.cargarFotoPerfil();
+    this.changeDetectorRef.detectChanges();
+  }
+
   async reportarUbicacion() {
     if (!this.idUsuarioActual) {
       try {
@@ -280,6 +291,28 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   // =====================================================
   // PERFIL
   // =====================================================
+
+  async cargarFotoPerfil() {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const userId = this.idUsuarioActual;
+
+      const { data } = await supabase.storage
+        .from('fotos-perfil')
+        .list(`${userId}/`, { limit: 1 });
+
+      if (data && data.length > 0) {
+        const { data: signedUrlData } = await supabase.storage
+          .from('fotos-perfil')
+          .createSignedUrl(`${userId}/${data[0].name}`, 3600);
+        this.fotoUrl = signedUrlData?.signedUrl || null;
+      } else {
+        this.fotoUrl = null;
+      }
+    } catch (error) {
+      this.fotoUrl = null;
+    }
+  }
 
   abrirPerfil() {
 

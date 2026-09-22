@@ -14,7 +14,8 @@
 
         <button class="avatar" type="button" (click)="abrirPerfil()">
 
-          <ion-icon name="person"></ion-icon>
+          <img *ngIf="fotoUrl" [src]="fotoUrl" alt="Foto de perfil" class="avatar-img">
+          <ion-icon *ngIf="!fotoUrl" name="person"></ion-icon>
 
         </button>
 

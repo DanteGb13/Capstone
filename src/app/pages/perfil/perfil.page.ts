@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController, IonModal } from '@ionic/angular';
+import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController, IonModal, IonActionSheet, ActionSheetController } from '@ionic/angular';
 import { CuidadoresService } from '../../services/Backend/cuidadores/cuidadores';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 import { addIcons } from 'ionicons';
 import {
@@ -29,7 +30,10 @@ import {
   checkmarkCircleOutline,
   lockClosedOutline,
   eyeOutline,
-  eyeOffOutline
+  eyeOffOutline,
+  cameraOutline,
+  imageOutline,
+  trashOutline
 } from 'ionicons/icons';
 import { SupabaseService } from '../../services/supabase/supabase';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
@@ -70,6 +74,7 @@ export class PerfilPage implements OnInit {
     private changeDetectorRef: ChangeDetectorRef,
     private supabaseService: SupabaseService,
     private alertController: AlertController,
+    private actionSheetController: ActionSheetController,
     private navRol: NavegacionRolService
   ) {
     addIcons({
@@ -78,7 +83,8 @@ export class PerfilPage implements OnInit {
       businessOutline, locationOutline, shieldCheckmarkOutline,
       closeOutline, logOutOutline, timeOutline, sendOutline,
       keypadOutline, checkmarkCircleOutline,
-      lockClosedOutline, eyeOutline, eyeOffOutline
+      lockClosedOutline, eyeOutline, eyeOffOutline,
+      cameraOutline, imageOutline, trashOutline
     });
   }
 
@@ -87,6 +93,8 @@ export class PerfilPage implements OnInit {
   usuarioOriginal: any = {};
   modoEditar = false;
   cargandoPerfil: boolean = true;
+  fotoUrl: string | null = null;
+  cargandoFoto: boolean = false;
 
   mostrarModalCorreo: boolean = false;
   nuevoCorreo: string = '';
@@ -131,6 +139,7 @@ export class PerfilPage implements OnInit {
         this.usuario = datosUsuario;
         this.nombreUsuario = datosUsuario.nombre || '';
         this.usuarioOriginal = JSON.parse(JSON.stringify(datosUsuario));
+        await this.cargarFotoPerfil();
       }
 
     } catch (error) {
@@ -138,6 +147,174 @@ export class PerfilPage implements OnInit {
     } finally {
       this.cargandoPerfil = false;
       this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  async cargarFotoPerfil() {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const userId = this.usuario.id;
+
+      const { data, error } = await supabase
+        .storage
+        .from('fotos-perfil')
+        .list(`${userId}/`, { limit: 1 });
+
+      if (error || !data || data.length === 0) {
+        this.fotoUrl = null;
+        return;
+      }
+
+      const fileName = data[0].name;
+      const { data: signedUrlData, error: signedUrlError } = await supabase
+        .storage
+        .from('fotos-perfil')
+        .createSignedUrl(`${userId}/${fileName}`, 3600);
+
+      if (signedUrlError || !signedUrlData) {
+        this.fotoUrl = null;
+        return;
+      }
+
+      this.fotoUrl = signedUrlData.signedUrl;
+
+    } catch (error) {
+      console.error('Error cargando foto de perfil:', error);
+      this.fotoUrl = null;
+    }
+  }
+
+  async abrirSelectorFoto() {
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Cambiar foto de perfil',
+      buttons: [
+        {
+          text: 'Tomar foto',
+          icon: 'camera-outline',
+          handler: () => {
+            this.seleccionarFoto(CameraSource.Camera);
+          }
+        },
+        {
+          text: 'Elegir de galería',
+          icon: 'image-outline',
+          handler: () => {
+            this.seleccionarFoto(CameraSource.Photos);
+          }
+        },
+        ...(this.fotoUrl ? [{
+          text: 'Eliminar foto actual',
+          icon: 'trash-outline',
+          role: 'destructive' as const,
+          handler: () => {
+            this.eliminarFoto();
+          }
+        }] : []),
+        {
+          text: 'Cancelar',
+          role: 'cancel'
+        }
+      ]
+    });
+
+    await actionSheet.present();
+  }
+
+  async seleccionarFoto(source: CameraSource) {
+    try {
+      const image = await Camera.getPhoto({
+        quality: 80,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: source,
+        width: 400,
+        height: 400,
+      });
+
+      if (!image.dataUrl) return;
+
+      this.cargandoFoto = true;
+      await this.subirFoto(image.dataUrl);
+
+    } catch (error: any) {
+      if (error?.message !== 'User cancelled photos app') {
+        console.error('Error seleccionando foto:', error);
+      }
+    } finally {
+      this.cargandoFoto = false;
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  async subirFoto(dataUrl: string) {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const userId = this.usuario.id;
+
+      await this.eliminarFotoExistente();
+
+      const fileName = `perfil_${Date.now()}.jpg`;
+      const filePath = `${userId}/${fileName}`;
+
+      const base64Data = dataUrl.split(',')[1];
+      const byteCharacters = atob(base64Data);
+      const byteArray = new Uint8Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteArray[i] = byteCharacters.charCodeAt(i);
+      }
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from('fotos-perfil')
+        .upload(filePath, byteArray, {
+          contentType: 'image/jpeg',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Error subiendo foto:', uploadError);
+        return;
+      }
+
+      await this.cargarFotoPerfil();
+      this.changeDetectorRef.detectChanges();
+
+    } catch (error) {
+      console.error('Error en subirFoto:', error);
+    }
+  }
+
+  async eliminarFotoExistente() {
+    try {
+      const supabase = this.supabaseService.getClient();
+      const userId = this.usuario.id;
+
+      const { data } = await supabase
+        .storage
+        .from('fotos-perfil')
+        .list(`${userId}/`, { limit: 1 });
+
+      if (data && data.length > 0) {
+        await supabase
+          .storage
+          .from('fotos-perfil')
+          .remove([`${userId}/${data[0].name}`]);
+      }
+    } catch (error) {
+      console.error('Error eliminando foto existente:', error);
+    }
+  }
+
+  async eliminarFoto() {
+    try {
+      this.cargandoFoto = true;
+      await this.eliminarFotoExistente();
+      this.fotoUrl = null;
+      this.changeDetectorRef.detectChanges();
+    } catch (error) {
+      console.error('Error eliminando foto:', error);
+    } finally {
+      this.cargandoFoto = false;
     }
   }
 

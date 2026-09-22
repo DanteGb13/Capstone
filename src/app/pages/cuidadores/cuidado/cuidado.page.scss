@@ -73,10 +73,24 @@ ion-content {
 
     .adulto-avatar {
         flex-shrink: 0;
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f0ecfa;
 
         ion-icon {
             font-size: 42px;
             color: var(--primary);
+        }
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
     }
 

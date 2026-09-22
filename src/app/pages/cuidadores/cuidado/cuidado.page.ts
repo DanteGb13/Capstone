@@ -15,6 +15,7 @@ import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
+import { SupabaseService } from '../../../services/supabase/supabase';
 
 @Component({
   selector: 'app-cuidado',
@@ -41,7 +42,8 @@ export class CuidadoPage implements OnInit {
     private vinculacionService: Vinculacion,
     private cdr: ChangeDetectorRef,
     private router: Router,
-    private navRol: NavegacionRolService
+    private navRol: NavegacionRolService,
+    private supabaseService: SupabaseService
   ) {
     addIcons(icons);
   }
@@ -58,11 +60,38 @@ export class CuidadoPage implements OnInit {
     this.cargandoAdultos = true;
     try {
       this.adultosACargo = await this.vinculacionService.obtenerAdultosACargo();
+      await this.cargarFotosPerfiles();
     } catch (e) {
       console.error('Error:', e);
     } finally {
       this.cargandoAdultos = false;
       this.cdr.detectChanges();
+    }
+  }
+
+  async cargarFotosPerfiles() {
+    const supabase = this.supabaseService.getClient();
+
+    for (const item of this.adultosACargo) {
+      const userId = item.adulto_mayor?.id;
+      if (!userId) continue;
+
+      try {
+        const { data } = await supabase.storage
+          .from('fotos-perfil')
+          .list(`${userId}/`, { limit: 1 });
+
+        if (data && data.length > 0) {
+          const { data: signedUrlData } = await supabase.storage
+            .from('fotos-perfil')
+            .createSignedUrl(`${userId}/${data[0].name}`, 3600);
+          item.adulto_mayor.foto_url = signedUrlData?.signedUrl || null;
+        } else {
+          item.adulto_mayor.foto_url = null;
+        }
+      } catch (error) {
+        item.adulto_mayor.foto_url = null;
+      }
     }
   }
 
