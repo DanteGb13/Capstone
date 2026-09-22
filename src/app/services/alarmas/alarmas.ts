@@ -2,8 +2,16 @@ import { Injectable } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
+import { Network } from '@capacitor/network';
 import { SiempreCerca } from './siempre-cerca';
 import { SupabaseService } from '../supabase/supabase';
+
+interface OperacionCola {
+  id: string;
+  op: 'insert' | 'update' | 'delete';
+  payload: Partial<AlarmaRecordatorio>;
+  ts: number;
+}
 
 export interface AlarmaRecordatorio {
   id: string;
@@ -38,6 +46,11 @@ export class AlarmasService {
   private apagadas = new Set<string>();
   private apagadasCargadas = false;
   private readonly CLAVE_APAGADAS = 'alarmas.apagadas';
+  private readonly CLAVE_ESPEJO = 'alarmas.mirror.v1';
+  private readonly CLAVE_COLA = 'alarmas.queue.v1';
+  private redConectada: boolean | null = null;
+  private redRegistrada = false;
+  private sincronizando = false;
 
   private alarmasCache: AlarmaRecordatorio[] = [];
 
@@ -65,27 +78,43 @@ export class AlarmasService {
       return [];
     }
 
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from(TABLA)
-      .select('*')
-      .eq('id_usuario', userId)
-      .order('hora', { ascending: true })
-      .order('minuto', { ascending: true });
-
-    if (error) {
-      console.error('Error al obtener alarmas:', error.message);
-      return this.alarmasCache;
+    const sinRed = this.redConectada === false;
+    if (sinRed) {
+      return this.espejoDelUsuario(userId);
     }
 
-    this.alarmasCache = (data || []).map((row: any) => ({
-      ...row,
-      dias: Array.isArray(row.dias) && row.dias.length > 0
-        ? row.dias
-        : [...DIAS_SEMANA_TODOS]
-    }));
+    try {
+      const supabase = this.supabaseService.getClient();
+      const { data, error } = await supabase
+        .from(TABLA)
+        .select('*')
+        .eq('id_usuario', userId)
+        .order('hora', { ascending: true })
+        .order('minuto', { ascending: true });
 
-    return this.alarmasCache;
+      if (error) {
+        if (this.esErrorDeRed(error.message)) {
+          this.redConectada = false;
+        }
+        return this.espejoDelUsuario(userId);
+      }
+
+      this.redConectada = true;
+      const filas = (data || []).map((row: any) => ({
+        ...row,
+        dias: Array.isArray(row.dias) && row.dias.length > 0
+          ? row.dias
+          : [...DIAS_SEMANA_TODOS]
+      }));
+      const resultado = this.aplicarCambiosPendientes(filas);
+      this.guardarEspejo(resultado);
+      this.alarmasCache = resultado;
+
+      return resultado;
+    } catch (e) {
+      console.error('Error inesperado al obtener alarmas:', e);
+      return this.espejoDelUsuario(userId);
+    }
   }
 
   getAlarmasCache(): AlarmaRecordatorio[] {
@@ -94,7 +123,7 @@ export class AlarmasService {
 
 
   // =====================================================
-  // CREAR ALARMA
+  // CREAR ALARMA (local-first)
   // =====================================================
 
   async crearAlarma(
@@ -110,68 +139,278 @@ export class AlarmasService {
       return null;
     }
 
-    const supabase = this.supabaseService.getClient();
-    const { data, error } = await supabase
-      .from(TABLA)
-      .insert({
-        id_usuario: userId,
-        nombre,
-        hora,
-        minuto,
-        descripcion,
-        activa,
-        dias: dias.length > 0 ? dias : [...DIAS_SEMANA_TODOS]
-      })
-      .select()
-      .single();
+    const alarma: AlarmaRecordatorio = {
+      id: this.generarId(),
+      id_usuario: userId,
+      nombre,
+      hora,
+      minuto,
+      descripcion,
+      activa,
+      confirmado: null,
+      dias: dias.length > 0 ? dias : [...DIAS_SEMANA_TODOS]
+    };
 
-    if (error) {
-      console.error('Error al crear alarma:', error.message);
-      return null;
-    }
+    this.espejoUpsert(alarma);
+    // descartar inserts previos de un borrado-no-trasladado con el mismo id
+    const restantes = this.leerCola().filter(
+      (o) => o.op !== 'insert' || o.id !== alarma.id
+    );
+    restantes.push({ id: alarma.id, op: 'insert', payload: alarma, ts: Date.now() });
+    this.guardarCola(restantes);
 
-    return data as AlarmaRecordatorio;
+    this.flushCola();
+
+    this.alarmasCache = this.leerEspejo();
+    return alarma;
   }
 
 
   // =====================================================
-  // ACTUALIZAR ALARMA
+  // ACTUALIZAR ALARMA (local-first)
   // =====================================================
 
   async actualizarAlarma(
     id: string,
     cambios: Partial<Pick<AlarmaRecordatorio, 'nombre' | 'hora' | 'minuto' | 'descripcion' | 'activa' | 'dias' | 'confirmado'>>
   ): Promise<boolean> {
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from(TABLA)
-      .update(cambios)
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error al actualizar alarma:', error.message);
+    const userId = await this.obtenerUsuarioId();
+    if (!userId) {
       return false;
     }
+
+    const espejo = this.leerEspejo();
+    const existente = espejo.find((e) => e.id === id && e.id_usuario === userId);
+    if (existente) {
+      this.espejoUpsert({ ...existente, ...cambios });
+    }
+
+    const restantes = this.leerCola().filter(
+      (o) => o.op !== 'insert' || o.id !== id
+    );
+    restantes.push({ id, op: 'update', payload: cambios, ts: Date.now() });
+    this.guardarCola(restantes);
+
+    this.flushCola();
+
+    const cache = this.leerEspejo().filter((e) => e.id_usuario === userId);
+    this.alarmasCache = cache;
     return true;
   }
 
 
   // =====================================================
-  // ELIMINAR ALARMA
+  // ELIMINAR ALARMA (local-first)
   // =====================================================
 
   async eliminarAlarma(id: string): Promise<boolean> {
-    const supabase = this.supabaseService.getClient();
-    const { error } = await supabase
-      .from(TABLA)
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      console.error('Error al eliminar alarma:', error.message);
+    const userId = await this.obtenerUsuarioId();
+    if (!userId) {
       return false;
     }
+
+    this.espejoQuitar(id);
+
+    let cola = this.leerCola();
+    if (cola.some((o) => o.op === 'insert' && o.id === id)) {
+      // la fila nunca llegó al servidor: solo se quita la cola, sin delete
+      cola = cola.filter((o) => o.id !== id);
+    } else {
+      cola = cola.filter((o) => o.op !== 'insert' || o.id !== id);
+      cola.push({ id, op: 'delete', payload: {}, ts: Date.now() });
+    }
+    this.guardarCola(cola);
+
+    this.flushCola();
+
+    const cache = this.leerEspejo().filter((e) => e.id_usuario === userId);
+    this.alarmasCache = cache;
     return true;
+  }
+
+
+  // =====================================================
+  // MODO OFFLINE: ESPEJO LOCAL + COLA DE SINCRONIZACIÓN
+  // =====================================================
+
+  private generarId(): string {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      return `local-${Date.now()}-${Math.floor(Math.random() * 1e9)}`;
+    }
+  }
+
+  private leerEspejo(): AlarmaRecordatorio[] {
+    try {
+      return JSON.parse(localStorage.getItem(this.CLAVE_ESPEJO) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  private guardarEspejo(alarmas: AlarmaRecordatorio[]) {
+    try {
+      localStorage.setItem(this.CLAVE_ESPEJO, JSON.stringify(alarmas));
+    } catch (e) {
+      console.error('No se pudo guardar el espejo local', e);
+    }
+  }
+
+  private espejoUpsert(alarma: AlarmaRecordatorio) {
+    const espejo = this.leerEspejo();
+    const idx = espejo.findIndex((e) => e.id === alarma.id);
+    if (idx >= 0) {
+      espejo[idx] = alarma;
+    } else {
+      espejo.push(alarma);
+    }
+    this.guardarEspejo(espejo);
+  }
+
+  private espejoQuitar(id: string) {
+    this.guardarEspejo(this.leerEspejo().filter((e) => e.id !== id));
+  }
+
+  private espejoDelUsuario(userId: string): AlarmaRecordatorio[] {
+    return this.leerEspejo()
+      .filter((r) => r.id_usuario === userId)
+      .sort((a, b) => a.hora - b.hora || a.minuto - b.minuto);
+  }
+
+  private leerCola(): OperacionCola[] {
+    try {
+      return JSON.parse(localStorage.getItem(this.CLAVE_COLA) || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  private guardarCola(cola: OperacionCola[]) {
+    try {
+      localStorage.setItem(this.CLAVE_COLA, JSON.stringify(cola));
+    } catch (e) {
+      console.error('No se pudo guardar la cola de sincronización', e);
+    }
+  }
+
+  /**
+   * Detecta mensajes de error típicos de "sin conexión" para no retomar
+   * con un pull que piensa que el servidor "respondió".
+   */
+  private esErrorDeRed(mensaje: string): boolean {
+    const m = (mensaje || '').toLowerCase();
+    return (
+      m.includes('failed to fetch') ||
+      m.includes('network') ||
+      m.includes('internet') ||
+      m.includes('fetch failed') ||
+      m.includes('socket') ||
+      m.includes('timed out') ||
+      m.includes('typeerror') ||
+      m === ''
+    );
+  }
+
+  private async flushCola() {
+    const cola = this.leerCola();
+    if (cola.length === 0) {
+      return;
+    }
+    if (this.redConectada === false) {
+      return;
+    }
+
+    const supabase = this.supabaseService.getClient();
+    const restantes: OperacionCola[] = [];
+    let indice = 0;
+
+    for (const op of cola) {
+      let error: any = null;
+      try {
+        if (op.op === 'insert') {
+          const { error: err } = await supabase
+            .from(TABLA)
+            .insert(op.payload)
+            .maybeSingle();
+          error = err;
+        } else if (op.op === 'update') {
+          const { error: err } = await supabase
+            .from(TABLA)
+            .update(op.payload)
+            .eq('id', op.id);
+          error = err;
+        } else if (op.op === 'delete') {
+          const { error: err } = await supabase
+            .from(TABLA)
+            .delete()
+            .eq('id', op.id);
+          error = err;
+        }
+      } catch (e: any) {
+        error = e;
+      }
+
+      if (error) {
+        const mensaje = (error?.message || '').toLowerCase();
+        const duplicado =
+          op.op === 'insert' &&
+          (mensaje.includes('duplicate') || mensaje.includes('unique constraint') || mensaje.includes('ya existe'));
+
+        if (duplicado) {
+          // el registro ya está en el servidor (lo envió otra sincronización)
+          indice++;
+          continue;
+        }
+
+        console.error('Sincronización pendiente falló (op ' + op.op + '):', error.message);
+        restantes.push(op);
+        if (this.esErrorDeRed(error.message)) {
+          this.redConectada = false;
+          indice++;
+          break;
+        }
+      }
+      indice++;
+    }
+
+    if (indice < cola.length) {
+      restantes.push(...cola.slice(indice));
+    }
+    this.guardarCola(restantes);
+  }
+
+  /**
+   * Mientras haya operaciones pendientes en la cola, lo que llegue del
+   * servidor NO debe pisar lo editado/creado/borrado localmente.
+   * - update/insert pendiente: gana la versión local.
+   * - delete pendiente: la fila se quita.
+   */
+  private aplicarCambiosPendientes(filasServidor: AlarmaRecordatorio[]): AlarmaRecordatorio[] {
+    const cola = this.leerCola();
+    if (cola.length === 0) {
+      return filasServidor;
+    }
+
+    const idsUpdate = new Set(cola.filter((o) => o.op === 'update').map((o) => o.id));
+    const idsInsert = new Set(cola.filter((o) => o.op === 'insert').map((o) => o.id));
+    const idsDelete = new Set(cola.filter((o) => o.op === 'delete').map((o) => o.id));
+    const espejoLocal = this.leerEspejo();
+
+    const porId = new Map<string, AlarmaRecordatorio>();
+    for (const f of filasServidor) {
+      if (!idsDelete.has(f.id)) {
+        porId.set(f.id, f);
+      }
+    }
+
+    for (const local of espejoLocal) {
+      if (idsInsert.has(local.id) || idsUpdate.has(local.id)) {
+        porId.set(local.id, local);
+      }
+    }
+
+    return [...porId.values()];
   }
 
 
@@ -613,15 +852,24 @@ export class AlarmasService {
   }
 
   async sincronizar() {
-    const alarmas = await this.getAlarmas();
-    for (const alarma of alarmas) {
-      if (alarma.activa) {
-        await this.programar(alarma);
-      } else {
-        await this.cancelarAlarma(alarma);
-      }
+    if (this.sincronizando) {
+      return;
     }
-    await this.limpiarApagadas(alarmas);
+    this.sincronizando = true;
+    try {
+      await this.flushCola();
+      const alarmas = await this.getAlarmas();
+      for (const alarma of alarmas) {
+        if (alarma.activa) {
+          await this.programar(alarma);
+        } else {
+          await this.cancelarAlarma(alarma);
+        }
+      }
+      await this.limpiarApagadas(alarmas);
+    } finally {
+      this.sincronizando = false;
+    }
   }
 
   private async limpiarApagadas(alarmas: AlarmaRecordatorio[]) {
@@ -687,8 +935,42 @@ export class AlarmasService {
       });
     }
 
+    this.registrarRed();
+
     this.registrarAccionApagar();
     this.sincronizar();
+  }
+
+  private registrarRed() {
+    if (this.redRegistrada) {
+      return;
+    }
+    this.redRegistrada = true;
+
+    Network.addListener('networkStatusChange', (estado) => {
+      this.redConectada = estado.connected;
+      if (estado.connected) {
+        this.sincronizar();
+      }
+    });
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        this.redConectada = true;
+        this.sincronizar();
+      });
+      window.addEventListener('offline', () => {
+        this.redConectada = false;
+      });
+    }
+
+    Network.getStatus()
+      .then((estado) => {
+        this.redConectada = estado.connected;
+      })
+      .catch(() => {
+        this.redConectada = true;
+      });
   }
 
   private async registrarAccionApagar() {
