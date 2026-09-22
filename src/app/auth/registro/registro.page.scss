@@ -13,25 +13,19 @@ ion-content {
 ========================= */
 
 .back-container {
-  padding-top: 52px;
+  padding-top: 60px;
 }
 
 .back-button {
   --color: #27323d;
-  --border-color: #a8bacb;
-  --border-width: 1px;
-  --border-style: solid;
-
-  width: 38px;
-  height: 38px;
-
-  --border-radius: 50%;
-
+  --padding-start: 0;
+  --padding-end: 0;
   margin: 0;
+  min-width: auto;
 }
 
 .back-button ion-icon {
-  font-size: 22px;
+  font-size: 24px;
 }
 
 
@@ -40,8 +34,8 @@ ion-content {
 ========================= */
 
 .register-header {
-  margin-top: 10px;
-  margin-bottom: 17px;
+  margin-top: 16px;
+  margin-bottom: 24px;
 }
 
 .register-header h1 {
