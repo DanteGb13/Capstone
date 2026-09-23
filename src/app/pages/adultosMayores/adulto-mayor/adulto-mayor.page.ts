@@ -131,6 +131,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   nombreCuidadorActivo: string = '';
 
+  cuidadorFotoUrl: string | null = null;
+
   cargandoCuidadores: boolean = false;
 
 
@@ -318,6 +320,31 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.fotoUrl = null;
+    }
+  }
+
+  async cargarFotoCuidador(idUsuarioCuidador?: string) {
+    if (!idUsuarioCuidador) {
+      this.cuidadorFotoUrl = null;
+      return;
+    }
+    try {
+      const supabase = this.supabaseService.getClient();
+
+      const { data } = await supabase.storage
+        .from('fotos-perfil')
+        .list(`${idUsuarioCuidador}/`, { limit: 1 });
+
+      if (data && data.length > 0) {
+        const { data: signedUrlData } = await supabase.storage
+          .from('fotos-perfil')
+          .createSignedUrl(`${idUsuarioCuidador}/${data[0].name}`, 3600);
+        this.cuidadorFotoUrl = signedUrlData?.signedUrl || null;
+      } else {
+        this.cuidadorFotoUrl = null;
+      }
+    } catch (error) {
+      this.cuidadorFotoUrl = null;
     }
   }
 
@@ -734,9 +761,13 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
         this.nombreCuidadorActivo =
           nombres.join(', ');
 
+        // Cargar foto del primer cuidador vinculado
+        await this.cargarFotoCuidador(data[0]?.cuidador?.id_usuario);
+
       } else {
 
         this.nombreCuidadorActivo = '';
+        this.cuidadorFotoUrl = null;
 
       }
 

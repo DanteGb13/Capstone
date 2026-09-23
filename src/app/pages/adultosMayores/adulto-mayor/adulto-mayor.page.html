@@ -74,7 +74,8 @@
       <div class="cuidador-activo-card">
 
         <div class="cuidador-avatar-circle">
-          <ion-icon name="shield-checkmark"></ion-icon>
+          <img *ngIf="cuidadorFotoUrl" [src]="cuidadorFotoUrl" alt="Foto del cuidador" class="cuidador-foto">
+          <ion-icon *ngIf="!cuidadorFotoUrl" name="person-circle" class="icon-sin-foto"></ion-icon>
         </div>
 
         <div class="cuidador-activo-info">

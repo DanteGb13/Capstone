@@ -21,6 +21,8 @@ import * as icons from 'ionicons/icons';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
 import { SupabaseService } from '../../../services/supabase/supabase';
+import { PermisosExtra } from '../../../services/Backend/permisos-extra/permisos-extra';
+import { Capacitor } from '@capacitor/core';
 
 @Component({
   selector: 'app-cuidado',
@@ -77,7 +79,8 @@ export class CuidadoPage implements OnInit {
     this.cargandoAdultos = true;
     try {
       this.adultosACargo = await this.vinculacionService.obtenerAdultosACargo();
-      await this.cargarFotosPerfiles();
+      this.cdr.detectChanges();
+      this.cargarFotosPerfiles().then(() => this.cdr.detectChanges());
     } catch (e) {
       console.error('Error:', e);
     } finally {
@@ -89,27 +92,29 @@ export class CuidadoPage implements OnInit {
   async cargarFotosPerfiles() {
     const supabase = this.supabaseService.getClient();
 
-    for (const item of this.adultosACargo) {
-      const userId = item.adulto_mayor?.id;
-      if (!userId) continue;
+    await Promise.all(
+      this.adultosACargo.map(async (item) => {
+        const userId = item.adulto_mayor?.id;
+        if (!userId) return;
 
-      try {
-        const { data } = await supabase.storage
-          .from('fotos-perfil')
-          .list(`${userId}/`, { limit: 1 });
-
-        if (data && data.length > 0) {
-          const { data: signedUrlData } = await supabase.storage
+        try {
+          const { data } = await supabase.storage
             .from('fotos-perfil')
-            .createSignedUrl(`${userId}/${data[0].name}`, 3600);
-          item.adulto_mayor.foto_url = signedUrlData?.signedUrl || null;
-        } else {
+            .list(`${userId}/`, { limit: 1 });
+
+          if (data && data.length > 0) {
+            const { data: signedUrlData } = await supabase.storage
+              .from('fotos-perfil')
+              .createSignedUrl(`${userId}/${data[0].name}`, 3600);
+            item.adulto_mayor.foto_url = signedUrlData?.signedUrl || null;
+          } else {
+            item.adulto_mayor.foto_url = null;
+          }
+        } catch (error) {
           item.adulto_mayor.foto_url = null;
         }
-      } catch (error) {
-        item.adulto_mayor.foto_url = null;
-      }
-    }
+      })
+    );
   }
 
   async abrirOpcionesAdulto(item: any) {
@@ -229,9 +234,13 @@ export class CuidadoPage implements OnInit {
     }
   }
 
-  llamarAdulto(telefono: string) {
-    if (telefono) {
-      window.open(`tel:${telefono}`, '_system');
+  async llamarAdulto(telefono: string) {
+    if (!telefono) return;
+    const telLimpio = telefono.replace(/[\s\-\(\)\+]/g, '');
+    if (Capacitor.isNativePlatform()) {
+      await PermisosExtra.realizarLlamada({ telefono: telLimpio });
+    } else {
+      window.location.href = `tel:${telLimpio}`;
     }
   }
 

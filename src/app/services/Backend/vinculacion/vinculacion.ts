@@ -424,24 +424,31 @@ export class Vinculacion {
       // OBTENER ADULTOS A CARGO (PARA EL CUIDADOR)
       // =====================================================
     
-      async obtenerAdultosACargo() {
-    
+async obtenerAdultosACargo() {
+
         const idCuidador =
           await this.obtenerCuidadorActual();
-    
+
         if (!idCuidador) {
           return [];
         }
-    
+
         const adultosMap = new Map<string, any>();
-    
-        // 1. Consultar solicitudes aceptadas
-        const { data: solicitudes } = await this.supabase
-          .from('solicitud_vinculacion')
-          .select('id, id_usuario, id_cuidador, estado, fecha_solicitud, fecha_respuesta')
-          .eq('id_cuidador', idCuidador)
-          .eq('estado', 'aceptada');
-    
+
+        // 1+2. Consultar solicitudes y cuidador_usuario en PARALELO
+        const [solRes, cuRes] = await Promise.all([
+          this.supabase
+            .from('solicitud_vinculacion')
+            .select('id, id_usuario, id_cuidador, estado, fecha_solicitud, fecha_respuesta')
+            .eq('id_cuidador', idCuidador)
+            .eq('estado', 'aceptada'),
+          this.supabase
+            .from('cuidador_usuario')
+            .select('id, id_cuidador, id_usuario')
+            .eq('id_cuidador', idCuidador)
+        ]);
+
+        const solicitudes = solRes.data;
         if (solicitudes && solicitudes.length > 0) {
           for (const s of solicitudes) {
             if (s.id_usuario) {
@@ -456,64 +463,66 @@ export class Vinculacion {
             }
           }
         }
-    
-        // 2. Consultar tabla cuidador_usuario
-        try {
-          const { data: cuData } = await this.supabase
-            .from('cuidador_usuario')
-            .select('id, id_cuidador, id_usuario')
-            .eq('id_cuidador', idCuidador);
-    
-          if (cuData && cuData.length > 0) {
-            for (const cu of cuData) {
-              if (cu.id_usuario && !adultosMap.has(cu.id_usuario)) {
-                adultosMap.set(cu.id_usuario, {
-                  id: cu.id,
-                  id_usuario: cu.id_usuario,
-                  id_cuidador: cu.id_cuidador,
-                  estado: 'aceptada'
-                });
-              }
+
+        const cuData = cuRes.data;
+        if (cuData && cuData.length > 0) {
+          for (const cu of cuData) {
+            if (cu.id_usuario && !adultosMap.has(cu.id_usuario)) {
+              adultosMap.set(cu.id_usuario, {
+                id: cu.id,
+                id_usuario: cu.id_usuario,
+                id_cuidador: cu.id_cuidador,
+                estado: 'aceptada'
+              });
             }
           }
-        } catch (e) {
-          // ignore
         }
-    
+
         const lista = Array.from(adultosMap.values());
-    
-        // 3. Enriquecer datos completos del adulto mayor desde public.usuario y public.direccion
-        for (const item of lista) {
-          if (item.id_usuario) {
-            const { data: usuarioData } = await this.supabase
-              .from('usuario')
-              .select(`
-                id,
-                nombre,
-                apellidopa,
-                apellidoma,
-                telefono,
-                correo,
-                rut,
-                fecha_nacimiento,
-                id_ubicación,
-                direccion:id_direccion (
-                  id,
-                  region,
-                  comuna,
-                  calle,
-                  numero
-                )
-              `)
-              .eq('id', item.id_usuario)
-              .maybeSingle();
-    
-            if (usuarioData) {
-              item.adulto_mayor = usuarioData;
-            }
+
+        if (lista.length === 0) {
+          return lista;
+        }
+
+        // 3. Obtener TODOS los usuarios en UNA sola consulta (batch)
+        const idsUsuarios = lista.map(item => item.id_usuario).filter(Boolean);
+
+        const { data: usuariosData } = await this.supabase
+          .from('usuario')
+          .select(`
+            id,
+            nombre,
+            apellidopa,
+            apellidoma,
+            telefono,
+            correo,
+            rut,
+            fecha_nacimiento,
+            direccion:id_direccion (
+              id,
+              region,
+              comuna,
+              calle,
+              numero
+            )
+          `)
+          .in('id', idsUsuarios);
+
+        // Asignar datos a cada item
+        const usuariosMap = new Map<string, any>();
+        if (usuariosData) {
+          for (const u of usuariosData as any[]) {
+            usuariosMap.set(u.id as string, u);
           }
         }
-    
+
+        for (const item of lista) {
+          const u = usuariosMap.get(item.id_usuario);
+          if (u) {
+            item.adulto_mayor = u;
+          }
+        }
+
         return lista;
       }
     

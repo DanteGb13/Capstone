@@ -79,7 +79,8 @@ export class AdultoCargoPage implements OnInit {
     this.cargando = true;
     try {
       this.adultosACargo = await this.vinculacionService.obtenerAdultosACargo();
-      await this.cargarFotosPerfiles();
+      this.changeDetectorRef.detectChanges();
+      this.cargarFotosPerfiles().then(() => this.changeDetectorRef.detectChanges());
     } catch (error: any) {
       console.error('Error al obtener adultos a cargo:', error);
     } finally {
@@ -91,27 +92,29 @@ export class AdultoCargoPage implements OnInit {
   async cargarFotosPerfiles() {
     const supabase = this.supabaseService.getClient();
 
-    for (const item of this.adultosACargo) {
-      const userId = item.adulto_mayor?.id;
-      if (!userId) continue;
+    await Promise.all(
+      this.adultosACargo.map(async (item) => {
+        const userId = item.adulto_mayor?.id;
+        if (!userId) return;
 
-      try {
-        const { data } = await supabase.storage
-          .from('fotos-perfil')
-          .list(`${userId}/`, { limit: 1 });
-
-        if (data && data.length > 0) {
-          const { data: signedUrlData } = await supabase.storage
+        try {
+          const { data } = await supabase.storage
             .from('fotos-perfil')
-            .createSignedUrl(`${userId}/${data[0].name}`, 3600);
-          item.adulto_mayor.foto_url = signedUrlData?.signedUrl || null;
-        } else {
+            .list(`${userId}/`, { limit: 1 });
+
+          if (data && data.length > 0) {
+            const { data: signedUrlData } = await supabase.storage
+              .from('fotos-perfil')
+              .createSignedUrl(`${userId}/${data[0].name}`, 3600);
+            item.adulto_mayor.foto_url = signedUrlData?.signedUrl || null;
+          } else {
+            item.adulto_mayor.foto_url = null;
+          }
+        } catch (error) {
           item.adulto_mayor.foto_url = null;
         }
-      } catch (error) {
-        item.adulto_mayor.foto_url = null;
-      }
-    }
+      })
+    );
   }
 
   async abrirOpcionesAdulto(item: any) {
