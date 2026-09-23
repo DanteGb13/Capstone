@@ -475,11 +475,13 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     }
 
     if (enviados === 0) {
+      const motivo = this.pushService.ultimoError;
       const alert = await this.alertCtrl.create({
         header: 'No se pudo enviar el estado',
         message:
-          'No se encontró un token de notificaciones vinculado al cuidador. ' +
-          'Pide que abra la app y acepte el permiso de notificaciones, o revisa la configuración de push.',
+          `No se envió al cuidador.\n\n` +
+          `Motivo: ${motivo || 'desconocido'}\n\n` +
+          `Verifica que el cuidador tenga la app abierta con el permiso de notificaciones activado y que el canal de notificaciones de SiempreCerca no esté bloqueado en su celular.`,
         buttons: ['OK']
       });
       await alert.present();

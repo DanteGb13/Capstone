@@ -14,6 +14,12 @@ export class PushNotificationService {
   private tokenFCM: string | null = null;
   private isNative = Capacitor.isNativePlatform();
 
+  private _ultimoError = '';
+
+  get ultimoError(): string {
+    return this._ultimoError;
+  }
+
   // CAMBIAR A true CUANDO FIREBASE ESTÉ CONFIGURADO
   private pushHabilitado = true;
 
@@ -163,6 +169,8 @@ export class PushNotificationService {
   ): Promise<boolean> {
     if (!this.pushHabilitado) return false;
 
+    this._ultimoError = '';
+
     try {
       const client = this.supabaseService.getClient();
 
@@ -172,19 +180,56 @@ export class PushNotificationService {
         .eq('id_usuario', idUsuarioDestino);
 
       if (error || !tokens || tokens.length === 0) {
-        console.warn('No se encontraron tokens para el usuario:', idUsuarioDestino);
+        this._ultimoError = 'No se encontraron tokens de notificación para el destinatario.';
+        console.warn(this._ultimoError, idUsuarioDestino);
         return false;
       }
 
+      let enviadosOk = 0;
+      const errores: string[] = [];
+
       for (const t of tokens) {
-        await this.enviarPushFirebase(t.token, titulo, cuerpo, data);
+        try {
+          const r = await this.enviarPushFirebase(t.token, titulo, cuerpo, data);
+          if (r.ok) {
+            enviadosOk++;
+          } else {
+            if (r.error) errores.push(r.error);
+            // Token inválido/caducado → limpiarlo para que no falle siempre
+            if (r.tokenInvalido) {
+              await client
+                .from('push_tokens')
+                .delete()
+                .eq('id_usuario', idUsuarioDestino)
+                .eq('token', t.token);
+              console.warn('Token obsoleto eliminado para el usuario:', idUsuarioDestino);
+            }
+          }
+        } catch (e: any) {
+          errores.push(e?.message || 'Error desconocido');
+        }
+      }
+
+      if (enviadosOk === 0) {
+        this._ultimoError = errores.join(' | ') || 'El envío falló sin detalles.';
+        console.error('Push fallido:', this._ultimoError);
+        return false;
       }
 
       return true;
-    } catch (e) {
+    } catch (e: any) {
+      this._ultimoError = e?.message || 'Error enviando push';
       console.error('Error enviando push:', e);
       return false;
     }
+  }
+
+  private esTokenInvalido(mensaje: string): boolean {
+    return (
+      mensaje.toLowerCase().includes('unregistered') ||
+      mensaje.toLowerCase().includes('invalid argument') ||
+      mensaje.toLowerCase().includes('not a valid')
+    );
   }
 
   private async enviarPushFirebase(
@@ -192,7 +237,7 @@ export class PushNotificationService {
     titulo: string,
     cuerpo: string,
     data?: any
-  ): Promise<void> {
+  ): Promise<{ ok: boolean; error?: string; tokenInvalido?: boolean }> {
     const client = this.supabaseService.getClient();
     const { error } = await client.functions.invoke('enviar-push', {
       body: {
@@ -204,8 +249,12 @@ export class PushNotificationService {
     });
 
     if (error) {
+      const mensaje = `Edge Function: ${error.message}`;
       console.error('Error en Edge Function push:', error);
+      return { ok: false, error: mensaje, tokenInvalido: this.esTokenInvalido(error.message || '') };
     }
+
+    return { ok: true };
   }
 
   private async mostrarAlerta(notification: PushNotification): Promise<void> {
