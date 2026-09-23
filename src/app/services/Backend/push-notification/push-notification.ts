@@ -129,31 +129,7 @@ export class PushNotificationService {
         return;
       }
 
-      // Si es adulto mayor, también guardar token para sus cuidadores vinculados
-      // (para que el SOS pueda enviar push al cuidador desde el mismo celular)
-      const { data: vinculos } = await client
-        .from('cuidador_usuario')
-        .select('cuidador(id_usuario)')
-        .eq('id_usuario', user.id);
-
-      if (vinculos) {
-        for (const v of vinculos) {
-          const cuidadorUserId = (v as any).cuidador?.id_usuario;
-          if (cuidadorUserId && cuidadorUserId !== user.id) {
-            await client
-              .from('push_tokens')
-              .upsert(
-                {
-                  id_usuario: cuidadorUserId,
-                  token: token,
-                  plataforma: 'android',
-                  updated_at: new Date().toISOString()
-                },
-                { onConflict: 'id_usuario,token' }
-              );
-          }
-        }
-      }
+      console.log('Token guardado para el usuario:', user.id);
     } catch (e) {
       console.error('Error guardando token:', e);
     }

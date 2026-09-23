@@ -44,6 +44,8 @@ import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
 import { Capacitor } from '@capacitor/core';
 import { FooterComponent } from '../../../components/footer/footer.component';
 import { SupabaseService } from '../../../services/supabase/supabase';
+import { PushNotificationService } from '../../../services/Backend/push-notification/push-notification';
+import { AlertController } from '@ionic/angular';
 
 
 @Component({
@@ -168,7 +170,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
     private sosService: SOSService,
 
-    private supabaseService: SupabaseService
+    private supabaseService: SupabaseService,
+
+    private pushService: PushNotificationService,
+
+    private alertCtrl: AlertController
 
   ) {
 
@@ -223,10 +229,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       this.router.navigate(['/recordatorios']);
     });
 
-    // Crear canal SOS después de cargar la página
+    // Crear canal SOS + registrar push después de cargar la página (no bloquear)
     setTimeout(() => {
       if (Capacitor.isNativePlatform()) {
         SiempreCerca.crearCanalSOS().catch(() => {});
+        this.pushService.inicializar().catch(() => {});
       }
     }, 2000);
 
@@ -405,16 +412,78 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.mostrarModalEstoyAqui = false;
   }
 
-  marcarEnCasa() {
+  async marcarEnCasa() {
     this.mostrarModalEstoyAqui = false;
     this.estadoEstoyAqui = 'Estoy en casa';
     console.log('Estado: Estoy en casa');
+    await this.notificarEstadoCasa('Estoy en casa');
   }
 
-  marcarSaliDeCasa() {
+  async marcarSaliDeCasa() {
     this.mostrarModalEstoyAqui = false;
     this.estadoEstoyAqui = 'Salí de casa';
     console.log('Estado: Salí de casa');
+    await this.notificarEstadoCasa('Salí de casa');
+  }
+
+  private async notificarEstadoCasa(estado: 'Estoy en casa' | 'Salí de casa') {
+    let cuidadores: any[] = [];
+
+    try {
+      cuidadores = await this.sosService.obtenerCuidadores();
+    } catch (e) {
+      console.error('Error obteniendo cuidadores vinculados:', e);
+    }
+
+    // Sin cuidador vinculado → avisar que debe vincularse primero
+    if (!cuidadores || cuidadores.length === 0) {
+      const alert = await this.alertCtrl.create({
+        header: 'Sin cuidador vinculado',
+        message: 'Debes vincular a un cuidador primero antes de realizar esta acción.',
+        buttons: ['OK']
+      });
+      await alert.present();
+      return;
+    }
+
+    const nombreAdulto = this.nombreUsuario?.trim()
+      ? this.nombreUsuario.trim()
+      : 'Tu adulto mayor';
+
+    const cuerpo =
+      estado === 'Estoy en casa'
+        ? `${nombreAdulto} dice: Estoy en casa`
+        : `${nombreAdulto} dice: Salí de casa`;
+
+    let enviados = 0;
+
+    for (const cuidador of cuidadores) {
+      try {
+        const ok = await this.pushService.enviarPushAUsuario(
+          cuidador.id,
+          estado,
+          cuerpo,
+          { tipo: 'estado_casa', estado }
+        );
+        if (ok) {
+          enviados++;
+          console.log('Push de estado enviado al cuidador:', cuidador.id);
+        }
+      } catch (e) {
+        console.error('Error enviando push de estado al cuidador:', e);
+      }
+    }
+
+    if (enviados === 0) {
+      const alert = await this.alertCtrl.create({
+        header: 'No se pudo enviar el estado',
+        message:
+          'No se encontró un token de notificaciones vinculado al cuidador. ' +
+          'Pide que abra la app y acepte el permiso de notificaciones, o revisa la configuración de push.',
+        buttons: ['OK']
+      });
+      await alert.present();
+    }
   }
 
 
