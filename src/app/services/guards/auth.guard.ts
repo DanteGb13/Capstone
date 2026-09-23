@@ -12,7 +12,7 @@ async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
     if (sessionError || !session?.user) {
-      return { autenticado: false, perfilCompleto: false, rol: null };
+      return { autenticado: false, perfilCompleto: false, existeUsuario: false, rol: null };
     }
 
     const user = session.user;
@@ -32,15 +32,15 @@ async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
       .maybeSingle();
 
     if (usuarioError || !usuario || !usuario.rut || !usuario.id_direccion) {
-      return { autenticado: true, perfilCompleto: false, rol: null };
+      return { autenticado: true, perfilCompleto: false, existeUsuario: !!usuario, rol: null };
     }
 
     const rolData = usuario.rol as any;
     const rol = Array.isArray(rolData) ? rolData[0]?.nombre : rolData?.nombre;
 
-    return { autenticado: true, perfilCompleto: true, rol };
+    return { autenticado: true, perfilCompleto: true, existeUsuario: true, rol };
   } catch {
-    return { autenticado: false, perfilCompleto: false, rol: null };
+    return { autenticado: false, perfilCompleto: false, existeUsuario: false, rol: null };
   }
 }
 
@@ -48,7 +48,7 @@ async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
  * Guard para páginas públicas como Login y Registro.
  * Si el usuario ya está autenticado, no le permite estar en Login o Registro y lo redirige:
  * - Si su perfil está completo -> a su panel (/adulto-mayor o /cuidador).
- * - Si su perfil está incompleto -> a /siguiente-paso.
+ * - Si su perfil está incompleto -> a /elegir-tipo (elegir Usuario / Familiar).
  */
 export const noAuthGuard: CanActivateFn = async () => {
   const supabaseService = inject(SupabaseService);
@@ -62,13 +62,8 @@ export const noAuthGuard: CanActivateFn = async () => {
       router.navigate([navRol.rutaPrincipal(estado.rol)], { replaceUrl: true });
       return false;
     } else {
-      // Perfil incompleto: distinguir cuenta nueva (ej. Google sin elegir tipo)
-      // de un registro de correo ya iniciado (tiene datos temporales).
-      if (!estado.rol && !localStorage.getItem('datos_registro_temp')) {
-        router.navigate(['/elegir-tipo'], { replaceUrl: true });
-      } else {
-        router.navigate(['/siguiente-paso'], { replaceUrl: true });
-      }
+      // Registro incompleto → siempre /elegir-tipo.
+      router.navigate(['/elegir-tipo'], { replaceUrl: true });
       return false;
     }
   }
@@ -105,7 +100,7 @@ export const siguientePasoGuard: CanActivateFn = async () => {
 /**
  * Guard para páginas protegidas (cuidador, adulto-mayor, etc.).
  * - Si no está autenticado -> redirige a /login.
- * - Si está autenticado pero no ha completado el perfil -> redirige a /siguiente-paso.
+ * - Si está autenticado pero no ha completado el perfil -> redirige a /elegir-tipo.
  * - Si está autenticado y perfil completo -> verifica que el rol coincida con la ruta.
  *   - Si el rol no coincide, redirige a su panel correcto.
  */
@@ -122,7 +117,7 @@ export const authGuard: CanActivateFn = async () => {
   }
 
   if (!estado.perfilCompleto) {
-    router.navigate(['/siguiente-paso'], { replaceUrl: true });
+    router.navigate(['/elegir-tipo'], { replaceUrl: true });
     return false;
   }
 

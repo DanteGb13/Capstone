@@ -248,22 +248,17 @@ export class LoginPage implements OnInit, OnDestroy {
         .eq('id', user.id)
         .maybeSingle();
 
+      const rolData = usuario?.rol as any;
+      const rolNombre = Array.isArray(rolData) ? rolData[0]?.nombre : rolData?.nombre;
+
       if (!usuario || !usuario.rut || !usuario.id_direccion) {
-        // Recién registrado (sin perfil ni rol elegido aún): que elija su tipo
-        // y no quede encasillado como Usuario por defecto.
-        if (!usuario && localStorage.getItem('datos_registro_temp')) {
-          await this.navCtrl.navigateRoot('/elegir-tipo', { replaceUrl: true });
-        } else {
-          await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
-        }
+        // Registro incompleto → siempre elegir Usuario / Familiar.
+        await this.navCtrl.navigateRoot('/elegir-tipo', { replaceUrl: true });
         return;
       }
 
-      const rolData = usuario.rol as any;
-      const rol = Array.isArray(rolData) ? rolData[0]?.nombre : rolData?.nombre;
-
       this.navRol.limpiarCache();
-      await this.navCtrl.navigateRoot(this.navRol.rutaPrincipal(rol), { replaceUrl: true });
+      await this.navCtrl.navigateRoot(this.navRol.rutaPrincipal(rolNombre), { replaceUrl: true });
 
     } catch (error) {
     }

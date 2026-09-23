@@ -214,6 +214,10 @@ export class SiguientePasoPage implements OnInit {
     }
   }
 
+  volverElegirTipo() {
+    this.navCtrl.navigateRoot('/elegir-tipo', { replaceUrl: true });
+  }
+
   private desglosarNombre(nombreCompleto: string) {
     const partes = nombreCompleto.trim().split(/\s+/).filter(p => p.length > 0);
     if (partes.length === 1) {

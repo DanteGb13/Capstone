@@ -25,7 +25,32 @@ ion-content {
   border-radius: 16px;
   font-size: 12px;
   font-weight: 700;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 8px;
+}
+
+.back-tipo-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #5b3fb0;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: none;
+}
+
+.back-tipo-inline ion-icon {
+  font-size: 20px;
 }
 
 .step-header h1 {
@@ -311,4 +336,14 @@ ion-content {
 .finish-button ion-icon {
   font-size: 20px;
   margin-left: 6px;
+}
+
+/* =========================
+   VOLVER A ELEGIR TIPO DE CUENTA
+========================= */
+
+.back-tipo,
+.back-tipo-btn,
+.back-tipo-btn ion-icon {
+  display: none;
 }

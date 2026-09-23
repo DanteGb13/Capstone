@@ -106,7 +106,8 @@ export class RegistroPage implements OnInit, OnDestroy {
           this.navRol.limpiarCache();
           await this.navCtrl.navigateRoot(this.navRol.rutaPrincipal(rol), { replaceUrl: true });
         } else {
-          await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
+          // Perfil incompleto → siempre elegir Usuario / Familiar
+          await this.navCtrl.navigateRoot('/elegir-tipo', { replaceUrl: true });
         }
         return;
       }

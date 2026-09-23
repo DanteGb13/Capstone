@@ -4,8 +4,18 @@
 
     <!-- Encabezado con Indicador de Paso -->
     <div class="step-header">
-      <div class="step-badge">
-        <span>Paso 2 de 2</span>
+      <div class="header-row">
+        <button
+          type="button"
+          class="back-tipo-inline"
+          (click)="volverElegirTipo()"
+          [disabled]="cargando">
+          <ion-icon name="arrow-back-outline"></ion-icon>
+          Cambiar tipo de cuenta
+        </button>
+        <div class="step-badge">
+          <span>Paso 2 de 2</span>
+        </div>
       </div>
       <h1>Completa tu perfil</h1>
       <p>Necesitamos estos datos para finalizar tu registro como <strong>{{ tipoCuenta }}</strong></p>
