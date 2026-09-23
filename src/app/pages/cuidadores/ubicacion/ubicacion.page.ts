@@ -303,20 +303,29 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
 
     const coords = [info.latitud, info.longitud];
 
-    // Crear icono personalizado moderno
+    // Pin clásico de ubicación (gotita) con degradado morado
     const customIcon = L.divIcon({
       className: 'custom-map-marker',
       html: `
         <div class="marker-pin">
-          <div class="marker-avatar">
-            <i class="bi bi-person-fill"></i>
-          </div>
           <div class="pulse-ring"></div>
+          <svg width="40" height="50" viewBox="0 0 40 50">
+            <defs>
+              <linearGradient id="ubiPinGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#7715c7"/>
+                <stop offset="100%" stop-color="#9c3ded"/>
+              </linearGradient>
+            </defs>
+            <path d="M20 2 C 9 2 2 10 2 20 C 2 32 20 48 20 48 C 20 48 38 32 38 20 C 38 10 31 2 20 2 Z"
+                  fill="url(#ubiPinGrad)" stroke="#ffffff" stroke-width="2"/>
+            <circle cx="20" cy="20" r="8" fill="#ffffff"/>
+            <circle cx="20" cy="20" r="4" fill="#7715c7"/>
+          </svg>
         </div>
       `,
-      iconSize: [44, 44],
-      iconAnchor: [22, 44],
-      popupAnchor: [0, -42]
+      iconSize: [40, 50],
+      iconAnchor: [20, 48],
+      popupAnchor: [0, -46]
     });
 
     if (this.marker) {

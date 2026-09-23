@@ -1,7 +1,7 @@
 <ion-header class="ion-no-border">
-  <ion-toolbar style="--background: #1565C0; --color: #fff;">
+  <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/adulto-mayor"></ion-back-button>
+      <ion-back-button defaultHref="/adulto-mayor" text=""></ion-back-button>
     </ion-buttons>
     <ion-title>Mi Ubicación</ion-title>
   </ion-toolbar>
@@ -9,77 +9,109 @@
 
 <ion-content [fullscreen]="true">
 
-  <div id="miMapa"></div>
+  <div class="ubicacion-container">
 
-  <div class="gps-panel">
+    <!-- ================================================= -->
+    <!-- MAPA INTERACTIVO -->
+    <!-- ================================================= -->
 
-    <div class="gps-header">
-      <ion-icon name="navigate"></ion-icon>
-      <span>GPS en Tiempo Real</span>
+    <div class="map-wrapper">
+
+      <div id="miMapa" class="map-view"></div>
+
+      <div class="map-top-badge" [class.badge-error]="errorGps">
+        <span class="pulse-dot" [class.dot-error]="errorGps"></span>
+        <span>{{ textoBadge }}</span>
+      </div>
+
+      <button
+        type="button"
+        class="btn-float-center"
+        (click)="centrarMapa()"
+        title="Centrar en mi posición">
+        <ion-icon name="locate"></ion-icon>
+      </button>
+
     </div>
 
-    <div class="gps-fila">
-      <span class="etiqueta">Estado:</span>
-      <span class="valor-estado" [class.error]="errorGps">
-        @if (iniciando) {
-          Esperando GPS...
-        } @else if (errorGps) {
-          {{ estadoTexto }}
-        } @else if (!ubicacionActiva) {
-          Esperando GPS...
-        } @else {
-          GPS conectado
-        }
-      </span>
-    </div>
+    <!-- ================================================= -->
+    <!-- TARJETA DE INFORMACIÓN Y CONTROLES -->
+    <!-- ================================================= -->
 
-    <div class="gps-fila">
-      <span class="etiqueta">Latitud:</span>
-      <span class="valor">{{ lat != null ? lat.toFixed(6) : '-' }}</span>
-    </div>
+    <div class="info-card">
 
-    <div class="gps-fila">
-      <span class="etiqueta">Longitud:</span>
-      <span class="valor">{{ lon != null ? lon.toFixed(6) : '-' }}</span>
-    </div>
+      <div class="info-header">
 
-    <div class="gps-fila">
-      <span class="etiqueta">Precisión:</span>
-      <span class="valor">{{ precision }} m</span>
-    </div>
+        <div class="user-avatar-wrap">
+          <ion-icon name="navigate"></ion-icon>
+        </div>
 
-    <div class="gps-fila">
-      <span class="etiqueta">Velocidad:</span>
-      <span class="valor">{{ velocidad.toFixed(1) }} km/h</span>
-    </div>
+        <div class="user-meta">
+          <h3>GPS en tiempo real</h3>
+          <div class="status-indicator">
+            <span class="dot-green"></span>
+            <span>Ubicación de mi teléfono</span>
+          </div>
+        </div>
 
-    <div class="gps-fila">
-      <span class="etiqueta">Última actualización:</span>
-      <span class="valor">{{ hora }}</span>
-    </div>
+      </div>
 
-    <div class="gps-botones">
-      <ion-button expand="block" fill="solid" color="primary" (click)="centrarMapa()">
-        <ion-icon slot="start" name="locate"></ion-icon>
-        Centrar mapa
-      </ion-button>
+      <!-- Coordenadas actuales -->
+      <div class="address-box" [class.box-error]="errorGps">
+        <ion-icon name="location-outline"></ion-icon>
+        <span>
+          @if (ubicacionActiva && lat != null && lon != null) {
+            Lat {{ lat.toFixed(6) }} · Lon {{ lon.toFixed(6) }}
+          } @else if (permisoDenegado) {
+            Permiso de ubicación denegado
+          } @else {
+            Calculando posición...
+          }
+        </span>
+      </div>
 
-      <ion-button expand="block" fill="outline" color="primary" (click)="abrirEnGoogleMaps()">
-        <ion-icon slot="start" name="map"></ion-icon>
-        Abrir en Google Maps
-      </ion-button>
+      <!-- Última actualización y precisión -->
+      <div class="refresh-meta">
+        <div class="meta-item">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>Última vez: <strong>{{ ubicacionActiva ? hora : '-' }}</strong></span>
+        </div>
 
-      <ion-button expand="block" fill="solid" color="success" class="ir-a-casa-btn" (click)="irACasa()">
-        <ion-icon slot="start" name="home"></ion-icon>
-        Ir a mi casa
-      </ion-button>
+        <div class="meta-item auto-timer">
+          <ion-icon name="speedometer-outline"></ion-icon>
+          <span>Precisión: <strong>{{ ubicacionActiva ? precision + ' m' : '-' }}</strong></span>
+        </div>
+      </div>
 
-      @if (tieneDireccion) {
-        <div class="direccion-guardada">
+      <!-- BOTONES DE ACCIÓN -->
+      <div class="action-buttons">
+
+        <button
+          type="button"
+          class="btn-control btn-centrar"
+          (click)="centrarMapa()">
+          <ion-icon name="locate-outline"></ion-icon>
+          <span>Centrar mapa</span>
+        </button>
+
+        <button
+          type="button"
+          class="btn-control btn-casa"
+          (click)="irACasa()">
           <ion-icon name="home-outline"></ion-icon>
-          {{ calle }} {{ numero }}{{ comuna ? ' · ' + comuna : '' }}
+          <span>Ir a mi casa</span>
+        </button>
+
+      </div>
+
+      <!-- Dirección de casa guardada -->
+      @if (tieneDireccion) {
+        <div class="address-box casa-box">
+          <ion-icon name="home-outline"></ion-icon>
+          <span>Mi casa: {{ calle }} {{ numero }}{{ comuna ? ' · ' + comuna : '' }}</span>
         </div>
       }
+
     </div>
 
   </div>

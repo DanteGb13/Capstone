@@ -8,8 +8,7 @@ import {
   IonButtons,
   IonBackButton,
   IonButton,
-  IonIcon,
-  IonSpinner
+  IonIcon
 } from '@ionic/angular';
 
 import { addIcons } from 'ionicons';
@@ -35,7 +34,6 @@ declare const L: any; // Leaflet (cargado globalmente en index.html)
     IonBackButton,
     IonButton,
     IonIcon,
-    IonSpinner,
     CommonModule
   ]
 })
@@ -53,8 +51,6 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
 
   precision: number = 0;
 
-  velocidad: number = 0;
-
   hora: string = '-';
 
   ubicacionActiva: boolean = false;
@@ -62,6 +58,22 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
   errorGps: string = '';
 
   iniciando: boolean = true;
+
+  permisoDenegado: boolean = false;
+
+  // Texto del badge flotante sobre el mapa
+  get textoBadge(): string {
+    if (this.permisoDenegado) {
+      return 'Permiso de ubicación denegado';
+    }
+    if (this.errorGps) {
+      return 'GPS sin señal';
+    }
+    if (this.ubicacionActiva) {
+      return 'GPS conectado';
+    }
+    return 'Esperando GPS...';
+  }
 
   // =====================================================
   // DIRECCIÓN DEL PERFIL (CASA)
@@ -163,6 +175,7 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
         if (permiso.location !== 'granted') {
           const pedido = await Geolocation.requestPermissions();
           if (pedido.location !== 'granted') {
+            this.permisoDenegado = true;
             this.estadoTexto = 'Permiso de ubicación denegado';
             this.errorGps = 'Debes activar los permisos de ubicación para poder usar tu ubicación.';
             this.iniciando = false;
@@ -214,11 +227,11 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     this.lat = coords.latitude;
     this.lon = coords.longitude;
     this.precision = Math.round(coords.accuracy || 0);
-    this.velocidad = coords.speed == null ? 0 : coords.speed * 3.6;
-    this.hora = new Date().toLocaleTimeString();
+    this.hora = new Date().toLocaleString('es-CL');
     this.estadoTexto = 'GPS conectado';
     this.errorGps = '';
     this.ubicacionActiva = true;
+    this.permisoDenegado = false;
 
     this.changeDetectorRef.detectChanges();
     this.renderizarEnMapa(this.lat, this.lon, coords.accuracy || 30);
@@ -289,10 +302,37 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
 
     const coords: [number, number] = [lat, lon];
 
+    // Recordar si el marcador aún no existe (primera fijación)
+    const primerFix = !this.marker;
+
+    // Marcador tipo pin de ubicación (morado, igual que el resto de la app)
+    const iconoMorado = L.divIcon({
+      className: 'mi-ubicacion-marker',
+      html: `
+        <div class="mi-pin">
+          <div class="mi-pin-ring"></div>
+          <svg width="40" height="50" viewBox="0 0 40 50">
+            <defs>
+              <linearGradient id="miPinGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#7715c7"/>
+                <stop offset="100%" stop-color="#9c3ded"/>
+              </linearGradient>
+            </defs>
+            <path d="M20 2 C 9 2 2 10 2 20 C 2 32 20 48 20 48 C 20 48 38 32 38 20 C 38 10 31 2 20 2 Z"
+                  fill="url(#miPinGrad)" stroke="#ffffff" stroke-width="2"/>
+            <circle cx="20" cy="20" r="8" fill="#ffffff"/>
+            <circle cx="20" cy="20" r="4" fill="#7715c7"/>
+          </svg>
+        </div>
+      `,
+      iconSize: [40, 50],
+      iconAnchor: [20, 48]
+    });
+
     if (this.marker) {
       this.marker.setLatLng(coords);
     } else {
-      this.marker = L.marker(coords).addTo(this.map);
+      this.marker = L.marker(coords, { icon: iconoMorado }).addTo(this.map);
     }
 
     if (this.accuracyCircle) {
@@ -301,29 +341,25 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.accuracyCircle = L.circle(coords, {
         radius: precision || 30,
-        color: '#2196F3',
-        fillColor: '#42A5F5',
+        color: '#7715c7',
+        fillColor: '#9c3ded',
         fillOpacity: 0.2,
         weight: 1.5
       }).addTo(this.map);
     }
 
-    this.map.setView(coords, 17);
+    // Centrar solo en la primera lectura o si la posición quedó fuera de la vista,
+    // para no pelear con el usuario cuando arrastra o hace zoom del mapa.
+    const fueraDeVista = this.map.getBounds().contains(coords) === false;
+    if (primerFix || fueraDeVista) {
+      this.map.setView(coords, 17);
+    }
   }
 
   centrarMapa() {
     if (this.map && this.lat != null && this.lon != null) {
       this.map.setView([this.lat, this.lon], 18);
     }
-  }
-
-  abrirEnGoogleMaps() {
-    if (this.lat == null || this.lon == null) {
-      this.mostrarAlertaLocacionDesactivada();
-      return;
-    }
-    const url = `https://www.google.com/maps?q=${this.lat},${this.lon}`;
-    window.open(url, '_system');
   }
 
   // =====================================================
@@ -365,16 +401,5 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
       `&travelmode=driving`;
 
     window.open(url, '_system');
-  }
-
-  private async mostrarAlertaLocacionDesactivada() {
-    const alert = await this.alertCtrl.create({
-      header: 'Ubicación no activa',
-      message:
-        'Tu ubicación no está activa.\n\n' +
-        'Debes activar los permisos de ubicación (Ajustes del teléfono > Apps > SiempreCerca > Permisos) y tener el GPS encendido.',
-      buttons: ['OK']
-    });
-    await alert.present();
   }
 }

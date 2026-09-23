@@ -139,48 +139,37 @@ ion-toolbar {
 
 /* PIN PERSONALIZADO LEAFLET */
 ::ng-deep .custom-map-marker {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: transparent;
+  border: none;
 
   .marker-pin {
     position: relative;
-    width: 44px;
-    height: 44px;
-
-    .marker-avatar {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #7715c7, #9c3ded);
-      border: 3px solid white;
-      box-shadow: 0 8px 20px rgba(119, 21, 199, 0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 20px;
-      position: relative;
-      z-index: 2;
-    }
+    width: 40px;
+    height: 50px;
 
     .pulse-ring {
       position: absolute;
-      top: -6px;
-      left: -6px;
-      width: 56px;
-      height: 56px;
+      left: 50%;
+      top: 14px;
+      width: 36px;
+      height: 36px;
+      transform: translate(-50%, -50%);
       border-radius: 50%;
       background: rgba(119, 21, 199, 0.25);
       animation: ripple 2s infinite ease-out;
-      z-index: 1;
+    }
+
+    svg {
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 4px 8px rgba(119, 21, 199, 0.4));
     }
   }
 }
 
 @keyframes ripple {
-  0% { transform: scale(0.8); opacity: 1; }
-  100% { transform: scale(1.6); opacity: 0; }
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
 }
 
 /* TARJETA DE INFORMACIÓN */
