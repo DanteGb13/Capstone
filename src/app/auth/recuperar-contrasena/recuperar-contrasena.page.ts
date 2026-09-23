@@ -100,18 +100,52 @@ export class RecuperarContrasenaPage {
     this.errorMensaje = '';
     this.exitoMensaje = '';
 
-    if (!this.codigoVerificacion || this.codigoVerificacion.trim().length === 0) {
+    const codigo = this.codigoVerificacion.trim();
+
+    if (!codigo) {
       this.errorMensaje = 'Ingresa el código de verificación.';
       return;
     }
 
-    if (this.codigoVerificacion.trim().length !== 6) {
+    if (!/^\d{6}$/.test(codigo)) {
       this.errorMensaje = 'El código debe tener 6 dígitos.';
       return;
     }
 
-    this.paso = 'contrasena';
-    this.cdr.detectChanges();
+    this.cargando = true;
+
+    try {
+      const response = await fetch(
+        `${environment.supabaseUrl}/functions/v1/verificar-codigo-recuperacion`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': environment.supabaseKey,
+          },
+          body: JSON.stringify({
+            codigo,
+            correo: this.correo.trim(),
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        this.errorMensaje = result.error || 'Código de verificación incorrecto.';
+        return;
+      }
+
+      this.paso = 'contrasena';
+      this.cdr.detectChanges();
+
+    } catch (error) {
+      this.errorMensaje = 'Error de conexión. Intenta nuevamente.';
+    } finally {
+      this.cargando = false;
+      this.cdr.detectChanges();
+    }
   }
 
   async cambiarContrasena() {
