@@ -18,7 +18,8 @@ export const RUTAS_ADULTO_MAYOR = [
   '/adulto-mayor',
   '/contacto-emergencia',
   '/informacion',
-  '/recordatorios'
+  '/recordatorios',
+  '/mi-ubicacion'
 ];
 
 @Injectable({

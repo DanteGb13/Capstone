@@ -499,6 +499,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.router.navigate(['/recordatorios']);
   }
 
+  abrirMiUbicacion() {
+    (document.activeElement as HTMLElement)?.blur();
+    this.router.navigate(['/mi-ubicacion']);
+  }
+
   async actualizarSonando() {
     this.alarmasSonando = await this.alarmasService.estanSonando();
   }

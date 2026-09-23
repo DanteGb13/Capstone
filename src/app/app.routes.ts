@@ -83,6 +83,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'mi-ubicacion',
+    loadComponent: () => import('./pages/adultosMayores/mi-ubicacion/mi-ubicacion.page').then( m => m.MiUbicacionPage),
+    canActivate: [authGuard]
+  },
+  {
     path: 'estado',
     loadComponent: () => import('./pages/cuidadores/estado/estado.page').then( m => m.EstadoPage),
     canActivate: [authGuard]
