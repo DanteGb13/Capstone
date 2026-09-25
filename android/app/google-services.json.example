@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "XXXXXXXXX",
+    "project_id": "TU-PROYECTO-FIREBASE",
+    "storage_bucket": "TU-PROYECTO-FIREBASE.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:XXXXXXXXX:android:XXXXXXXXXXXXXXXX",
+        "android_client_info": {
+          "package_name": "io.ionic.starter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "REEMPLAZA_POR_TU_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

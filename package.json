@@ -9,7 +9,9 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "lint": "ng lint"
+    "lint": "ng lint",
+    "android": "node scripts/android.mjs run",
+    "android:apk": "node scripts/android.mjs apk"
   },
   "private": true,
   "dependencies": {

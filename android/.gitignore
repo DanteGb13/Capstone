@@ -62,7 +62,8 @@ captures/
 .cxx/
 
 # Google Services (e.g. APIs or Firebase)
-# google-services.json
+# NUNCA subir este archivo: contiene la configuracion de Firebase/FCM.
+google-services.json
 
 # Freeline
 freeline.py
