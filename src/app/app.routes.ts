@@ -88,6 +88,31 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'juegos',
+    loadComponent: () => import('./pages/juegos/juegos.page').then( m => m.JuegosPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'juegos/memoria',
+    loadComponent: () => import('./pages/memoria/memoria.page').then( m => m.MemoriaPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'juegos/trivia',
+    loadComponent: () => import('./pages/trivia/trivia.page').then( m => m.TriviaPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'juegos/sopa-letras',
+    loadComponent: () => import('./pages/sopa-letras/sopa-letras.page').then( m => m.SopaLetrasPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'juegos/rompecabezas',
+    loadComponent: () => import('./pages/rompecabezas/rompecabezas.page').then( m => m.RompecabezasPage),
+    canActivate: [authGuard]
+  },
+  {
     path: 'estado',
     loadComponent: () => import('./pages/cuidadores/estado/estado.page').then( m => m.EstadoPage),
     canActivate: [authGuard]

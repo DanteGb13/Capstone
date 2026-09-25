@@ -14,7 +14,8 @@ import {
   IonButtons,
   IonInput,
   IonTextarea,
-  IonToggle
+  IonToggle,
+  IonSpinner
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
@@ -32,6 +33,7 @@ import {
 import { AlarmaRecordatorio, AlarmasService, DIAS_SEMANA_TODOS } from '../../../services/alarmas/alarmas';
 import { RuedaComponent } from '../../../components/rueda/rueda.component';
 import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
+import { validarNombreOApellido } from '../../../services/utils/validators';
 
 @Component({
   selector: 'app-recordatorios',
@@ -49,6 +51,7 @@ import { NavegacionRolService } from '../../../services/navegacion-rol/navegacio
     IonInput,
     IonTextarea,
     IonToggle,
+    IonSpinner,
     RuedaComponent,
     CommonModule,
     FormsModule
@@ -59,6 +62,8 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   alarmas: AlarmaRecordatorio[] = [];
   sonando: AlarmaRecordatorio[] = [];
 
+  cargando = false;
+
   mostrarModal = false;
   editandoId: string | null = null;
   nuevoNombre = '';
@@ -66,13 +71,14 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   nuevoMinutoSel = 0;
   nuevaDescripcion = '';
   nuevosDias: number[] = [];
+  errorNombre = false;
 
   horas: number[] = Array.from({ length: 24 }, (_, i) => i);
   minutos: number[] = Array.from({ length: 60 }, (_, i) => i);
 
   sesionRueda = 0;
 
-  modoFlechas: boolean = localStorage.getItem('sc_modo_hora_v1') !== 'dedos';
+  modoFlechas: boolean = localStorage.getItem('sc_modo_hora_v1') === 'flechas';
 
   diasOpciones = [
     { valor: 2, nombre: 'Lun' },
@@ -142,9 +148,12 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   private iniciarTimer() {
     this.detenerTimer();
     this.timer = setInterval(() => {
-      this.cargar();
-      this.changeDetectorRef.detectChanges();
-    }, 3000);
+      // Revisar si algún recordatorio está sonando SIN golpear la red
+      void this.alarmasService.estanSonando(this.alarmas).then((sonando) => {
+        this.sonando = sonando;
+        this.changeDetectorRef.detectChanges();
+      });
+    }, 10000);
   }
 
   private detenerTimer() {
@@ -184,8 +193,26 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   async cargar() {
-    this.alarmas = await this.alarmasService.getAlarmas();
-    this.sonando = await this.alarmasService.estanSonando(this.alarmas);
+    // Pintar al instante con lo guardado en el dispositivo (sin esperar la red)
+    const locales = this.alarmasService.getAlarmasLocales();
+    if (locales.length > 0) {
+      this.alarmas = locales;
+      this.cargando = false;
+    } else {
+      this.cargando = true;
+    }
+    this.changeDetectorRef.detectChanges();
+
+    try {
+      const alarmas = await this.alarmasService.getAlarmas();
+      this.alarmas = alarmas;
+      this.sonando = await this.alarmasService.estanSonando(alarmas);
+    } catch (e) {
+      console.error('Error cargando recordatorios:', e);
+    } finally {
+      this.cargando = false;
+      this.changeDetectorRef.detectChanges();
+    }
   }
 
   async volver() {
@@ -232,6 +259,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.nuevoMinutoSel = 0;
     this.nuevaDescripcion = '';
     this.nuevosDias = [...DIAS_SEMANA_TODOS];
+    this.errorNombre = false;
     this.sesionRueda++;
     this.mostrarModal = true;
   }
@@ -245,6 +273,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.nuevosDias = (alarma.dias && alarma.dias.length > 0)
       ? [...alarma.dias]
       : [...DIAS_SEMANA_TODOS];
+    this.errorNombre = false;
     this.sesionRueda++;
     this.mostrarModal = true;
   }
@@ -340,9 +369,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   private formatearProxima(fecha: Date): string {
-    const h = this.nuevaHoraSel.toString().padStart(2, '0');
-    const m = this.nuevoMinutoSel.toString().padStart(2, '0');
-    const horaTexto = `${h}:${m}`;
+    const horaTexto = this.horaTextoAmPm(this.nuevaHoraSel, this.nuevoMinutoSel);
 
     const hoy = new Date();
     const manana = new Date(hoy);
@@ -361,11 +388,19 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     return `${diaNombre} a las ${horaTexto}`;
   }
 
+  onNombreInput() {
+    const limpio = this.nuevoNombre.trim();
+    this.errorNombre = limpio.length > 0 && !validarNombreOApellido(limpio);
+  }
+
   async guardarNueva() {
     const nombre = this.nuevoNombre.trim();
-    if (!nombre) {
+    if (!validarNombreOApellido(nombre)) {
+      this.errorNombre = true;
+      this.changeDetectorRef.detectChanges();
       return;
     }
+    this.errorNombre = false;
 
     let dias = [...this.nuevosDias];
     if (dias.length === 0) {
@@ -402,9 +437,9 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
 
       const editada = this.alarmas.find((a) => a.id === this.editandoId);
       if (editada && editada.activa) {
-        await this.activarConPermisos(editada);
+        await this.alarmasService.activarDesactivar(editada, true);
       } else if (editada) {
-        await this.alarmasService.activarDesactivar(editada, false);
+        await this.alarmasService.cancelarAlarma(editada);
       }
       return;
     }
@@ -463,9 +498,17 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   horaTexto(alarma: AlarmaRecordatorio): string {
-    const h = alarma.hora.toString().padStart(2, '0');
-    const m = alarma.minuto.toString().padStart(2, '0');
-    return `${h}:${m}`;
+    return this.horaTextoAmPm(alarma.hora, alarma.minuto);
+  }
+
+  horaTextoAmPm(hora: number, minuto: number): string {
+    const ampm = hora < 12 ? 'AM' : 'PM';
+    const h12 = hora % 12 === 0 ? 12 : hora % 12;
+    return `${this.dosDigitos(h12)}:${this.dosDigitos(minuto)} ${ampm}`;
+  }
+
+  get amPm(): string {
+    return this.nuevaHoraSel < 12 ? 'AM' : 'PM';
   }
 
   diasTexto(alarma: AlarmaRecordatorio): string {

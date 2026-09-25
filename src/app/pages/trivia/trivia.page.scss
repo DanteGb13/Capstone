@@ -1,0 +1,243 @@
+:host {
+  --primary: #7715c7;
+  --primary-light: rgba(119, 21, 199, 0.1);
+  --background: #f8f7fc;
+  --text-main: #1a1d26;
+  --text-muted: #8c92a4;
+
+  background: #f8f7fc;
+}
+
+ion-content {
+  --background: var(--background, #f8f7fc);
+}
+
+.page-header {
+  ion-toolbar {
+    --background: #ffffff;
+    --color: var(--text-main, #1a1d26);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    ion-title {
+      font-size: 18px;
+      font-weight: 800;
+    }
+  }
+}
+
+.trivia-container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 18px 18px 40px;
+}
+
+.centro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-top: 48px;
+
+  h1 {
+    margin: 14px 0 8px;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-main, #1a1d26);
+  }
+
+  p {
+    margin: 0 0 22px;
+    font-size: 17px;
+    line-height: 1.5;
+    color: var(--text-muted, #8c92a4);
+    max-width: 300px;
+  }
+
+  ion-button {
+    width: 100%;
+    max-width: 300px;
+    margin-top: 6px;
+  }
+}
+
+.logo-tarjeta {
+  width: 84px;
+  height: 84px;
+  border-radius: 26px;
+  background: linear-gradient(135deg, #7715c7, #9c3ded);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon {
+    font-size: 46px;
+    color: #8ce99a;
+  }
+}
+
+.logo-tarjeta.verde {
+  background: linear-gradient(135deg, #16a34a, #4ade80);
+
+  ion-icon {
+    color: #ffffff;
+  }
+}
+
+.progreso {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+
+  span {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-muted, #8c92a4);
+  }
+
+  strong {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--primary, #7715c7);
+  }
+}
+
+.barra-progreso {
+  height: 10px;
+  border-radius: 999px;
+  background: #ede9fe;
+  overflow: hidden;
+  margin-bottom: 18px;
+
+  .barra-llena {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #7715c7, #9c3ded);
+    transition: width 0.35s ease;
+  }
+}
+
+.pregunta-txt {
+  margin: 0 0 18px;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--text-main, #1a1d26);
+}
+
+.opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.opcion {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 62px;
+  background: #ffffff;
+  border: 2px solid #e9e7f6;
+  border-radius: 16px;
+  padding: 10px 18px;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-main, #1a1d26);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: #c4b5fd;
+  }
+
+  .marca {
+    font-size: 26px;
+    flex-shrink: 0;
+  }
+
+  .marca.ok {
+    color: #16a34a;
+  }
+
+  .marca.mal {
+    color: #dc2626;
+  }
+}
+
+.opcion.elegida {
+  border-color: var(--primary, #7715c7);
+  background: var(--primary-light, rgba(119, 21, 199, 0.1));
+}
+
+.opcion.correcta {
+  border-color: #16a34a;
+  background: rgba(22, 163, 74, 0.12);
+  color: #14532d;
+}
+
+.opcion.incorrecta {
+  border-color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+  color: #7f1d1d;
+}
+
+.feedback {
+  margin: 18px 0 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.feedback.acierto {
+  background: rgba(22, 163, 74, 0.14);
+  color: #14532d;
+  border: 2px solid #86efac;
+}
+
+.feedback.fallo {
+  background: rgba(220, 38, 38, 0.1);
+  color: #7f1d1d;
+  border: 2px solid #fca5a5;
+}
+
+.btn-primario {
+  --background: var(--primary, #7715c7);
+  --background-hover: #5f0fa3;
+  --border-radius: 14px;
+  --color: #ffffff;
+  font-size: 17px;
+  font-weight: 800;
+  min-height: 54px;
+  margin-top: 18px;
+}
+
+.btn-secundario {
+  --border-color: #ddd6fe;
+  --color: var(--primary, #7715c7);
+  --border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  min-height: 50px;
+  margin-top: 10px;
+}
+
+.puntaje-grande {
+  font-size: 64px;
+  font-weight: 900;
+  color: var(--primary, #7715c7);
+  background: var(--primary-light, rgba(119, 21, 199, 0.1));
+  border-radius: 26px;
+  padding: 10px 34px;
+  margin: 10px 0;
+}
+
+.mensaje-resultado {
+  font-size: 18px !important;
+  color: var(--text-main, #1a1d26) !important;
+  font-weight: 600;
+}

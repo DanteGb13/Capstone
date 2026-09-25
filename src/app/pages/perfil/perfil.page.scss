@@ -409,3 +409,13 @@ ion-input.ion-invalid {
   --padding-start: 8px;
   --padding-end: 8px;
 }
+
+.toast-exito-perfil {
+  --background: linear-gradient(135deg, #16a34a, #22c55e);
+  --border-radius: 16px;
+  --color: #ffffff;
+  font-weight: 600;
+  font-size: 15px;
+  text-align: center;
+  box-shadow: 0 10px 24px rgba(22, 163, 74, 0.35);
+}

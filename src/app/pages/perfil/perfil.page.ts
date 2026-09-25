@@ -1,8 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController, IonModal, IonActionSheet, ActionSheetController } from '@ionic/angular';
+import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController, ToastController, IonModal, IonActionSheet, ActionSheetController } from '@ionic/angular';
 import { CuidadoresService } from '../../services/Backend/cuidadores/cuidadores';
+import { AlarmasService } from '../../services/alarmas/alarmas';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
@@ -70,10 +71,12 @@ export class PerfilPage implements OnInit {
 
   constructor(
     private cuidadoresService: CuidadoresService,
+    private alarmasService: AlarmasService,
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef,
     private supabaseService: SupabaseService,
     private alertController: AlertController,
+    private toastController: ToastController,
     private actionSheetController: ActionSheetController,
     private navRol: NavegacionRolService
   ) {
@@ -325,27 +328,17 @@ export class PerfilPage implements OnInit {
         return;
       }
 
-      const alert = await this.alertController.create({
-        cssClass: 'alerta-exito-guardar',
-        header: 'Guardado',
-        message: 'Tu perfil se actualizó correctamente.',
-        buttons: [
-          {
-            text: 'Seguir editando',
-            role: 'cancel',
-          },
-          {
-            text: 'Volver al perfil',
-            role: 'destructive',
-            handler: () => {
-              this.modoEditar = false;
-              this.changeDetectorRef.detectChanges();
-            }
-          }
-        ]
-      });
+      this.modoEditar = false;
+      this.changeDetectorRef.detectChanges();
 
-      await alert.present();
+      const toast = await this.toastController.create({
+        message: 'Perfil editado correctamente',
+        duration: 2500,
+        position: 'bottom',
+        icon: 'checkmark-circle-outline',
+        cssClass: 'toast-exito-perfil'
+      });
+      await toast.present();
       return;
     }
     this.modoEditar = !this.modoEditar;
@@ -737,6 +730,7 @@ export class PerfilPage implements OnInit {
           handler: async () => {
             try {
               this.navRol.limpiarCache();
+              this.alarmasService.limpiarDatosLocal();
               await this.supabaseService.getClient().auth.signOut();
             } catch (err) {
               console.error('Error al cerrar sesión:', err);

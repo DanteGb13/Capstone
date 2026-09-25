@@ -1,0 +1,133 @@
+:host {
+  --primary: #7715c7;
+  --primary-light: rgba(119, 21, 199, 0.1);
+  --background: #f8f7fc;
+  --text-main: #1a1d26;
+  --text-muted: #8c92a4;
+
+  background: #f8f7fc;
+}
+
+ion-content {
+  --background: var(--background, #f8f7fc);
+}
+
+.page-header {
+  ion-toolbar {
+    --background: #ffffff;
+    --color: var(--text-main, #1a1d26);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    ion-title {
+      font-size: 18px;
+      font-weight: 800;
+    }
+  }
+}
+
+.juegos-container {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 18px 18px 40px;
+}
+
+.bienestar-titulo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 6px;
+
+  .bienestar-icono {
+    width: 62px;
+    height: 62px;
+    flex-shrink: 0;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #7715c7, #9c3ded);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ion-icon {
+      font-size: 34px;
+      color: #ffffff;
+    }
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text-main, #1a1d26);
+  }
+}
+
+.intro {
+  margin: 8px 0 20px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-muted, #8c92a4);
+}
+
+.juegos-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.juego-card {
+  margin: 0;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(119, 21, 199, 0.1);
+  padding: 18px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  .juego-icono {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+    border-radius: 18px;
+    background: var(--primary-light, rgba(119, 21, 199, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ion-icon {
+      font-size: 34px;
+      color: var(--primary, #7715c7);
+    }
+  }
+
+  .juego-texto {
+    flex: 1;
+    min-width: 0;
+
+    ion-card-title {
+      padding: 0;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text-main, #1a1d26);
+    }
+
+    span {
+      display: block;
+      margin-top: 4px;
+      font-size: 14.5px;
+      color: var(--text-muted, #8c92a4);
+      line-height: 1.4;
+    }
+  }
+
+  .jugar-btn {
+    --background: var(--primary, #7715c7);
+    --background-activated: #5f0fa3;
+    --background-hover: #5f0fa3;
+    --border-radius: 14px;
+    --color: #ffffff;
+    min-height: 52px;
+    min-width: 108px;
+    font-size: 16px;
+    font-weight: 800;
+  }
+}

@@ -1,0 +1,83 @@
+<ion-header class="ion-no-border page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Rompecabezas</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="rompi-container">
+
+    <div class="estadisticas">
+      <div class="stat">
+        <span>Movimientos</span>
+        <strong>{{ movimientos }}</strong>
+      </div>
+    </div>
+
+    <p class="instruccion">Arma la imagen deslizando las piezas.</p>
+
+    <!-- Imagen de referencia -->
+    <div class="referencia">
+      <span class="etiqueta"><ion-icon name="image-outline"></ion-icon> Imagen de referencia</span>
+      <img [src]="imagen" alt="Imagen a armar" class="mina" />
+    </div>
+
+    <!-- Tablero con las piezas -->
+    <div class="tablero">
+      @for (pieza of piezas; track $index; let casilla = $index) {
+
+        @if (pieza !== 0) {
+
+          <button
+            type="button"
+            class="pieza"
+            [class.movible]="esMovible(casilla)"
+            [style.background-image]="'url(' + imagen + ')'"
+            [style.background-size]="'300% 300%'"
+            [style.background-position]="posPieza(pieza)"
+            (click)="mover(casilla)"
+            aria-label="Pieza {{ pieza }}">
+          </button>
+
+        } @else {
+
+          <div class="hueco"></div>
+
+        }
+
+      }
+    </div>
+
+    <ion-button expand="block" fill="outline" class="btn-reiniciar" (click)="jugarDeNuevo()">
+      <ion-icon name="refresh-outline"></ion-icon>
+      Revolver y reiniciar
+    </ion-button>
+
+  </div>
+
+  @if (terminado) {
+
+    <div class="overlay">
+      <div class="overlay-card">
+        <div class="celebra">🎉</div>
+        <h2>¡Rompecabezas armado!</h2>
+        <p>Completaste la imagen en <strong>{{ movimientos }}</strong> movimientos.</p>
+
+        <ion-button expand="block" class="btn-primario" (click)="jugarDeNuevo()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Jugar de nuevo
+        </ion-button>
+
+        <ion-button expand="block" fill="outline" class="btn-secundario" (click)="volver()">
+          Volver a Juegos
+        </ion-button>
+      </div>
+    </div>
+
+  }
+</ion-content>

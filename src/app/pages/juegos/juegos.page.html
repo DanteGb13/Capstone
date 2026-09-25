@@ -1,0 +1,47 @@
+<ion-header class="ion-no-border page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Juegos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="juegos-container">
+
+    <div class="bienestar-titulo">
+      <span class="bienestar-icono"><ion-icon name="puzzle-outline"></ion-icon></span>
+      <h1>Sección Bienestar</h1>
+    </div>
+
+    <p class="intro">Elige un juego y comienza a divertirte.</p>
+
+    <div class="juegos-lista">
+
+      @for (juego of juegos; track juego.ruta) {
+
+        <ion-card class="juego-card" (click)="jugar($event, juego)">
+          <div class="juego-icono">
+            <ion-icon [name]="juego.icono"></ion-icon>
+          </div>
+
+          <div class="juego-texto">
+            <ion-card-title>{{ juego.nombre }}</ion-card-title>
+            <span>{{ juego.descripcion }}</span>
+          </div>
+
+          <ion-button class="jugar-btn" (click)="jugar($event, juego)">
+            <ion-icon name="play" slot="start"></ion-icon>
+            Jugar
+          </ion-button>
+        </ion-card>
+
+      }
+
+    </div>
+
+  </div>
+</ion-content>

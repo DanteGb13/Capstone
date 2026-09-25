@@ -1,0 +1,74 @@
+<ion-header class="ion-no-border page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Memoria</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="memoria-container">
+
+    <div class="estadisticas">
+      <div class="stat">
+        <span>Movimientos</span>
+        <strong>{{ movimientos }}</strong>
+      </div>
+      <div class="stat">
+        <span>Tiempo</span>
+        <strong>{{ tiempoTexto }}</strong>
+      </div>
+    </div>
+
+    <p class="instruccion">Encuentra las parejas de imágenes.</p>
+
+    <div class="tablero">
+      @for (carta of cartas; track carta.id) {
+
+        <button
+          type="button"
+          class="carta"
+          [class.volteada]="carta.volteada || carta.encontrada"
+          (click)="voltear(carta)">
+          <div class="carta-inner">
+            <div class="cara cara-atras">
+              <ion-icon name="albums-outline"></ion-icon>
+            </div>
+            <div class="cara cara-frente">
+              <span>{{ carta.emoji }}</span>
+            </div>
+          </div>
+        </button>
+
+      }
+    </div>
+
+  </div>
+
+  @if (terminado) {
+
+    <div class="overlay">
+      <div class="overlay-card">
+        <div class="celebra">🎉</div>
+        <h2>¡Felicitaciones!</h2>
+        <p>
+          Completaste el juego en <strong>{{ movimientos }}</strong> movimientos
+          y un tiempo de <strong>{{ tiempoTexto }}</strong>.
+        </p>
+
+        <ion-button expand="block" class="btn-primario" (click)="jugarDeNuevo()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Jugar de nuevo
+        </ion-button>
+
+        <ion-button expand="block" fill="outline" class="btn-secundario" (click)="volver()">
+          Volver a Juegos
+        </ion-button>
+      </div>
+    </div>
+
+  }
+</ion-content>

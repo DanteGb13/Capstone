@@ -1,0 +1,84 @@
+<ion-header class="ion-no-border page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Sopa de Letras</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="sopa-container">
+
+    <p class="instruccion">
+      Toca la primera letra de la palabra y luego la última.
+    </p>
+
+    <!-- Selector de tema -->
+    <div class="temas">
+      @for (temaItem of temas; track temaItem.nombre; let i = $index) {
+
+        <button
+          type="button"
+          class="tema-btn"
+          [class.activo]="i === temaIndex"
+          (click)="elegirTema(i)">
+          {{ temaItem.nombre }}
+        </button>
+
+      }
+    </div>
+
+    <!-- Tablero de letras -->
+    <div class="tablero">
+      @for (fila of celdas; track fila) {
+        @for (celda of fila; track celda.col) {
+
+          <button
+            type="button"
+            class="celda"
+            [class.marcada]="celda.marcada"
+            [class.seleccion]="(primeraSel && primeraSel.fila === celda.fila && primeraSel.col === celda.col) || (segundaSel && segundaSel.fila === celda.fila && segundaSel.col === celda.col)"
+            (click)="primeraSel ? seleccionarSegunda(celda) : seleccionarPrimera(celda)">
+            {{ celda.letra }}
+          </button>
+
+        }
+      }
+    </div>
+
+    <!-- Palabras por encontrar -->
+    <div class="palabras">
+      @for (palabra of tema.palabras; track palabra) {
+
+        <span class="palabra" [class.encontrada]="encontradas.includes(palabra)">
+          {{ palabra }}
+        </span>
+
+      }
+    </div>
+
+  </div>
+
+  @if (terminado) {
+
+    <div class="overlay">
+      <div class="overlay-card">
+        <div class="celebra">🎉</div>
+        <h2>¡Muy bien!</h2>
+        <p>Encontraste todas las palabras del tema {{ tema.nombre }}.</p>
+
+        <ion-button expand="block" class="btn-primario" (click)="jugarDeNuevo()">
+          Jugar de nuevo
+        </ion-button>
+
+        <ion-button expand="block" fill="outline" class="btn-secundario" (click)="volver()">
+          Volver a Juegos
+        </ion-button>
+      </div>
+    </div>
+
+  }
+</ion-content>

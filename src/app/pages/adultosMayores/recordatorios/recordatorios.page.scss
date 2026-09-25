@@ -1,58 +1,80 @@
+:host {
+  --primary: #7715c7;
+  --primary-light: rgba(119, 21, 199, 0.1);
+  --background: #f8f7fc;
+  --text-main: #1a1d26;
+  --text-muted: #8c92a4;
+
+  background: #f8f7fc;
+}
+
+ion-content {
+  --background: var(--background, #f8f7fc);
+}
+
+/* Header SOLO de la página (no afecta al modal de crear recordatorio) */
+.rec-page-header {
+  ion-toolbar {
+    --background: #ffffff;
+    --color: #1a1d26;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    ion-title {
+      font-size: 17px;
+      font-weight: 700;
+      padding-inline-start: 4px;
+    }
+
+    .toolbar-add {
+      --background: #7715c7;
+      --background-hover: #5f0fa3;
+      --background-activated: #5f0fa3;
+      --color: #ffffff;
+      --border-radius: 50%;
+      --box-shadow: 0 6px 16px rgba(119, 21, 199, 0.35);
+      --padding-start: 0;
+      --padding-end: 0;
+      width: 40px;
+      height: 40px;
+      margin-right: 10px;
+
+      ion-icon {
+        font-size: 24px;
+      }
+    }
+  }
+}
+
 .rec-container {
   max-width: 520px;
   margin: 0 auto;
-  padding: 16px 16px 80px;
+  padding: 14px 16px 40px;
 }
 
 /* ==========================================
-   HEADER
+   CARGA INICIAL
    ========================================== */
 
-.rec-header {
+.rec-cargando {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  justify-content: center;
+  gap: 14px;
+  padding: 64px 20px;
+  color: var(--primary, #7715c7);
 
-  .rec-back,
-  .rec-add {
-    width: 48px;
-    height: 48px;
-    border: none;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 26px;
-    flex: 0 0 48px;
-  }
-
-  .rec-back {
-    background: var(--primary-light, #f0e8ff);
+  ion-spinner {
+    width: 44px;
+    height: 44px;
     color: var(--primary, #7715c7);
   }
 
-  .rec-add {
-    background: var(--primary, #7715c7);
-    color: #ffffff;
-    box-shadow: 0 8px 20px rgba(119, 21, 199, 0.3);
-  }
-
-  .rec-header-text {
-    flex: 1;
-
-    h1 {
-      margin: 0;
-      font-size: 26px;
-      font-weight: 800;
-      color: var(--text-main, #1f2937);
-    }
-
-    p {
-      margin: 2px 0 0;
-      font-size: 13px;
-      color: var(--text-muted, #6b7280);
-    }
+  p {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-muted, #8c92a4);
   }
 }
 
@@ -71,9 +93,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #dc2626;
+  background: linear-gradient(135deg, #dc2626, #ef4444);
   color: #ffffff;
-  border-radius: 18px;
+  border-radius: 20px;
   padding: 16px;
   box-shadow: 0 10px 25px rgba(220, 38, 38, 0.35);
   animation: parpadeo 1.2s infinite;
@@ -123,24 +145,42 @@
    ========================================== */
 
 .rec-vacio {
+  margin-top: 8px;
+  padding: 48px 24px;
+  background: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
   text-align: center;
-  padding: 40px 20px;
 
-  ion-icon {
-    font-size: 70px;
-    color: var(--primary-light, #d9c8ff);
+  .vacio-icono {
+    width: 84px;
+    height: 84px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #7715c7, #9c3ded);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 24px rgba(119, 21, 199, 0.35);
+
+    ion-icon {
+      font-size: 42px;
+      color: #ffffff;
+    }
   }
 
   h2 {
-    font-size: 24px;
-    margin: 12px 0 6px;
-    color: var(--text-main, #1f2937);
+    font-size: 21px;
+    font-weight: 800;
+    margin: 0 0 8px;
+    color: var(--text-main, #1a1d26);
   }
 
   p {
-    font-size: 16px;
-    color: var(--text-muted, #6b7280);
+    font-size: 15px;
+    color: var(--text-muted, #8c92a4);
     margin: 0 0 24px;
+    line-height: 1.5;
   }
 }
 
@@ -159,72 +199,115 @@
   align-items: center;
   gap: 12px;
   background: #ffffff;
-  border-radius: 18px;
-  padding: 16px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  padding: 14px 14px 14px 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.07);
   border: 2px solid transparent;
 
   &.inactiva {
     opacity: 0.55;
   }
-}
 
-.alarma-toggle {
-  flex: 0 0 auto;
-
-  ion-toggle {
-    --handle-width: 30px;
-    --handle-height: 30px;
-    --handle-max-width: 30px;
-  }
-}
-
-.alarma-info {
-  flex: 1;
-  min-width: 0;
-
-  .alarma-hora {
-    font-size: 22px;
-    font-weight: 800;
+  .alarma-icono {
+    flex: 0 0 54px;
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    background: var(--primary-light, rgba(119, 21, 199, 0.1));
     color: var(--primary, #7715c7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
   }
 
-  strong {
-    display: block;
-    font-size: 18px;
-    color: var(--text-main, #1f2937);
+  .alarma-info {
+    flex: 1;
+    min-width: 0;
+
+    .alarma-hora {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--primary, #7715c7);
+      letter-spacing: 0.5px;
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      text-align: left;
+      font-family: inherit;
+      line-height: 1.2;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+
+      &:active {
+        opacity: 0.65;
+      }
+    }
+
+    strong {
+      display: block;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text-main, #1a1d26);
+      margin-top: 2px;
+    }
+
+    span {
+      display: block;
+      font-size: 13px;
+      color: var(--text-muted, #8c92a4);
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    small {
+      display: block;
+      font-size: 12px;
+      color: #16a34a;
+      margin-top: 6px;
+      font-weight: 700;
+
+      &.texto-apagada {
+        color: var(--text-muted, #8c92a4);
+      }
+    }
   }
 
-  span {
-    display: block;
-    font-size: 14px;
-    color: var(--text-muted, #6b7280);
-    margin-top: 2px;
-  }
+  .alarma-derecha {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 
-  small {
-    display: block;
-    font-size: 12px;
-    color: #16a34a;
-    margin-top: 4px;
-    font-weight: 600;
-  }
-}
+    ion-toggle {
+      --track-background: #e2e8f0;
+      --track-background-checked: #22c55e;
+      --thumb-background: white;
+      --thumb-background-checked: white;
+      --handle-width: 26px;
+      --handle-height: 26px;
+      --handle-max-width: 26px;
+      --track-width: 52px;
+    }
 
-.alarma-acciones {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 0 0 auto;
+    .alarma-acciones {
+      display: flex;
+      gap: 8px;
+    }
+  }
 }
 
 .alarma-editar,
 .alarma-borrar {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border: none;
-  border-radius: 50%;
-  font-size: 20px;
+  border-radius: 12px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -263,7 +346,7 @@
   > span {
     font-size: 16px;
     font-weight: 700;
-    color: var(--text-main, #1f2937);
+    color: var(--text-main, #1a1d26);
   }
 
   ion-input,
@@ -284,6 +367,24 @@
     width: 100%;
     max-width: 100%;
   }
+
+  &.invalido {
+    > span {
+      color: #dc2626;
+    }
+
+    ion-input {
+      border-color: #fca5a5;
+      background: #fef2f2;
+    }
+  }
+}
+
+.campo-error {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #dc2626;
 }
 
 .rueda-selectores {
@@ -365,7 +466,7 @@
 .flecha-valor {
   width: 96px;
   text-align: center;
-  font-size: 48px;
+  font-size: 26px;
   font-weight: 800;
   color: var(--primary, #7715c7);
   background: #f5f3ff;
@@ -378,6 +479,19 @@
   font-size: 40px;
   font-weight: 800;
   color: var(--primary, #7715c7);
+}
+
+.am-pm-badge {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+  background: var(--primary, #7715c7);
+  border-radius: 10px;
+  min-width: 56px;
+  padding: 8px 10px;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(119, 21, 199, 0.35);
 }
 
 .prevista {
@@ -440,4 +554,20 @@
   font-size: 17px;
   --border-radius: 14px;
   min-height: 52px;
+}
+
+.btn-cancelar {
+  --background: #ffffff;
+  --background-hover: #f5f3ff;
+  --background-activated: #f5f3ff;
+  --border-color: #ddd6fe;
+  --color: var(--primary, #7715c7);
+  --border-radius: 14px;
+  --border-width: 2px;
+  --border-style: solid;
+  min-height: 50px;
+  font-weight: 700;
+  font-size: 16px;
+  margin-top: 2px;
+  box-shadow: 0 2px 8px rgba(119, 21, 199, 0.08);
 }

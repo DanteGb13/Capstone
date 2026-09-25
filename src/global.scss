@@ -165,3 +165,8 @@ body {
   --background-hover: #6b7280;
   --color: #ffffff;
 }
+
+/* Evita ver la página anterior debajo durante las transiciones de navegación */
+.ion-page {
+  background-color: #f8f7fc;
+}

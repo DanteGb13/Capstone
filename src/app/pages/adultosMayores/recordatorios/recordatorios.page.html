@@ -1,24 +1,23 @@
-<ion-content [fullscreen]="true">
-
-  <div class="rec-container">
-
-    <!-- Header -->
-    <div class="rec-header">
-
-      <button class="rec-back" type="button" (click)="volver()">
+<ion-header class="ion-no-border rec-page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
         <ion-icon name="arrow-back"></ion-icon>
-      </button>
+      </ion-button>
+    </ion-buttons>
 
-      <div class="rec-header-text">
-        <h1>Recordatorios</h1>
-        <p>Medicinas y actividades diarias</p>
-      </div>
+    <ion-title>Recordatorios</ion-title>
 
-      <button class="rec-add" type="button" (click)="abrirNueva()">
+    <ion-buttons slot="end">
+      <ion-button class="toolbar-add" (click)="abrirNueva()">
         <ion-icon name="add"></ion-icon>
-      </button>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
 
-    </div>
+<ion-content>
+  <div class="rec-container">
 
     <!-- Alarma sonando -->
     @if (sonando.length > 0) {
@@ -50,11 +49,23 @@
 
     }
 
-    <!-- Mensaje de bienvenida -->
-    @if (alarmas.length === 0) {
+    <!-- Cargando por primera vez -->
+    @if (cargando) {
+
+      <div class="rec-cargando">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>Cargando tus recordatorios...</p>
+      </div>
+
+    }
+
+    <!-- Mensaje de vacío -->
+    @if (!cargando && alarmas.length === 0) {
 
       <div class="rec-vacio">
-        <ion-icon name="alarm-outline"></ion-icon>
+        <div class="vacio-icono">
+          <ion-icon name="alarm-outline"></ion-icon>
+        </div>
         <h2>No tienes recordatorios</h2>
         <p>
           Pulsa el botón + para crear tu primer
@@ -62,6 +73,7 @@
         </p>
 
         <ion-button expand="block" (click)="abrirNueva()" class="btn-primario">
+          <ion-icon name="add" slot="start"></ion-icon>
           Crear recordatorio
         </ion-button>
       </div>
@@ -69,7 +81,7 @@
     }
 
     <!-- Lista de alarmas -->
-    @if (alarmas.length > 0) {
+    @if (!cargando && alarmas.length > 0) {
 
       <div class="alarmas-list">
 
@@ -77,34 +89,45 @@
 
           <div class="alarma-item" [class.inactiva]="!alarma.activa">
 
-            <div class="alarma-toggle">
+            <div class="alarma-icono">
+              <ion-icon name="alarm"></ion-icon>
+            </div>
+
+            <div class="alarma-info">
+              <button
+              type="button"
+              class="alarma-hora"
+              [attr.aria-label]="'Editar hora ' + horaTexto(alarma)"
+              (click)="abrirEditar(alarma)">
+              {{ horaTexto(alarma) }}
+            </button>
+
+              <strong>{{ alarma.nombre }}</strong>
+              <span>{{ alarma.descripcion || 'Sin descripción' }}</span>
+              <small [class.texto-apagada]="!alarma.activa">
+                {{ alarma.activa ? diasTexto(alarma) : 'Apagada' }}
+              </small>
+            </div>
+
+            <div class="alarma-derecha">
+
               <ion-toggle
                 [checked]="alarma.activa"
                 (ionChange)="cambiarActivacion(alarma, $event.detail.checked)"
                 color="success">
               </ion-toggle>
-            </div>
 
-            <div class="alarma-info">
-              <div class="alarma-hora">
-                {{ horaTexto(alarma) }}
+              <div class="alarma-acciones">
+
+                <button class="alarma-editar" type="button" (click)="abrirEditar(alarma)">
+                  <ion-icon name="create-outline"></ion-icon>
+                </button>
+
+                <button class="alarma-borrar" type="button" (click)="eliminar(alarma)">
+                  <ion-icon name="trash-outline"></ion-icon>
+                </button>
+
               </div>
-              <strong>{{ alarma.nombre }}</strong>
-              <span>{{ alarma.descripcion || 'Sin descripción' }}</span>
-              <small>
-                {{ alarma.activa ? diasTexto(alarma) : 'Apagada' }}
-              </small>
-            </div>
-
-            <div class="alarma-acciones">
-
-              <button class="alarma-editar" type="button" (click)="abrirEditar(alarma)">
-                <ion-icon name="create-outline"></ion-icon>
-              </button>
-
-              <button class="alarma-borrar" type="button" (click)="eliminar(alarma)">
-                <ion-icon name="trash-outline"></ion-icon>
-              </button>
 
             </div>
 
@@ -117,7 +140,7 @@
     }
 
     <!-- Botón inferior grande -->
-    @if (alarmas.length > 0) {
+    @if (!cargando && alarmas.length > 0) {
 
       <div class="rec-footer-btn">
         <ion-button expand="block" (click)="abrirNueva()" class="btn-primario">
@@ -151,14 +174,19 @@
 
         <div class="nueva-form">
 
-          <label class="campo">
+          <label class="campo" [class.invalido]="errorNombre">
             <span>Nombre</span>
             <ion-input
               type="text"
               placeholder="Ej. Tomar medicina"
-              [(ngModel)]="nuevoNombre">
+              [(ngModel)]="nuevoNombre"
+              (ionInput)="onNombreInput()">
             </ion-input>
           </label>
+
+          @if (errorNombre) {
+            <p class="campo-error">Escribe un nombre válido (solo letras, mínimo 2 caracteres).</p>
+          }
 
           <label class="campo">
             <span>Hora de la alarma</span>
@@ -236,6 +264,8 @@
                   </button>
                 </div>
 
+                <span class="am-pm-badge">{{ amPm }}</span>
+
               </div>
 
             } @else {
@@ -256,6 +286,8 @@
                   [reiniciar]="sesionRueda"
                   (valorChange)="nuevoMinutoSel = $event">
                 </app-rueda>
+
+                <span class="am-pm-badge">{{ amPm }}</span>
               </div>
 
             }
@@ -314,7 +346,7 @@
             {{ botonGuardarTitulo }}
           </ion-button>
 
-          <ion-button expand="block" fill="outline" (click)="cerrarNueva()">
+          <ion-button expand="block" fill="outline" (click)="cerrarNueva()" class="btn-cancelar">
             Cancelar
           </ion-button>
 

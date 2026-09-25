@@ -54,6 +54,9 @@ export class AlarmasService {
 
   private alarmasCache: AlarmaRecordatorio[] = [];
 
+  private readonly CLAVE_USUARIO = 'sc.userid';
+  private userIdActual: string | null = localStorage.getItem('sc.userid');
+
   constructor(private supabaseService: SupabaseService) {}
 
 
@@ -64,7 +67,16 @@ export class AlarmasService {
   private async obtenerUsuarioId(): Promise<string | null> {
     const supabase = this.supabaseService.getClient();
     const { data } = await supabase.auth.getUser();
-    return data?.user?.id ?? null;
+    const id = data?.user?.id ?? null;
+    this.userIdActual = id;
+    if (id) {
+      try {
+        localStorage.setItem(this.CLAVE_USUARIO, id);
+      } catch {
+        // sin persistencia
+      }
+    }
+    return id;
   }
 
 
@@ -119,6 +131,43 @@ export class AlarmasService {
 
   getAlarmasCache(): AlarmaRecordatorio[] {
     return this.alarmasCache;
+  }
+
+  /**
+   * Limpia toda la información local de recordatorios al cerrar sesión:
+   * evita que la siguiente cuenta vea por un instante los datos del
+   * usuario anterior mientras llegan los propios de la red.
+   */
+  limpiarDatosLocal() {
+    this.userIdActual = null;
+    this.alarmasCache = [];
+    try {
+      localStorage.removeItem(this.CLAVE_ESPEJO);
+      localStorage.removeItem(this.CLAVE_COLA);
+      localStorage.removeItem(this.CLAVE_APAGADAS);
+      localStorage.removeItem(this.CLAVE_USUARIO);
+    } catch {
+      // sin persistencia: ignorar
+    }
+  }
+
+  /**
+   * Devolución instantánea para pintar la pantalla sin esperar la red:
+   * usa la caché en memoria si existe, o el espejo local del dispositivo,
+   * SIEMPRE filtrando por el usuario actual para no filtrar datos de
+   * otras cuentas ni registros eliminados en la base de datos.
+   */
+  getAlarmasLocales(): AlarmaRecordatorio[] {
+    if (!this.userIdActual) {
+      return [];
+    }
+    const lista = this.alarmasCache.length > 0
+      ? this.alarmasCache
+      : this.leerEspejo();
+    return lista
+      .filter((a) => a.id_usuario === this.userIdActual)
+      .slice()
+      .sort((a, b) => a.hora - b.hora || a.minuto - b.minuto);
   }
 
 
