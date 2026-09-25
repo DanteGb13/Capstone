@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonContent,
@@ -77,9 +77,11 @@ export class SopaLetrasPage {
   /** Palabras ya encontradas. */
   encontradas: string[] = [];
 
-  /** Primera y segunda letra elegidas por el usuario. */
-  primeraSel: CeldaSopa | null = null;
-  segundaSel: CeldaSopa | null = null;
+  /** Celda donde comenzó el arrastre (el dedo se apoya aquí). */
+  origen: CeldaSopa | null = null;
+  /** Celdas resaltadas durante el arrastre (línea recta desde el origen). */
+  ruta: CeldaSopa[] = [];
+  deslizando = false;
 
   terminado = false;
 
@@ -106,8 +108,9 @@ export class SopaLetrasPage {
   private regenerar(): void {
     this.restantes = [...this.tema.palabras];
     this.encontradas = [];
-    this.primeraSel = null;
-    this.segundaSel = null;
+    this.origen = null;
+    this.ruta = [];
+    this.deslizando = false;
     this.terminado = false;
 
     // Direcciones posibles: horizontal, vertical y diagonales.
@@ -210,53 +213,116 @@ export class SopaLetrasPage {
     return false;
   }
 
-  /** Marca la primera letra de la palabra seleccionada. */
-  seleccionarPrimera(celda: CeldaSopa): void {
-    if (this.terminado || celda.marcada) {
+  /** Empieza el arrastre apoyando el dedo en una celda. */
+  iniciarArrastre(celda: CeldaSopa): void {
+    if (this.terminado || celda.marcada || this.deslizando) {
       return;
     }
-    this.primeraSel = celda;
-    this.segundaSel = null;
+    this.origen = celda;
+    this.ruta = [celda];
+    this.deslizando = true;
   }
 
-  /** Marca la segunda letra y comprueba si forman una palabra. */
-  seleccionarSegunda(celda: CeldaSopa): void {
-    if (this.terminado || !this.primeraSel || celda.marcada) {
+  /** Al mover el dedo detecta la celda real bajo el puntero y actualiza la línea. */
+  onPointerMove(evento: PointerEvent): void {
+    if (!this.deslizando || !this.origen) {
       return;
     }
-    if (celda.fila === this.primeraSel.fila && celda.col === this.primeraSel.col) {
-      return;
+    // En táctil el navegador captura el puntero, así que se busca por
+    // coordenadas la celda que está físicamente debajo del dedo.
+    const celda = this.celdaEnPuntero(evento);
+    if (celda) {
+      this.actualizarArrastre(celda);
     }
-    this.segundaSel = celda;
-    this.evaluarSeleccion();
   }
 
-  /** Comprueba si la línea entre las dos letras forma una palabra válida. */
-  private evaluarSeleccion(): void {
-    const a = this.primeraSel!;
-    const b = this.segundaSel!;
+  /** Celda bajo las coordenadas del puntero, o null si no es una letra. */
+  private celdaEnPuntero(evento: PointerEvent): CeldaSopa | null {
+    const elemento = document.elementFromPoint(evento.clientX, evento.clientY) as HTMLElement | null;
+    const celdaEl = elemento?.closest('.celda') as HTMLElement | null;
+    if (!celdaEl) {
+      return null;
+    }
+    const fila = Number(celdaEl.dataset['fila']);
+    const col = Number(celdaEl.dataset['col']);
+    if (Number.isNaN(fila) || Number.isNaN(col)) {
+      return null;
+    }
+    return this.celdas[fila]?.[col] ?? null;
+  }
+
+  /** Actualiza el resaltado con la línea recta desde el origen. */
+  private actualizarArrastre(celda: CeldaSopa): void {
+    this.ruta = this.lineaDesdeOrigen(celda);
+  }
+
+  /** Termina el arrastre y comprueba si la línea resaltada es una palabra. */
+  finalizarArrastre(evento?: PointerEvent): void {
+    if (!this.deslizando) {
+      return;
+    }
+    this.deslizando = false;
+
+    // En barridos rápidos, el último "pointermove" puede llegar retrasado.
+    // Si al soltar el dedo está sobre una celda que forma línea recta con
+    // el origen, se usa esa línea (más precisa). Si no, se conserva la
+    // última resaltada durante el arrastre.
+    if (this.origen && evento) {
+      const celda = this.celdaEnPuntero(evento);
+      if (celda) {
+        const linea = this.lineaDesdeOrigen(celda);
+        if (linea.length > 1) {
+          this.ruta = linea;
+        }
+      }
+    }
+
+    this.evaluarRuta();
+    this.origen = null;
+    this.ruta = [];
+  }
+
+  /** Celdas en línea recta desde el origen hasta la celda indicada. */
+  private lineaDesdeOrigen(celda: CeldaSopa): CeldaSopa[] {
+    const a = this.origen!;
+    const b = celda;
 
     const diffFila = Math.abs(b.fila - a.fila);
     const diffCol = Math.abs(b.col - a.col);
 
-    // Tiene que ser una línea recta: misma fila, misma columna o diagonal.
+    // Solo líneas rectas: misma fila, misma columna o diagonal.
     const esLinea = diffFila === 0 || diffCol === 0 || diffFila === diffCol;
-    const tramos = Math.max(diffFila, diffCol);
-    if (!esLinea || tramos < 1) {
-      this.primeraSel = null;
-      this.segundaSel = null;
-      return;
+    if (!esLinea) {
+      return [b];
     }
 
+    const tramos = Math.max(diffFila, diffCol);
     const pasoF = b.fila > a.fila ? 1 : b.fila < a.fila ? -1 : 0;
     const pasoC = b.col > a.col ? 1 : b.col < a.col ? -1 : 0;
 
-    let texto = '';
-    const tramoCeldas: CeldaSopa[] = [];
+    const celdas: CeldaSopa[] = [];
     for (let i = 0; i <= tramos; i++) {
-      const celda = this.celdas[a.fila + pasoF * i][a.col + pasoC * i];
+      celdas.push(this.celdas[a.fila + pasoF * i][a.col + pasoC * i]);
+    }
+    return celdas;
+  }
+
+  /** True cuando la celda pertenece a la línea resaltada. */
+  enRuta(celda: CeldaSopa): boolean {
+    return this.ruta.some(
+      (c) => c.fila === celda.fila && c.col === celda.col
+    );
+  }
+
+  /** Comprueba si la línea resaltada forma una palabra del tema. */
+  private evaluarRuta(): void {
+    if (!this.origen || this.ruta.length < 2) {
+      return;
+    }
+
+    let texto = '';
+    for (const celda of this.ruta) {
       texto += celda.letra;
-      tramoCeldas.push(celda);
     }
 
     const invertida = texto.split('').reverse().join('');
@@ -265,7 +331,7 @@ export class SopaLetrasPage {
     );
 
     if (encontrada) {
-      for (const celda of tramoCeldas) {
+      for (const celda of this.ruta) {
         celda.marcada = true;
       }
       this.encontradas = [...this.encontradas, encontrada].sort();
@@ -275,9 +341,18 @@ export class SopaLetrasPage {
         this.terminado = true;
       }
     }
+  }
 
-    this.primeraSel = null;
-    this.segundaSel = null;
+  /** Libera el puntero (incluso si se suelta fuera del tablero). */
+  @HostListener('document:pointerup', ['$event'])
+  soltarFuera(evento: PointerEvent): void {
+    this.finalizarArrastre(evento);
+  }
+
+  /** Cancelación del puntero (ej. el dispositivo interrumpió el toque). */
+  @HostListener('document:pointercancel')
+  cancelarFuera(): void {
+    this.finalizarArrastre();
   }
 
   /** Reinicia el tablero con el mismo tema. */

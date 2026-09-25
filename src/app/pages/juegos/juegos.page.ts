@@ -18,6 +18,9 @@ import {
   helpCircleOutline,
   gridOutline,
   extensionPuzzleOutline,
+  appsOutline,
+  layersOutline,
+  flashOutline,
   play
 } from 'ionicons/icons';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
@@ -29,6 +32,7 @@ export interface JuegoDisponible {
   nombre: string;
   descripcion: string;
   icono: string;
+  dificultad: string;
   ruta: string;
 }
 
@@ -38,25 +42,50 @@ const JUEGOS_DISPONIBLES: JuegoDisponible[] = [
     nombre: 'Memoria',
     descripcion: 'Encuentra las parejas de imágenes.',
     icono: 'albums-outline',
+    dificultad: 'Fácil',
     ruta: '/juegos/memoria'
   },
   {
     nombre: 'Trivia',
     descripcion: 'Responde preguntas de cultura general.',
     icono: 'help-circle-outline',
+    dificultad: 'Media',
     ruta: '/juegos/trivia'
   },
   {
     nombre: 'Sopa de letras',
     descripcion: 'Busca las palabras ocultas en la cuadrícula.',
     icono: 'grid-outline',
+    dificultad: 'Media',
     ruta: '/juegos/sopa-letras'
   },
   {
     nombre: 'Rompecabezas',
     descripcion: 'Ordena las piezas para armar la imagen.',
     icono: 'extension-puzzle-outline',
+    dificultad: 'Media',
     ruta: '/juegos/rompecabezas'
+  },
+  {
+    nombre: 'Tres en línea',
+    descripcion: 'Completa una línea de tres. Juega contra la IA.',
+    icono: 'apps-outline',
+    dificultad: '3 niveles',
+    ruta: '/juegos/tic-tac-toe'
+  },
+  {
+    nombre: 'Torres de Hanoi',
+    descripcion: 'Ordena los discos de una torre a otra.',
+    icono: 'layers-outline',
+    dificultad: 'Fácil',
+    ruta: '/juegos/torres-hanoi'
+  },
+  {
+    nombre: 'Memoria de secuencias',
+    descripcion: 'Obsérvalas, memorízalas y repite las secuencias de luces.',
+    icono: 'flash-outline',
+    dificultad: 'Progresiva',
+    ruta: '/juegos/memoria-secuencias'
   }
 ];
 
@@ -90,6 +119,9 @@ export class JuegosPage {
       helpCircleOutline,
       gridOutline,
       extensionPuzzleOutline,
+      appsOutline,
+      layersOutline,
+      flashOutline,
       play
     });
   }

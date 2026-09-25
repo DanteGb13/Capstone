@@ -1,0 +1,127 @@
+<ion-header class="ion-no-border page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Torres de Hanoi</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="hanoi-container">
+
+    <p class="instruccion">
+      Toca un disco y luego la torre donde quieras colocarlo.
+    </p>
+
+    <!-- Selector de cantidad de discos -->
+    <div class="selector-discos">
+      @for (opcion of opcionesDiscos; track opcion) {
+
+        <button
+          type="button"
+          class="disco-btn"
+          [class.activo]="cantidad === opcion"
+          (click)="cambiarCantidad(opcion)">
+          {{ opcion }} discos
+        </button>
+
+      }
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="estadisticas">
+      <div class="stat">
+        <span>Movimientos</span>
+        <strong>{{ movimientos }}</strong>
+      </div>
+      <div class="stat">
+        <span>Tiempo</span>
+        <strong>{{ tiempoTexto }}</strong>
+      </div>
+      <div class="stat">
+        <span>Mejor récord</span>
+        <strong>{{ record ?? '—' }}</strong>
+      </div>
+    </div>
+
+    <!-- Ayuda o error -->
+    <p class="ayuda" [class.error]="msjError">
+      @if (msjError) {
+        {{ msj }}
+      } @else {
+        Mínimo: {{ minMovimientos }} movimientos
+      }
+    </p>
+
+    <!-- Tablero con las tres torres -->
+    <div class="tablero-hanoi" #tableroHanoi>
+      @for (torre of torres; track $index; let i = $index) {
+
+        <div
+          class="torre"
+          #torre
+          [class.seleccionada]="torreSel === i"
+          (click)="tapTorre(i)">
+
+          <div class="palo"></div>
+
+          <div class="pila">
+            @for (disco of torre; track disco) {
+
+              <div
+                class="disco"
+                [style.width.%]="anchoDiscoPorc(disco)"
+                [style.background]="colorDisco(disco)">
+              </div>
+
+            }
+          </div>
+
+          <div class="base"></div>
+        </div>
+
+      }
+    </div>
+
+    <ion-button expand="block" fill="outline" class="btn-reiniciar" (click)="reiniciar()">
+      <ion-icon name="refresh-outline"></ion-icon>
+      Reiniciar partida
+    </ion-button>
+
+    <p class="partidas-contador">Partidas iniciadas: {{ partidas }}</p>
+
+  </div>
+
+  <!-- Pantalla de victoria -->
+  @if (terminado) {
+
+    <div class="overlay">
+      <div class="overlay-card">
+        <div class="celebra">🎉</div>
+        <h2>¡Torres completadas!</h2>
+
+        <p>
+          Completaste {{ cantidad }} discos en <strong>{{ movimientos }}</strong> movimientos
+          y un tiempo de <strong>{{ tiempoTexto }}</strong>.
+        </p>
+
+        @if (nuevoRecordStar) {
+          <p class="nuevo-record">¡Nuevo récord!</p>
+        }
+
+        <ion-button expand="block" class="btn-primario" (click)="reiniciar()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Jugar de nuevo
+        </ion-button>
+
+        <ion-button expand="block" fill="outline" class="btn-secundario" (click)="volver()">
+          Volver a Juegos
+        </ion-button>
+      </div>
+    </div>
+
+  }
+</ion-content>

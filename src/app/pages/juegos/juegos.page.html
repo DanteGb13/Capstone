@@ -13,7 +13,7 @@
   <div class="juegos-container">
 
     <div class="bienestar-titulo">
-      <span class="bienestar-icono"><ion-icon name="puzzle-outline"></ion-icon></span>
+      <span class="bienestar-icono"><ion-icon name="extension-puzzle-outline"></ion-icon></span>
       <h1>Sección Bienestar</h1>
     </div>
 
@@ -31,6 +31,7 @@
           <div class="juego-texto">
             <ion-card-title>{{ juego.nombre }}</ion-card-title>
             <span>{{ juego.descripcion }}</span>
+            <span class="dificultad">Dificultad: {{ juego.dificultad }}</span>
           </div>
 
           <ion-button class="jugar-btn" (click)="jugar($event, juego)">

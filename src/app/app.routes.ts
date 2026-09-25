@@ -113,6 +113,21 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'juegos/tic-tac-toe',
+    loadComponent: () => import('./pages/tic-tac-toe/tic-tac-toe.page').then( m => m.TicTacToePage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'juegos/torres-hanoi',
+    loadComponent: () => import('./pages/torres-hanoi/torres-hanoi.page').then( m => m.TorresHanoiPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'juegos/memoria-secuencias',
+    loadComponent: () => import('./pages/memoria-secuencias/memoria-secuencias.page').then( m => m.MemoriaSecuenciasPage),
+    canActivate: [authGuard]
+  },
+  {
     path: 'estado',
     loadComponent: () => import('./pages/cuidadores/estado/estado.page').then( m => m.EstadoPage),
     canActivate: [authGuard]

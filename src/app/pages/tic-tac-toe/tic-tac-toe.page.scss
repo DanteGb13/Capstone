@@ -1,0 +1,110 @@
+@use '../juegos/juego-base';
+
+.ttt-container {
+  max-width: 430px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+}
+
+/* Selector de dificultad */
+.dificultades {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  .dificultad-btn {
+    border: 2px solid #ede9fe;
+    background: #ffffff;
+    color: var(--primary, #7715c7);
+    border-radius: 999px;
+    padding: 9px 18px;
+    font-size: 16px;
+    font-weight: 800;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s ease;
+
+    &.activo {
+      background: var(--primary, #7715c7);
+      border-color: var(--primary, #7715c7);
+      color: #ffffff;
+    }
+  }
+}
+
+/* Mensaje de estado del juego */
+.estado-msg {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--primary, #7715c7);
+  margin: 4px 0 16px;
+  min-height: 26px;
+}
+
+/* Tablero */
+.ttt-tablero {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.casilla {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 18px;
+  background: #ffffff;
+  border: 2px solid #ede9fe;
+  font-size: clamp(44px, 13vw, 70px);
+  font-weight: 900;
+  color: var(--primary, #7715c7);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 12px rgba(119, 21, 199, 0.08);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* Colores distintos para X y O */
+.casilla.ficha-x {
+  color: var(--primary, #7715c7);
+}
+
+.casilla.ficha-o {
+  color: #0891b2;
+}
+
+/* Animación de aparición de la ficha */
+.casilla.llena {
+  animation: aparicion-ficha 0.28s ease;
+}
+
+@keyframes aparicion-ficha {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Resalta la línea ganadora */
+.casilla.ganadora {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
+}
+
+/* Botones de acción */
+.acciones {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+}

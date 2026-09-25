@@ -1,29 +1,4 @@
-:host {
-  --primary: #7715c7;
-  --primary-light: rgba(119, 21, 199, 0.1);
-  --background: #f8f7fc;
-  --text-main: #1a1d26;
-  --text-muted: #8c92a4;
-
-  background: #f8f7fc;
-}
-
-ion-content {
-  --background: var(--background, #f8f7fc);
-}
-
-.page-header {
-  ion-toolbar {
-    --background: #ffffff;
-    --color: var(--text-main, #1a1d26);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-
-    ion-title {
-      font-size: 18px;
-      font-weight: 800;
-    }
-  }
-}
+@use '../juegos/juego-base';
 
 .trivia-container {
   max-width: 480px;
@@ -205,24 +180,12 @@ ion-content {
   border: 2px solid #fca5a5;
 }
 
+/* Ajustes finos de la base para esta pantalla */
 .btn-primario {
-  --background: var(--primary, #7715c7);
-  --background-hover: #5f0fa3;
-  --border-radius: 14px;
-  --color: #ffffff;
-  font-size: 17px;
-  font-weight: 800;
-  min-height: 54px;
   margin-top: 18px;
 }
 
 .btn-secundario {
-  --border-color: #ddd6fe;
-  --color: var(--primary, #7715c7);
-  --border-radius: 14px;
-  font-size: 16px;
-  font-weight: 700;
-  min-height: 50px;
   margin-top: 10px;
 }
 

@@ -1,0 +1,103 @@
+<ion-header class="ion-no-border page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Memoria de secuencias</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="simon-container">
+
+    <p class="instruccion">
+      Mira la secuencia de luces y repítela en el mismo orden.
+    </p>
+
+    <!-- Puntaje y niveles -->
+    <div class="estadisticas">
+      <div class="stat">
+        <span>Nivel</span>
+        <strong>{{ nivel }}</strong>
+      </div>
+      <div class="stat">
+        <span>Puntaje</span>
+        <strong>{{ puntaje }}</strong>
+      </div>
+      <div class="stat">
+        <span>Récord</span>
+        <strong>{{ mejor }}</strong>
+      </div>
+    </div>
+
+    <p class="estado-simon">{{ mensaje }}</p>
+
+    <!-- Cuatro botones de colores -->
+    <div class="simon-grid">
+      @for (color of colores; track color; let i = $index) {
+
+        <button
+          type="button"
+          class="simon-boton {{ color }}"
+          [class.activo]="activo === i"
+          (click)="tocar(i)"
+          [attr.aria-label]="'Color ' + color">
+        </button>
+
+      }
+    </div>
+
+    <div class="acciones-simon">
+      @if (fase === 'listo') {
+
+        <ion-button expand="block" class="btn-primario" (click)="comenzar()">
+          <ion-icon name="play" slot="start"></ion-icon>
+          Comenzar
+        </ion-button>
+
+      } @else if (enPartida) {
+
+        <ion-button expand="block" fill="outline" class="btn-secundario" (click)="comenzar()">
+          <ion-icon name="refresh-outline"></ion-icon>
+          Reiniciar
+        </ion-button>
+
+      }
+    </div>
+
+    <p class="partidas-contador">Partidas jugadas: {{ partidas }}</p>
+
+  </div>
+
+  <!-- Pantalla de fin de juego -->
+  @if (fase === 'fin') {
+
+    <div class="overlay">
+      <div class="overlay-card">
+        <div class="celebra">💡</div>
+        <h2>Fin del juego</h2>
+
+        <p>
+          Llegaste hasta el nivel <strong>{{ nivel }}</strong> con
+          <strong>{{ puntaje }}</strong> puntos.
+        </p>
+
+        @if (nuevoRecord) {
+          <p class="nuevo-record">🎖️ ¡Nuevo récord!</p>
+        }
+
+        <ion-button expand="block" class="btn-primario" (click)="comenzar()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Jugar de nuevo
+        </ion-button>
+
+        <ion-button expand="block" fill="outline" class="btn-secundario" (click)="volver()">
+          Volver a Juegos
+        </ion-button>
+      </div>
+    </div>
+
+  }
+</ion-content>

@@ -13,7 +13,7 @@
   <div class="sopa-container">
 
     <p class="instruccion">
-      Toca la primera letra de la palabra y luego la última.
+      Desliza el dedo sobre la palabra para marcarla.
     </p>
 
     <!-- Selector de tema -->
@@ -39,9 +39,13 @@
           <button
             type="button"
             class="celda"
+            [attr.data-fila]="celda.fila"
+            [attr.data-col]="celda.col"
             [class.marcada]="celda.marcada"
-            [class.seleccion]="(primeraSel && primeraSel.fila === celda.fila && primeraSel.col === celda.col) || (segundaSel && segundaSel.fila === celda.fila && segundaSel.col === celda.col)"
-            (click)="primeraSel ? seleccionarSegunda(celda) : seleccionarPrimera(celda)">
+            [class.ruta]="enRuta(celda)"
+            (pointerdown)="iniciarArrastre(celda)"
+            (pointermove)="onPointerMove($event)"
+            (contextmenu)="$event.preventDefault()">
             {{ celda.letra }}
           </button>
 

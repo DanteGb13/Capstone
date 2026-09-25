@@ -1,0 +1,109 @@
+<ion-header class="ion-no-border page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Tres en línea</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="ttt-container">
+
+    <p class="instruccion">Completa una línea de tres. Tú juegas con la X.</p>
+
+    <!-- Selector de dificultad -->
+    <div class="dificultades">
+      @for (opcion of dificultades; track opcion.valor) {
+
+        <button
+          type="button"
+          class="dificultad-btn"
+          [class.activo]="dificultad === opcion.valor"
+          (click)="cambiarDificultad(opcion.valor)">
+          {{ opcion.etiqueta }}
+        </button>
+
+      }
+    </div>
+
+    <!-- Marcador de partidas -->
+    <div class="estadisticas">
+      <div class="stat">
+        <span>Ganadas</span>
+        <strong>{{ victorias }}</strong>
+      </div>
+      <div class="stat">
+        <span>Empates</span>
+        <strong>{{ empates }}</strong>
+      </div>
+      <div class="stat">
+        <span>Perdidas</span>
+        <strong>{{ derrotas }}</strong>
+      </div>
+    </div>
+
+    <p class="estado-msg">{{ mensaje }}</p>
+
+    <p class="partidas-contador">Partidas jugadas: {{ victorias + derrotas + empates }}</p>
+
+    <!-- Tablero 3 x 3 -->
+    <div class="ttt-tablero">
+      @for (casilla of tablero; track $index; let i = $index) {
+
+        <button
+          type="button"
+          class="casilla"
+          [class.ficha-x]="casilla === 'X'"
+          [class.ficha-o]="casilla === 'O'"
+          [class.llena]="casilla !== null"
+          [class.ganadora]="lineaGanadora !== null && lineaGanadora.includes(i)"
+          (click)="colocar(i)">
+          {{ casilla }}
+        </button>
+
+      }
+    </div>
+
+    <div class="acciones">
+      <ion-button expand="block" class="btn-primario" (click)="reiniciarPartida()">
+        <ion-icon name="refresh-outline" slot="start"></ion-icon>
+        Reiniciar partida
+      </ion-button>
+
+      <ion-button expand="block" fill="outline" class="btn-secundario" (click)="reiniciarEstadisticas()">
+        <ion-icon name="trash-outline" slot="start"></ion-icon>
+        Reiniciar estadísticas
+      </ion-button>
+    </div>
+
+  </div>
+
+  <!-- Pantalla de fin de partida -->
+  @if (juegoTerminado) {
+
+    <div class="overlay">
+      <div class="overlay-card">
+        <div class="celebra">
+          @if (ganador === 'X') { 🎉 }
+          @else if (ganador === 'O') { 🤖 }
+          @else { 🤝 }
+        </div>
+        <h2>{{ tituloFinal }}</h2>
+        <p>{{ mensajeFinal }}</p>
+
+        <ion-button expand="block" class="btn-primario" (click)="reiniciarPartida()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Jugar de nuevo
+        </ion-button>
+
+        <ion-button expand="block" fill="outline" class="btn-secundario" (click)="volver()">
+          Volver a Juegos
+        </ion-button>
+      </div>
+    </div>
+
+  }
+</ion-content>
