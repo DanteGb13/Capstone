@@ -15,6 +15,7 @@ import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
 
 import { Geolocation, Position } from '@capacitor/geolocation';
+import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import { AlertController } from '@ionic/angular';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
@@ -103,6 +104,8 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
 
   private webWatchId: number | null = null;
 
+  private destruido: boolean = false;
+
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private alertCtrl: AlertController,
@@ -132,6 +135,7 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.destruido = true;
     this.detenerWatch();
     if (this.map) {
       this.map.remove();
@@ -189,8 +193,23 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     try {
+      // Lectura inmediata para obtener la primera posición lo antes posible
+      // (no hay que esperar el primer callback del watch)
+      try {
+        const posicionRapida = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 8000,
+          maximumAge: 0
+        });
+        if (posicionRapida?.coords) {
+          this.procesarPosicion(posicionRapida.coords as any);
+        }
+      } catch (e: any) {
+        console.warn('Sin lectura inmediata, esperando el watch:', e?.message || e);
+      }
+
       this.watchId = await Geolocation.watchPosition(
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
         (pos: Position | null, err: any) => {
           if (err) {
             this.manejarErrorGps(err?.message || 'Error GPS');
@@ -216,14 +235,23 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
+    // Lectura inmediata (fallback web)
+    navigator.geolocation.getCurrentPosition(
+      (pos) => this.procesarPosicion(pos.coords),
+      () => {},
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+    );
+
     this.webWatchId = navigator.geolocation.watchPosition(
       (pos) => this.procesarPosicion(pos.coords),
       (err) => this.manejarErrorGps(err?.message || 'Error GPS'),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   }
 
   private procesarPosicion(coords: { latitude: number; longitude: number; accuracy?: number; speed?: number | null }) {
+    if (this.destruido) return;
+
     this.lat = coords.latitude;
     this.lon = coords.longitude;
     this.precision = Math.round(coords.accuracy || 0);
@@ -238,6 +266,8 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private manejarErrorGps(mensaje: string) {
+    if (this.destruido) return;
+
     this.estadoTexto = 'GPS sin señal';
     this.errorGps = mensaje;
     this.ubicacionActiva = false;
@@ -352,7 +382,9 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     // para no pelear con el usuario cuando arrastra o hace zoom del mapa.
     const fueraDeVista = this.map.getBounds().contains(coords) === false;
     if (primerFix || fueraDeVista) {
-      this.map.setView(coords, 17);
+      // Zoom inicial según la precisión: si es mala, alejar para ver el círculo completo
+      const zoom = primerFix ? (precision <= 50 ? 17 : precision <= 200 ? 16 : 15) : 17;
+      this.map.setView(coords, zoom);
     }
   }
 
@@ -400,6 +432,54 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
       `&destination=${encodeURIComponent(destino)}` +
       `&travelmode=driving`;
 
+    window.open(url, '_system');
+  }
+
+  // =====================================================
+  // COMPARTIR MI UBICACIÓN (HOJA DE COMPARTIR DEL TELÉFONO)
+  // =====================================================
+
+  async compartirUbicacion() {
+    if (!this.ubicacionActiva || this.lat == null || this.lon == null) {
+      const alert = await this.alertCtrl.create({
+        header: 'Ubicación no activa',
+        message:
+          'Tu ubicación no está activa o aún no se ha obtenido tu posición.\n\n' +
+          'Debes activar los permisos de ubicación del teléfono y tener el GPS encendido para poder compartir tu ubicación.',
+        buttons: ['OK']
+      });
+      await alert.present();
+      return;
+    }
+
+    const url = `https://www.google.com/maps?q=${this.lat},${this.lon}`;
+    const mensaje = `Estoy aquí ahora: ${url}`;
+
+    try {
+      if (Capacitor.isNativePlatform()) {
+        // Hoja de compartir nativa (WhatsApp, SMS, etc.)
+        await Share.share({
+          title: 'Mi ubicación',
+          text: mensaje,
+          dialogTitle: 'Compartir mi ubicación'
+        });
+        return;
+      }
+
+      // Web: usar la API de compartir del navegador si existe
+      if (navigator.share) {
+        await navigator.share({ title: 'Mi ubicación', text: mensaje, url });
+        return;
+      }
+    } catch (e: any) {
+      // Si el usuario cierra la hoja de compartir, no es un error real
+      if (e?.message?.includes('cancel') || e === undefined) {
+        return;
+      }
+      console.warn('Error al compartir:', e);
+    }
+
+    // Último recurso: abrir Google Maps con mi posición
     window.open(url, '_system');
   }
 }
