@@ -369,7 +369,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   private formatearProxima(fecha: Date): string {
-    const horaTexto = this.horaTextoAmPm(this.nuevaHoraSel, this.nuevoMinutoSel);
+    const horaTexto = this.horaTexto24(this.nuevaHoraSel, this.nuevoMinutoSel);
 
     const hoy = new Date();
     const manana = new Date(hoy);
@@ -504,13 +504,11 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   horaTexto(alarma: AlarmaRecordatorio): string {
-    return `${this.dosDigitos(alarma.hora)}:${this.dosDigitos(alarma.minuto)}`;
+    return this.horaTexto24(alarma.hora, alarma.minuto);
   }
 
-  horaTextoAmPm(hora: number, minuto: number): string {
-    const ampm = hora < 12 ? 'AM' : 'PM';
-    const h12 = hora % 12 === 0 ? 12 : hora % 12;
-    return `${this.dosDigitos(h12)}:${this.dosDigitos(minuto)} ${ampm}`;
+  horaTexto24(hora: number, minuto: number): string {
+    return `${this.dosDigitos(hora)}:${this.dosDigitos(minuto)}`;
   }
 
   get amPm(): string {

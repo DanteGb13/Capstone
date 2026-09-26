@@ -261,7 +261,7 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
       this.ubicacionActual = info;
 
       const ahora = new Date();
-      this.ultimaActualizacionTexto = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      this.ultimaActualizacionTexto = ahora.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
 
       // Reiniciar contador de 5 min
       this.tiempoRestanteSegundos = 300;
