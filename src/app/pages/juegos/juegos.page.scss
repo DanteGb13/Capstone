@@ -78,14 +78,16 @@ ion-content {
   margin: 0;
   border-radius: 20px;
   box-shadow: 0 4px 14px rgba(119, 21, 199, 0.1);
-  padding: 18px 16px;
+  padding: 16px 16px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+  overflow: visible;
 
   .juego-icono {
-    width: 60px;
-    height: 60px;
+    width: 52px;
+    height: 52px;
     flex-shrink: 0;
     border-radius: 18px;
     background: var(--primary-light, rgba(119, 21, 199, 0.1));
@@ -94,20 +96,22 @@ ion-content {
     justify-content: center;
 
     ion-icon {
-      font-size: 34px;
+      font-size: 32px;
       color: var(--primary, #7715c7);
     }
   }
 
   .juego-texto {
-    flex: 1;
+    flex: 1 1 200px;
     min-width: 0;
+    overflow-wrap: anywhere;
 
     ion-card-title {
       padding: 0;
       font-size: 20px;
       font-weight: 800;
       color: var(--text-main, #1a1d26);
+      line-height: 1.3;
     }
 
     span {
@@ -115,7 +119,7 @@ ion-content {
       margin-top: 4px;
       font-size: 14.5px;
       color: var(--text-muted, #8c92a4);
-      line-height: 1.4;
+      line-height: 1.45;
     }
 
     .dificultad {
@@ -138,8 +142,9 @@ ion-content {
     --background-hover: #5f0fa3;
     --border-radius: 14px;
     --color: #ffffff;
-    min-height: 52px;
-    min-width: 108px;
+    flex: 1 1 auto;
+    min-width: 120px;
+    min-height: 50px;
     font-size: 16px;
     font-weight: 800;
   }

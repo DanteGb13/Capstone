@@ -10,7 +10,7 @@ import {
   IonIcon
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { arrowBack } from 'ionicons/icons';
+import { arrowBack, chevronDownOutline, chevronUpOutline } from 'ionicons/icons';
 
 /** Una celda de la sopa de letras. */
 export interface CeldaSopa {
@@ -44,6 +44,34 @@ const TEMAS: TemaSopa[] = [
   {
     nombre: 'Alimentos',
     palabras: ['PAN', 'LECHE', 'QUESO', 'ARROZ', 'HUEVO', 'PAPA', 'MANZANA', 'NARANJA']
+  },
+  {
+    nombre: 'Tecnología',
+    palabras: ['TECLADO', 'PANTALLA', 'CELULAR', 'INTERNET', 'CORREO', 'ROBOT', 'WIFI', 'MOUSE']
+  },
+  {
+    nombre: 'Deportes',
+    palabras: ['FUTBOL', 'TENIS', 'NATACION', 'CICLISMO', 'BASQUET', 'VOLEIBOL', 'BOXEO', 'GOLF']
+  },
+  {
+    nombre: 'Profesiones',
+    palabras: ['DOCTOR', 'MAESTRO', 'BOMBERO', 'POLICIA', 'ENFERMERA', 'COCINERO', 'PILOTO', 'JUEZ']
+  },
+  {
+    nombre: 'Música',
+    palabras: ['GUITARRA', 'PIANO', 'BATERIA', 'VIOLIN', 'FLAUTA', 'CANCION', 'RITMO', 'CORO']
+  },
+  {
+    nombre: 'Ropa',
+    palabras: ['CAMISA', 'PANTALON', 'ZAPATOS', 'VESTIDO', 'CHAMARRA', 'MEDIAS', 'GORRO', 'BUFANDA']
+  },
+  {
+    nombre: 'Marcas',
+    palabras: ['NIKE', 'ADIDAS', 'SONY', 'SAMSUNG', 'APPLE', 'PEPSI', 'XBOX', 'TOYOTA']
+  },
+  {
+    nombre: 'Cosas',
+    palabras: ['MESA', 'SILLA', 'VENTANA', 'RELOJ', 'LIBRO', 'LLAVE', 'TAZA', 'SOFA']
   }
 ];
 
@@ -69,6 +97,8 @@ export class SopaLetrasPage {
 
   temas = TEMAS;
   temaIndex = 0;
+  /** True cuando el selector de temas está desplegado. */
+  temasAbierta = false;
 
   /** Letrero 10x10 con letras. */
   celdas: CeldaSopa[][] = [];
@@ -86,7 +116,7 @@ export class SopaLetrasPage {
   terminado = false;
 
   constructor(private router: Router) {
-    addIcons({ arrowBack });
+    addIcons({ arrowBack, chevronDownOutline, chevronUpOutline });
     this.regenerar();
   }
 
@@ -98,9 +128,11 @@ export class SopaLetrasPage {
   /** Cambia de tema y arma un tablero nuevo. */
   elegirTema(activo: number): void {
     if (activo === this.temaIndex) {
+      this.temasAbierta = false;
       return;
     }
     this.temaIndex = activo;
+    this.temasAbierta = false;
     this.regenerar();
   }
 
