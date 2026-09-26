@@ -268,16 +268,18 @@
 
       </div>
 
-      <div class="menu-card ripple" (click)="abrirZonaSegura()" style="
-          background: linear-gradient(135deg, #4caf50, #81c784);
-          box-shadow: 0 10px 25px rgba(156, 39, 176, 0.35);
-          border:none
-        ">
+      <!-- Indicador demostrativo de zona segura: no navega, sólo muestra
+           el estado (verde = dentro, rojo = fuera de la zona segura) -->
+      <div class="menu-card ripple" [class.fuera-de-zona]="fueraDeZona" [style.background]="fueraDeZona
+          ? 'linear-gradient(135deg, #ef5350, #e53935)'
+          : 'linear-gradient(135deg, #4caf50, #81c784)'" [style.box-shadow]="fueraDeZona
+          ? '0 10px 25px rgba(229, 57, 53, 0.45)'
+          : '0 10px 25px rgba(156, 39, 176, 0.35)'" style="border:none">
 
-        <ion-icon name="shield-checkmark"></ion-icon>
+        <ion-icon [name]="fueraDeZona ? 'warning' : 'shield-checkmark'"></ion-icon>
 
         <h3>
-          Zona Segura
+          {{ fueraDeZona ? 'Fuera de zona segura' : 'Zona Segura' }}
         </h3>
 
       </div>

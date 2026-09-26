@@ -90,6 +90,10 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   private zonaEstadoPrevio: boolean | null = null;
 
+  /** Estado demostrativo del botón "Zona Segura" del panel del adulto:
+   *  false = dentro de la zona (verde), true = fuera de la zona (rojo). */
+  fueraDeZona: boolean = false;
+
 
   // =====================================================
   // USUARIO
@@ -329,6 +333,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       if (!estado) return;
 
       this.zonaEstadoPrevio = estado.dentro;
+
+      // El botón del panel sólo es indicador: cambia a "Fuera de zona" (rojo)
+      // al salirse y vuelve a su color normal al entrar de nuevo.
+      this.fueraDeZona = !estado.dentro;
+      this.changeDetectorRef.detectChanges();
 
       if (!estado.dentro && antesDentro !== false && this.zonaSeguraService.puedeAlertar(this.idUsuarioActual)) {
         this.zonaSeguraService.registrarAlerta(this.idUsuarioActual);
@@ -592,11 +601,6 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   abrirRecordatorios() {
     (document.activeElement as HTMLElement)?.blur();
     this.router.navigate(['/recordatorios']);
-  }
-
-  abrirZonaSegura() {
-    (document.activeElement as HTMLElement)?.blur();
-    this.router.navigate(['/zona-segura']);
   }
 
   abrirMiUbicacion() {

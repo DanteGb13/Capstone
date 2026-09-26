@@ -169,6 +169,10 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
 
   private timerSugerencias: any = null;
 
+  private timerDirecciones: any = null;
+
+  private observerTamano: ResizeObserver | null = null;
+
   private destruido: boolean = false;
 
   private estadoPrevioDentro: boolean | null = null;
@@ -237,6 +241,14 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
       clearTimeout(this.timerSugerencias);
       this.timerSugerencias = null;
     }
+    if (this.timerDirecciones) {
+      clearTimeout(this.timerDirecciones);
+      this.timerDirecciones = null;
+    }
+    if (this.observerTamano) {
+      this.observerTamano.disconnect();
+      this.observerTamano = null;
+    }
     if (this.timerCuidador) {
       clearInterval(this.timerCuidador);
       this.timerCuidador = null;
@@ -292,8 +304,26 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     const zonas = await this.zonaService.obtenerZonas(this.idAdulto);
     this.zonas = zonas;
     this.pintarZonas();
+
+    // Si los datos llegaron DESPUÉS de iniciar el mapa, la vista aterriza de una
+    // vez sobre las zonas (sin animación: se pide un solo lote de tiles).
+    if (this.map) this.ajustarVista();
+
     this.changeDetectorRef.detectChanges();
-    void this.resolverDireccionesZonas();
+    this.programarDireccionesZonas();
+  }
+
+  /**
+   * Retrasa el reverse-geocoding de las zonas para que no compita con la
+   * descarga inicial de los tiles del mapa (es texto cosmético de la lista).
+   */
+  private programarDireccionesZonas() {
+    if (this.timerDirecciones) return;
+
+    this.timerDirecciones = setTimeout(() => {
+      this.timerDirecciones = null;
+      void this.resolverDireccionesZonas();
+    }, 1200);
   }
 
   /**
@@ -677,12 +707,27 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   // MAPA
   // =====================================================
 
+  /** Espera corta (máx. 800 ms) a zonas/ubicación para centrar bien desde el
+   *  primer tile; si no llegan, se arranca con el centro por defecto. */
+  private async esperarDatosIniciales(): Promise<void> {
+    const inicio = Date.now();
+
+    while (!this.destruido && !this.map && Date.now() - inicio < 800) {
+      if (!this.cargando || this.ubicacion || this.zonas.length > 0) return;
+      await new Promise<void>((resolver) => setTimeout(resolver, 80));
+    }
+  }
+
   /**
-   * Arranca el mapa reintentando unas veces: Leaflet viene de un CDN y el
-   * contenedor puede tardar en estar listo. Si nunca arranca, queda el aviso
-   * visible sobre el área del mapa.
+   * Arranca el mapa reintentando unas veces: el contenedor puede tardar en
+   * estar listo. Si nunca arranca, queda el aviso visible sobre el área del mapa.
    */
   private async arrancarMapa(intento = 0): Promise<void> {
+    if (this.destruido || this.map) return;
+
+    // Igual que "mi ubicación": si los datos ya llegaron, el mapa nace centrado
+    // donde tiene que estar y pide UN solo lote de tiles (sin saltos ni refetch).
+    if (intento === 0) await this.esperarDatosIniciales();
     if (this.destruido || this.map) return;
 
     const ok = await this.inicializarMapa();
@@ -749,14 +794,21 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.map) return true;
 
     try {
-      const lat = this.ubicacion?.latitud ?? -33.4489;
-      const lng = this.ubicacion?.longitud ?? -70.6693;
+      // Prioridad de centro: ubicación conocida → primera zona → por defecto.
+      const primeraZona = this.zonas[0];
+      const lat = this.ubicacion?.latitud ?? primeraZona?.latitud_centro ?? -33.4489;
+      const lng = this.ubicacion?.longitud ?? primeraZona?.longitud_centro ?? -70.6693;
+      // Zoom 16 = el mismo al que ajustarVista() lleva una sola zona: evita refetch.
+      const zoom = this.ubicacion || this.zonas.length > 0 ? 16 : 15;
 
-      this.map = L.map(container, { center: [lat, lng], zoom: 15, zoomControl: false });
+      this.map = L.map(container, { center: [lat, lng], zoom, zoomControl: false });
 
       // Host único (HTTP/2) en vez de subdominios {s}: menos conexiones
       L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        // Durante flyTo/zoom animado NO pedir tiles de zooms intermedios:
+        // sólo se descarga el nivel final (menos viajes, vista estable).
+        updateWhenZooming: false,
         attribution: 'OpenStreetMap contributors'
       }).addTo(this.map);
 
@@ -765,16 +817,39 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
       this.map.on('click', (e: any) => this.onMapClick(e));
 
       this.mapaFallo = '';
-      try {
-        this.map.invalidateSize({ animate: false });
-      } catch {
-        /* aún no tiene tamaño */
-      }
+      this.programarAjusteDeTamano();
       return true;
     } catch (e) {
       console.error('Error inicializando mapa de zonas seguras:', e);
       this.mapaFallo = 'No se pudo iniciar el mapa.';
       return false;
+    }
+  }
+
+  /**
+   * Garantiza que Leaflet vea el tamaño final del contenedor:
+   *  - tras la animación de entrada de Ionic (invalidateSize diferido)
+   *  - cada vez que el contenedor cambie (hoja del formulario, cambios de layout)
+   */
+  private programarAjusteDeTamano() {
+    const contenedor = this.mapaEl?.nativeElement;
+    if (!contenedor) return;
+
+    const ajustar = () => {
+      if (this.destruido || !this.map) return;
+      try {
+        this.map.invalidateSize({ animate: false });
+      } catch {
+        /* el mapa aún no está listo */
+      }
+    };
+
+    // La transición de entrada de Ionic termina ~350-500 ms tras crear la vista.
+    setTimeout(ajustar, 400);
+
+    if (typeof ResizeObserver !== 'undefined' && !this.observerTamano) {
+      this.observerTamano = new ResizeObserver(() => ajustar());
+      this.observerTamano.observe(contenedor);
     }
   }
 
@@ -926,7 +1001,8 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     try {
-      this.map.fitBounds(L.latLngBounds(puntos), { padding: [40, 40], maxZoom: 16 });
+      // animate:false → salto directo: sólo se piden los tiles del destino final.
+      this.map.fitBounds(L.latLngBounds(puntos), { padding: [40, 40], maxZoom: 16, animate: false });
     } catch { /* vista por defecto */ }
   }
 
