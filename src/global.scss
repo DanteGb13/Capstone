@@ -170,3 +170,71 @@ body {
 .ion-page {
   background-color: #f8f7fc;
 }
+
+/* =====================================================
+   MAPA DE ZONAS SEGURAS (Leaflet)
+   Estilos globales: Leaflet crea estos nodos con JavaScript,
+   fuera del alcance de los estilos encapsulados del componente.
+   ===================================================== */
+.zona-persona-marker {
+  background: transparent;
+  border: none;
+
+  .zona-pin {
+    position: relative;
+    width: 40px;
+    height: 50px;
+
+    .zona-pin-ring {
+      position: absolute;
+      left: 50%;
+      top: 14px;
+      width: 36px;
+      height: 36px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(119, 21, 199, 0.25);
+      animation: zona-ripple 1.6s ease-out infinite;
+    }
+
+    svg {
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 4px 8px rgba(119, 21, 199, 0.4));
+    }
+  }
+}
+
+.zona-nuevo-marker {
+  background: transparent;
+  border: none;
+
+  .zona-nuevo-pin {
+    position: relative;
+    width: 36px;
+    height: 46px;
+
+    .zona-nuevo-ring {
+      position: absolute;
+      left: 50%;
+      top: 15px;
+      width: 34px;
+      height: 34px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: rgba(255, 152, 0, 0.3);
+      animation: zona-ripple 1.8s ease-out infinite;
+    }
+
+    svg {
+      position: relative;
+      z-index: 2;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+    }
+  }
+}
+
+@keyframes zona-ripple {
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+}

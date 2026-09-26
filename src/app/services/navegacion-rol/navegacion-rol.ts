@@ -5,6 +5,12 @@ import { SupabaseService } from '../supabase/supabase';
 /**
  * Rutas protegidas por rol.
  */
+/**
+ * Rutas que pertenecen SOLO a un rol.
+ * Ojo: authGuard evalúa la URL actual (no el destino). Si una ruta compartida
+ * por ambos roles (ej: /zona-segura) está en ambas listas, el guard entra en
+ * bucle al intentar salir de ella y la navegación queda "muda".
+ */
 export const RUTAS_CUIDADOR = [
   '/cuidador',
   '/cuidado',

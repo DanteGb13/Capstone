@@ -217,6 +217,15 @@ export class CuidadorPage implements OnInit, OnDestroy {
     this.router.navigate(['/estado']);
   }
 
+  verZonaSegura(adulto?: any) {
+    const id = adulto?.adulto_mayor?.id || adulto?.id_usuario || adulto?.id;
+    if (id) {
+      this.router.navigate(['/zona-segura'], { queryParams: { id } });
+    } else {
+      this.router.navigate(['/zona-segura']);
+    }
+  }
+
   llamarAdulto(telefono?: string) {
     if (telefono) {
       window.open(`tel:${telefono}`, '_system');

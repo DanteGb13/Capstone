@@ -273,7 +273,7 @@ export class Gps {
   // GEOCODIFICACIÓN (DIRECCIÓN TEXTO -> COORDENADAS)
   // =====================================================
 
-  private async geocodificarDireccion(query: string): Promise<{ latitud: number; longitud: number } | null> {
+  async geocodificarDireccion(query: string): Promise<{ latitud: number; longitud: number } | null> {
     try {
       const encoded = encodeURIComponent(query);
       const res = await fetch(

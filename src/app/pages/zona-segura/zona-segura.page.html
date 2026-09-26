@@ -1,0 +1,338 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Zona Segura</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+
+  <div class="zona-container" [class.modo-formulario]="modoFormulario">
+
+    <!-- ================================================= -->
+    <!-- SELECTOR DE ADULTO MAYOR (CUIDADOR) -->
+    <!-- ================================================= -->
+
+    <!-- ================================================= -->
+    <!-- FILA SUPERIOR: ADULTO A CARGO + AÑADIR ZONA -->
+    <!-- ================================================= -->
+
+    @if (mostrarFilaSuperior && !modoFormulario) {
+      <div class="fila-superior" [class.sin-selector]="!mostrarSelectorAdultos">
+        @if (mostrarSelectorAdultos) {
+          <div class="selector-card">
+            <ion-icon name="people-outline"></ion-icon>
+            <div class="selector-body">
+              <label>Cuidando a:</label>
+              <ion-select [value]="adultoSeleccionado?.id" interface="popover" (ionChange)="onAdultoChange($event)">
+                @for (adulto of adultosACargo; track adulto.id) {
+                  <ion-select-option [value]="adulto.id">
+                    {{ adulto.adulto_mayor?.nombre }} {{ adulto.adulto_mayor?.apellidopa }}
+                  </ion-select-option>
+                }
+              </ion-select>
+            </div>
+          </div>
+        }
+
+        @if (!modoFormulario && !cargando) {
+          <button type="button" class="btn-agregar" (click)="iniciarNuevaZona()">
+            <ion-icon name="add-circle-outline"></ion-icon>
+            <span>Añadir zona segura</span>
+          </button>
+        }
+      </div>
+    }
+
+    <!-- ================================================= -->
+    <!-- ESTADO -->
+    <!-- ================================================= -->
+
+    @if (!modoFormulario) {
+      <div class="estado-card" [ngClass]="estadoClase">
+        <div class="estado-icono">
+          <ion-icon [name]="estadoIcono"></ion-icon>
+        </div>
+        <div class="estado-texto">
+          <strong>{{ textoEstado }}</strong>
+          <span>{{ subtituloEstado }}</span>
+        </div>
+        @if (cargandoUbicacion) {
+          <ion-spinner name="crescent" class="estado-spinner"></ion-spinner>
+        }
+      </div>
+    }
+
+    <!-- ================================================= -->
+    <!-- MAPA -->
+    <!-- ================================================= -->
+
+    <div class="map-wrapper">
+      <div id="mapaZona" #mapaZona class="map-view"></div>
+
+      <!-- BADGE DE ESTADO DEL GPS (COMO EN MI UBICACIÓN) -->
+      @if (!modoFormulario) {
+        <div class="map-top-badge" [class.badge-esperando]="!ubicacion">
+          <span class="pulse-dot"></span>
+          <span>{{ textoBadgeMapa }}</span>
+        </div>
+      }
+
+      <!-- BUSCADOR SOBRE EL MAPA (TIPO GOOGLE MAPS) -->
+      @if (modoFormulario) {
+        <div class="map-busqueda">
+          <div class="buscador">
+            <ion-icon name="search"></ion-icon>
+            <input
+              type="text"
+              [value]="formDireccionTexto"
+              (input)="onTextoDireccion($any($event.target).value)"
+              (blur)="onBlurBusqueda()"
+              (keyup.enter)="buscarDireccion()"
+              placeholder="Busca un lugar o dirección"
+              autocomplete="off"
+              autocapitalize="words"
+              spellcheck="false" />
+            @if (cargandoSugerencias) {
+              <ion-spinner name="crescent" class="buscador-spinner"></ion-spinner>
+            } @else if (formDireccionTexto) {
+              <button
+                type="button"
+                class="btn-limpiar"
+                (mousedown)="$event.preventDefault()"
+                (click)="limpiarBusqueda()"
+                aria-label="Limpiar búsqueda">
+                <ion-icon name="close-circle"></ion-icon>
+              </button>
+            }
+          </div>
+
+          @if (sugerencias.length) {
+            <ul class="sugerencias">
+              @for (sugerencia of sugerencias; track sugerencia.id) {
+                <li (mousedown)="$event.preventDefault(); seleccionarSugerencia(sugerencia)">
+                  <ion-icon name="location"></ion-icon>
+                  <span>
+                    <strong>{{ sugerencia.principal }}</strong>
+                    @if (sugerencia.secundario) {
+                      <small>{{ sugerencia.secundario }}</small>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          } @else if (busquedaVacia && !cargandoSugerencias) {
+            <div class="sugerencias-vacia">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              <span>No se encontró nada con “{{ formDireccionTexto }}”. Prueba con otro texto o toca el mapa.</span>
+            </div>
+          }
+        </div>
+      }
+
+      @if (modoFormulario && !mapaFallo) {
+        @if (colocandoCentro) {
+          <div class="map-hint abajo">
+            <ion-icon name="hand-left-outline"></ion-icon>
+            Toca el mapa para ajustar el centro
+          </div>
+        } @else {
+          <div class="map-hint abajo">
+            <ion-icon name="search-outline"></ion-icon>
+            Escribe la dirección arriba para ubicar la zona
+          </div>
+        }
+      }
+
+      <button type="button" class="btn-float-center" (click)="localizar()" title="Centrar en la ubicación">
+        <ion-icon name="locate"></ion-icon>
+      </button>
+
+      @if (mapaFallo) {
+        <div class="mapa-fallo">
+          <ion-icon name="cloud-offline-outline"></ion-icon>
+          <strong>No se pudo cargar el mapa</strong>
+          <span>{{ mapaFallo }}</span>
+          <small>Puedes guardar la zona igual usando tu ubicación o escribiendo la dirección.</small>
+        </div>
+      }
+    </div>
+
+    <!-- ================================================= -->
+    <!-- ZONAS GUARDADAS -->
+    <!-- ================================================= -->
+
+    <div class="zonas-header">
+      <h3>
+        Zonas seguras
+        @if (hayZonas) {
+          <span class="contador">{{ zonas.length }}</span>
+        }
+      </h3>
+      <span class="nota">Radio predeterminado: 500 m</span>
+    </div>
+
+    @if (cargando) {
+      <div class="cargando">
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>Cargando zonas seguras…</span>
+      </div>
+    } @else if (!hayZonas) {
+      <div class="vacio">
+        <div class="vacio-icono">
+          <ion-icon name="shield-outline"></ion-icon>
+        </div>
+        <h3>Aún no hay zonas seguras</h3>
+        @if (esCuidador) {
+          <p>Añade una zona segura para que puedas saber siempre si {{ nombreParaMostrar }} está en un lugar seguro.</p>
+        } @else {
+          <p>La primera zona se crea con la dirección de tu casa. Puedes agregar más lugares que quieras mantener seguros.</p>
+        }
+      </div>
+    } @else {
+      <div class="zonas-lista">
+        @for (zona of zonas; track zona.id) {
+          <div class="zona-item" [class.activa]="esZonaActiva(zona)">
+            <div class="zona-icono" [class.activa]="esZonaActiva(zona)">
+              @if (zona.es_casa) {
+                <ion-icon name="home"></ion-icon>
+              } @else {
+                <ion-icon name="shield-checkmark-outline"></ion-icon>
+              }
+            </div>
+
+            <div class="zona-info">
+              <h4>
+                {{ tituloZona(zona) }}
+                @if (zona.es_casa) {
+                  <span class="chip-casa">Casa</span>
+                }
+              </h4>
+              <p>{{ etiquetaDireccionZona(zona) }}</p>
+              <span class="zona-meta">Radio {{ zona.radio_metros }} m@if (distanciaA(zona)) { · {{ distanciaA(zona) }} }</span>
+            </div>
+
+            <div class="zona-acciones">
+              <button type="button" (click)="editarZona(zona)" title="Editar zona">
+                <ion-icon name="create-outline"></ion-icon>
+              </button>
+              @if (zona.es_casa) {
+                <button
+                  type="button"
+                  (click)="actualizarCasa(zona)"
+                  [disabled]="actualizandoCasa"
+                  title="Actualizar con la dirección del perfil">
+                  <ion-icon name="refresh-outline"></ion-icon>
+                </button>
+              }
+              <button type="button" class="peligro" (click)="eliminarZona(zona)" title="Eliminar zona">
+                <ion-icon name="trash-outline"></ion-icon>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (!esCuidador && !hayZonas && !cargando) {
+      <p class="ayuda">
+        Si no se creó la zona de tu casa, revisa que tu dirección esté completa en el perfil.
+      </p>
+    }
+
+  </div>
+
+  <!-- ================================================= -->
+  <!-- HOJA DE FORMULARIO (ALTA / EDICIÓN) -->
+  <!-- ================================================= -->
+
+  @if (modoFormulario) {
+    <div class="sheet-form">
+      <div class="sheet-handle"></div>
+
+      <div class="sheet-header">
+        <h3>{{ editandoId ? 'Editar zona segura' : 'Nueva zona segura' }}</h3>
+        <button type="button" (click)="cancelarFormulario()" title="Cerrar">
+          <ion-icon name="close"></ion-icon>
+        </button>
+      </div>
+
+      <div class="campo">
+        <label>Dirección de la zona</label>
+        <div class="direccion-texto">
+          @if (direccionFormulario) {
+            <ion-icon name="location"></ion-icon>
+            <span>{{ direccionFormulario }}</span>
+          } @else {
+            <ion-icon name="search-outline"></ion-icon>
+            <span>Escribe la dirección en el buscador del mapa</span>
+          }
+        </div>
+        @if (direccionResuelta) {
+          <span class="direccion-resuelta">
+            <ion-icon name="location-outline"></ion-icon>
+            {{ direccionResuelta }}
+          </span>
+        }
+      </div>
+
+      <div class="campo">
+        <label>Nombre</label>
+        <ion-input
+          [(ngModel)]="formNombre"
+          placeholder="Ej: Casa, Plaza, Clínica"
+          maxlength="60"
+          fill="outline">
+        </ion-input>
+      </div>
+
+      <div class="campo">
+        <label>Radio de la zona (metros)</label>
+        <div class="chips-radio">
+          <button type="button" [class.seleccionado]="formRadio === 100" (click)="fijarRadio(100)">100 m</button>
+          <button type="button" [class.seleccionado]="formRadio === 300" (click)="fijarRadio(300)">300 m</button>
+          <button type="button" [class.seleccionado]="formRadio === 500" (click)="fijarRadio(500)">500 m</button>
+        </div>
+        <ion-input
+          type="number"
+          [ngModel]="formRadio"
+          (ngModelChange)="onRadioChange($event)"
+          placeholder="500"
+          fill="outline">
+        </ion-input>
+      </div>
+
+      <div class="campo">
+        <label>Centro de la zona</label>
+        @if (pendienteLat !== null && pendienteLng !== null) {
+          <div class="coordenadas">
+            <ion-icon name="location"></ion-icon>
+            <span>{{ textoCentroZona }}</span>
+          </div>
+        } @else {
+          <div class="coordenadas pendiente">
+            <ion-icon name="search-outline"></ion-icon>
+            <span>Se ubicará al buscar la dirección o tocar el mapa</span>
+          </div>
+        }
+      </div>
+
+      <div class="sheet-acciones">
+        <button type="button" class="btn-secundario" (click)="cancelarFormulario()">Cancelar</button>
+        <button type="button" class="btn-guardar" (click)="guardarZona()" [disabled]="guardando">
+          @if (guardando) {
+            <ion-spinner name="crescent"></ion-spinner>
+          } @else {
+            <ion-icon name="checkmark-circle-outline"></ion-icon>
+          }
+          <span>{{ editandoId ? 'Guardar cambios' : 'Guardar zona' }}</span>
+        </button>
+      </div>
+    </div>
+  }
+
+</ion-content>

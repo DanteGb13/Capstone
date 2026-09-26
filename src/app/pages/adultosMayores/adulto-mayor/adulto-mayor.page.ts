@@ -38,6 +38,7 @@ import * as icons from 'ionicons/icons';
 import * as QRCode from 'qrcode';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { Gps } from '../../../services/Backend/gps/gps';
+import { ZonaSeguraService } from '../../../services/Backend/zona-segura/zona-segura';
 import { AlarmasService, AlarmaRecordatorio } from '../../../services/alarmas/alarmas';
 import { SOSService, ResultadoSOS } from '../../../services/Backend/sos/sos';
 import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
@@ -86,6 +87,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   // =====================================================
 
   private solicitudesInterval: any = null;
+
+  private zonaEstadoPrevio: boolean | null = null;
 
 
   // =====================================================
@@ -163,6 +166,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     private vinculacionService: Vinculacion,
 
     private gpsService: Gps,
+
+    private zonaSeguraService: ZonaSeguraService,
 
     private alarmasService: AlarmasService,
 
@@ -250,6 +255,9 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
         this.cargarCuidadoresVinculados()
       ]);
 
+      // Actualiza la ubicación y revisa si sigue dentro de sus zonas seguras
+      this.reportarUbicacion();
+
       this.actualizarSonando();
 
       this.changeDetectorRef.detectChanges();
@@ -274,10 +282,49 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     }
     if (this.idUsuarioActual) {
       try {
-        await this.gpsService.reportarUbicacionAdulto(this.idUsuarioActual);
+        const info = await this.gpsService.reportarUbicacionAdulto(this.idUsuarioActual);
+        this.verificarZonaSegura(info.latitud, info.longitud);
       } catch (e) {
         // ignore
       }
+    }
+  }
+
+  // =====================================================
+  // ZONA SEGURA: AVISA A LOS CUIDADORES SI SALIÓ DE ZONA
+  // =====================================================
+
+  private async verificarZonaSegura(latitud: number, longitud: number) {
+    if (!this.idUsuarioActual) return;
+
+    try {
+      const antesDentro = this.zonaEstadoPrevio;
+      const estado = await this.zonaSeguraService.evaluarYNotificar(
+        this.idUsuarioActual,
+        latitud,
+        longitud
+      );
+
+      if (!estado) return;
+
+      this.zonaEstadoPrevio = estado.dentro;
+
+      if (!estado.dentro && antesDentro !== false && this.zonaSeguraService.puedeAlertar(this.idUsuarioActual)) {
+        this.zonaSeguraService.registrarAlerta(this.idUsuarioActual);
+
+        const zona = estado.zonaCercana;
+        const alert = await this.alertCtrl.create({
+          header: 'Fuera de zona segura',
+          message: zona
+            ? `Estás fuera de la zona segura "${zona.nombre || zona.direccion_texto || 'sin nombre'}", ` +
+              `a ${Math.round(estado.distancia)} m del centro. Tu cuidador fue avisado.`
+            : 'Estás fuera de todas las zonas seguras. Tu cuidador fue avisado.',
+          buttons: ['OK']
+        });
+        await alert.present();
+      }
+    } catch (e) {
+      console.warn('Error verificando zona segura:', e);
     }
   }
 
@@ -524,6 +571,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   abrirRecordatorios() {
     (document.activeElement as HTMLElement)?.blur();
     this.router.navigate(['/recordatorios']);
+  }
+
+  abrirZonaSegura() {
+    (document.activeElement as HTMLElement)?.blur();
+    this.router.navigate(['/zona-segura']);
   }
 
   abrirMiUbicacion() {

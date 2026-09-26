@@ -88,6 +88,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'zona-segura',
+    loadComponent: () => import('./pages/zona-segura/zona-segura.page').then( m => m.ZonaSeguraPage),
+    canActivate: [authGuard]
+  },
+  {
     path: 'juegos',
     loadComponent: () => import('./pages/juegos/juegos.page').then( m => m.JuegosPage),
     canActivate: [authGuard]
