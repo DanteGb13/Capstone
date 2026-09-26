@@ -6,30 +6,139 @@
   padding: 16px 16px 40px;
 }
 
-.referencia {
-  text-align: center;
-  margin-bottom: 14px;
+/* Contador de movimientos en forma de píldora */
+.estado-juego {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
 
-  .etiqueta {
+  .estado-pill {
     display: inline-flex;
     align-items: center;
+    gap: 10px;
+    background: #ffffff;
+    border: 2px solid #ede9fe;
+    border-radius: 999px;
+    padding: 8px 22px;
+    box-shadow: 0 4px 14px rgba(119, 21, 199, 0.1);
+
+    ion-icon {
+      font-size: 20px;
+      color: var(--primary, #7715c7);
+    }
+
+    .estado-label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-muted, #8c92a4);
+    }
+
+    .estado-valor {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary, #7715c7);
+      min-width: 30px;
+      text-align: center;
+    }
+  }
+}
+
+.instruccion {
+  margin: 6px 0 16px;
+}
+
+/* Tarjeta de la imagen de referencia */
+.referencia {
+  background: #ffffff;
+  border: 2px solid #ede9fe;
+  border-radius: 18px;
+  padding: 12px 12px 16px;
+  margin-bottom: 16px;
+  text-align: center;
+  box-shadow: 0 6px 18px rgba(119, 21, 199, 0.1);
+
+  .referencia-cabeza {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 6px;
     font-size: 15px;
     font-weight: 800;
     color: var(--text-muted, #8c92a4);
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 
     ion-icon {
       font-size: 18px;
+      color: var(--primary, #7715c7);
     }
   }
 
+  .tu-foto {
+    background: rgba(119, 21, 199, 0.1);
+    color: var(--primary, #7715c7);
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+
   .mina {
-    width: 120px;
-    height: 120px;
-    border-radius: 14px;
+    width: 132px;
+    height: 132px;
+    border-radius: 16px;
     border: 3px solid #c4b5fd;
-    box-shadow: 0 6px 16px rgba(119, 21, 199, 0.2);
+    box-shadow: 0 6px 16px rgba(119, 21, 199, 0.18);
+    background: #f1effb;
+  }
+}
+
+/* Sección para usar la propia foto del usuario */
+.foto-propia {
+  margin: 0 0 16px;
+  padding: 12px 14px 14px;
+  background: #ffffff;
+  border: 2px solid #ede9fe;
+  border-radius: 16px;
+  text-align: center;
+
+  .foto-titulo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--primary, #7715c7);
+    text-align: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    ion-icon {
+      font-size: 18px;
+      color: var(--primary, #7715c7);
+      flex-shrink: 0;
+    }
+  }
+
+  .foto-opciones {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .foto-confirmada {
+    margin: 10px 0 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: #15803d;
+    background: rgba(22, 163, 74, 0.12);
+    border-radius: 999px;
+    padding: 8px 12px;
   }
 }
 
@@ -67,4 +176,95 @@
   border-radius: 10px;
   background: #f1effb;
   border: 2px dashed #d8d2f5;
+}
+
+/* Ventana para ajustar y recortar la foto */
+.crop-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 18, 43, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: 8vh 16px 24px;
+  touch-action: none;
+}
+
+.crop-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 28px 16px 16px;
+  width: 100%;
+  max-width: 360px;
+  text-align: center;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--primary, #7715c7);
+  }
+}
+
+.crop-ayuda {
+  margin: 0 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted, #8c92a4);
+  line-height: 1.35;
+}
+
+/* Cuadrado del tamaño que tendrá la imagen en el rompecabeza */
+.crop-cuadro {
+  position: relative;
+  width: min(70vw, 250px);
+  aspect-ratio: 1;
+  margin: 0 auto 10px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #1a1d26;
+  border: 3px dashed #9c3ded;
+  touch-action: none;
+  -webkit-touch-callout: none;
+}
+
+.crop-imagen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  will-change: transform;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.crop-zoom {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 10px;
+
+  ion-icon {
+    font-size: 20px;
+    color: var(--text-muted, #8c92a4);
+    flex-shrink: 0;
+  }
+
+  ion-range {
+    flex: 1;
+    --height: 40px;
+    padding: 0 4px;
+  }
+}
+
+.crop-zoom-label {
+  width: 42px;
+  text-align: right;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--primary, #7715c7);
+  flex-shrink: 0;
 }

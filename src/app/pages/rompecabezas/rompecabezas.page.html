@@ -5,17 +5,18 @@
         <ion-icon name="arrow-back"></ion-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title>Rompecabezas</ion-title>
+    <ion-title>Rompecabeza</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content>
   <div class="rompi-container">
 
-    <div class="estadisticas">
-      <div class="stat">
-        <span>Movimientos</span>
-        <strong>{{ movimientos }}</strong>
+    <div class="estado-juego">
+      <div class="estado-pill">
+        <ion-icon name="swap-horizontal-outline"></ion-icon>
+        <span class="estado-label">Movimientos</span>
+        <strong class="estado-valor">{{ movimientos }}</strong>
       </div>
     </div>
 
@@ -23,9 +24,61 @@
 
     <!-- Imagen de referencia -->
     <div class="referencia">
-      <span class="etiqueta"><ion-icon name="image-outline"></ion-icon> Imagen de referencia</span>
+      <div class="referencia-cabeza">
+        <ion-icon name="image-outline"></ion-icon>
+        <span>Imagen de referencia</span>
+        @if (esFotoPropia) {
+          <span class="tu-foto">Tu foto</span>
+        }
+      </div>
       <img [src]="imagen" alt="Imagen a armar" class="mina" />
     </div>
+
+    <!-- Sección de foto propia (plegable para no ocupar espacio) -->
+    <div class="foto-propia">
+      <button
+        type="button"
+        class="foto-titulo"
+        (click)="fotoAbierta = !fotoAbierta"
+        [attr.aria-expanded]="fotoAbierta">
+        <span>¿Quieres armar tu propia foto?</span>
+        <ion-icon [name]="fotoAbierta ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+      </button>
+
+      @if (fotoAbierta) {
+
+        <div class="foto-opciones">
+          <ion-button expand="block" fill="outline" class="btn-secundario" (click)="abrirCamara()">
+            <ion-icon name="camera-outline" slot="start"></ion-icon>
+            Tomar foto
+          </ion-button>
+
+          <ion-button expand="block" fill="outline" class="btn-secundario" (click)="abrirGaleria()">
+            <ion-icon name="images-outline" slot="start"></ion-icon>
+            Subir foto
+          </ion-button>
+        </div>
+
+        @if (esFotoPropia) {
+          <p class="foto-confirmada">¡Listo! Arma tu foto ahora.</p>
+        }
+
+      }
+    </div>
+
+    <input
+      #selectorCamara
+      type="file"
+      accept="image/*"
+      capture
+      hidden
+      (change)="onFotoSeleccionada($event, selectorCamara)" />
+    <input
+      #selectorGaleria
+      type="file"
+      accept="image/*"
+      hidden
+      (change)="onFotoSeleccionada($event, selectorGaleria)" />
 
     <!-- Tablero con las piezas -->
     <div class="tablero">
@@ -65,7 +118,7 @@
     <div class="overlay">
       <div class="overlay-card">
         <div class="celebra">🎉</div>
-        <h2>¡Rompecabezas armado!</h2>
+        <h2>¡Rompecabeza armado!</h2>
         <p>Completaste la imagen en <strong>{{ movimientos }}</strong> movimientos.</p>
 
         <ion-button expand="block" class="btn-primario" (click)="jugarDeNuevo()">
@@ -75,6 +128,59 @@
 
         <ion-button expand="block" fill="outline" class="btn-secundario" (click)="volver()">
           Volver a Juegos
+        </ion-button>
+      </div>
+    </div>
+
+  }
+
+  <!-- Recorte interactivo de la foto -->
+  @if (recorteVisible) {
+
+    <div class="crop-overlay">
+      <div class="crop-card">
+        <h2>Ajusta tu foto</h2>
+        <p class="crop-ayuda">
+          El cuadrado es el tamaño que tendrá en el rompecabeza.
+          Desliza la foto para elegir la parte, o acércala y aléjala
+          con los dedos (pellizco).
+        </p>
+
+        <div class="crop-cuadro" #cuadroRecorte>
+          <img
+            #imagenRecorte
+            [src]="fotoSeleccionada"
+            alt="Tu foto para el rompecabeza"
+            class="crop-imagen"
+            (load)="prepararRecorte()"
+            (pointerdown)="marcarRecorte($event)"
+            (pointermove)="moverRecorte($event)"
+            (pointerup)="soltarRecorte($event)"
+            (pointercancel)="soltarRecorte($event)"
+            (contextmenu)="$event.preventDefault()" />
+        </div>
+
+        <div class="crop-zoom">
+          <ion-icon name="remove-outline"></ion-icon>
+          <ion-range
+            [value]="zoom"
+            min="1"
+            [max]="zoomMaximo"
+            step="0.1"
+            (ionChange)="cambiarZoom($event)"
+            aria-label="Tamaño de la foto">
+          </ion-range>
+          <ion-icon name="add-outline"></ion-icon>
+          <span class="crop-zoom-label">{{ zoom.toFixed(1) }}x</span>
+        </div>
+
+        <ion-button expand="block" class="btn-primario" (click)="confirmarRecorte()">
+          <ion-icon name="checkmark-done-outline" slot="start"></ion-icon>
+          Usar esta parte
+        </ion-button>
+
+        <ion-button expand="block" fill="outline" class="btn-secundario" (click)="cerrarRecorte()">
+          Cancelar
         </ion-button>
       </div>
     </div>

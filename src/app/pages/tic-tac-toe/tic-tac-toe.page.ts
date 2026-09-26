@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonContent,
@@ -31,6 +31,13 @@ const COMBINACIONES: number[][] = [
   [0, 4, 8], [2, 4, 6]
 ];
 
+/**
+ * Probabilidad de que la IA en dificultad difícil no juegue su mejor jugada.
+ * Con Minimax perfecto es imposible ganarle, así que de vez en cuando
+ * elige una jugada de segundo nivel para que sí haya partidas ganables.
+ */
+const PROBABILIDAD_ERROR_DIFICIL = 0.1;
+
 @Component({
   selector: 'app-tic-tac-toe',
   templateUrl: './tic-tac-toe.page.html',
@@ -45,7 +52,7 @@ const COMBINACIONES: number[][] = [
     IonIcon
   ]
 })
-export class TicTacToePage {
+export class TicTacToePage implements OnDestroy {
 
   tablero: FichaTres[] = Array(9).fill(null);
   turno: FichaTres = 'X';
@@ -68,7 +75,10 @@ export class TicTacToePage {
   private readonly CLAVE_STATS = 'sc_tres_en_linea_stats_v1';
   private iaPendiente: any = null;
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {
     addIcons({ arrowBack, refreshOutline, trashOutline });
     this.cargarStats();
   }
@@ -125,9 +135,9 @@ export class TicTacToePage {
     if (!this.juegoTerminado) {
       this.turno = 'O';
       this.pensando = true;
-      // La IA "piensa" con una pequeña pausa para que el juego se sienta natural.
+      // La IA "piensa" con una pausa breve para que el juego se sienta natural.
       // Se guarda el temporizador para poder cancelarlo si se reinicia la partida.
-      this.iaPendiente = setTimeout(() => this.responderIA(), 550 + Math.random() * 450);
+      this.iaPendiente = setTimeout(() => this.responderIA(), 350 + Math.random() * 350);
     }
   }
 
@@ -136,12 +146,14 @@ export class TicTacToePage {
     this.iaPendiente = null;
     const mover = this.elegirMovimientoIA();
     this.pensando = false;
-    if (mover === null) {
-      return;
+    if (mover !== null) {
+      this.tablero[mover] = 'O';
+      this.turno = 'X';
+      this.resolver();
     }
-    this.tablero[mover] = 'O';
-    this.turno = 'X';
-    this.resolver();
+    // Fuerza el renderizado inmediato de la jugada de la IA (temporizadores
+    // no siempre disparan la detección de cambios).
+    this.cdr.detectChanges();
   }
 
   /** Devuelve una jugada válida para la IA según la dificultad. */
@@ -207,29 +219,37 @@ export class TicTacToePage {
   }
 
   /**
-   * Dificultad difícil: Minimax. Si hay varias jugadas igual de buenas,
-   * elige una al azar para que la IA no repita siempre la misma partida.
+   * Dificultad difícil: Minimax con desempate aleatorio entre jugadas de
+   * igual valor (la IA no repite siempre la misma partida).
+   *
+   * Una IA perfecta impediría ganar siempre, así que la mayoría de las veces
+   * juega óptimo y, con una probabilidad pequeña, elige una jugada del
+   * segundo mejor nivel para que el modo sí pueda vencerse.
    */
   private mejorMovimientoMinimax(libres: number[]): number {
     const clon = [...this.tablero];
-    let mejorValor = -Infinity;
-    const candidatos: number[] = [];
 
-    for (const casilla of libres) {
+    const puntuaciones = libres.map((casilla) => {
       clon[casilla] = 'O';
       const valor = this.minimax(clon, 0, false);
       clon[casilla] = null;
+      return { valor, casilla };
+    });
+    puntuaciones.sort((a, b) => b.valor - a.valor);
 
-      if (valor > mejorValor) {
-        mejorValor = valor;
-        candidatos.length = 0;
-        candidatos.push(casilla);
-      } else if (valor === mejorValor) {
-        candidatos.push(casilla);
-      }
-    }
+    const mejorValor = puntuaciones[0].valor;
+    const mejores = puntuaciones.filter((p) => p.valor === mejorValor);
 
-    return candidatos[Math.floor(Math.random() * candidatos.length)];
+    const segundoValor = puntuaciones.find((p) => p.valor < mejorValor)?.valor ?? null;
+    const deSegundoNivel = segundoValor !== null
+      ? puntuaciones.filter((p) => p.valor === segundoValor)
+      : [];
+
+    const grupo = (Math.random() < PROBABILIDAD_ERROR_DIFICIL && deSegundoNivel.length > 0)
+      ? deSegundoNivel
+      : mejores;
+
+    return grupo[Math.floor(Math.random() * grupo.length)].casilla;
   }
 
   /** Algoritmo Minimax: la IA (O) maximiza y el jugador (X) minimiza. */

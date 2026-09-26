@@ -98,11 +98,6 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
-    path: 'juegos/trivia',
-    loadComponent: () => import('./pages/trivia/trivia.page').then( m => m.TriviaPage),
-    canActivate: [authGuard]
-  },
-  {
     path: 'juegos/sopa-letras',
     loadComponent: () => import('./pages/sopa-letras/sopa-letras.page').then( m => m.SopaLetrasPage),
     canActivate: [authGuard]
@@ -115,11 +110,6 @@ export const routes: Routes = [
   {
     path: 'juegos/tic-tac-toe',
     loadComponent: () => import('./pages/tic-tac-toe/tic-tac-toe.page').then( m => m.TicTacToePage),
-    canActivate: [authGuard]
-  },
-  {
-    path: 'juegos/torres-hanoi',
-    loadComponent: () => import('./pages/torres-hanoi/torres-hanoi.page').then( m => m.TorresHanoiPage),
     canActivate: [authGuard]
   },
   {
