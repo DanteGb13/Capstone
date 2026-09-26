@@ -33,7 +33,7 @@ import {
 import { AlarmaRecordatorio, AlarmasService, DIAS_SEMANA_TODOS } from '../../../services/alarmas/alarmas';
 import { RuedaComponent } from '../../../components/rueda/rueda.component';
 import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
-import { validarNombreOApellido } from '../../../services/utils/validators';
+
 
 @Component({
   selector: 'app-recordatorios',
@@ -388,14 +388,20 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     return `${diaNombre} a las ${horaTexto}`;
   }
 
+  /** Permite letras, números, emojis y espacios; solo rechaza caracteres de control. */
+  private nombreValido(texto: string): boolean {
+    const t = texto.trim();
+    return t.length > 0 && t.length <= 40 && !/[\u0000-\u001F\u007F]/.test(t);
+  }
+
   onNombreInput() {
     const limpio = this.nuevoNombre.trim();
-    this.errorNombre = limpio.length > 0 && !validarNombreOApellido(limpio);
+    this.errorNombre = limpio.length > 0 && !this.nombreValido(limpio);
   }
 
   async guardarNueva() {
     const nombre = this.nuevoNombre.trim();
-    if (!validarNombreOApellido(nombre)) {
+    if (!this.nombreValido(nombre)) {
       this.errorNombre = true;
       this.changeDetectorRef.detectChanges();
       return;
