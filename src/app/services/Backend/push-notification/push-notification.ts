@@ -5,6 +5,7 @@ import { SupabaseService } from '../../supabase/supabase';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular';
 import { NavegacionRolService } from '../../navegacion-rol/navegacion-rol';
+import { SiempreCerca } from '../../alarmas/siempre-cerca';
 
 @Injectable({
   providedIn: 'root'
@@ -33,6 +34,9 @@ export class PushNotificationService {
 
   async inicializar(): Promise<void> {
     if (!this.isNative || !this.pushHabilitado) return;
+
+    // Canales de alerta listos (SOS / zona segura) antes de registrar el token
+    SiempreCerca.crearCanalSOS().catch(() => {});
 
     if (!Capacitor.isPluginAvailable('PushNotifications')) {
       console.warn('Plugin PushNotifications no disponible');
@@ -78,16 +82,83 @@ export class PushNotificationService {
 
     PushNotifications.addListener('pushNotificationReceived', (notification: PushNotification) => {
       console.log('Notificación recibida:', notification);
+      this.vibrarPorTipo(notification);
       this.mostrarAlerta(notification);
       this.publicarEnBarra(notification);
     });
 
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
       console.log('Acción en notificación:', action);
+      const datos: any = (action as any)?.notification?.data || {};
       this.ngZone.run(async () => {
+        // Tocar la alerta SOS cuenta como "contesté": se deja de reenviar
+        if (datos.tipo === 'sos' && datos.id_sos) {
+          await this.confirmarSos(datos.id_sos);
+        }
         await this.navRol.irAPanelPrincipal();
       });
     });
+  }
+
+  /**
+   * Vibración intensa al recibir una alerta (app abierta):
+   *  - SOS: 3 pulsos largos a amplitud máxima (~8 s).
+   *  - Primera salida de zona: 3 pulsos de 1,5 s (~5 s).
+   *  - Actualización de estado: un pulso corto.
+   */
+  private vibrarPorTipo(notification: PushNotification): void {
+    if (!this.isNative) return;
+
+    const datos: any = (notification as any).data || {};
+    const tipo = datos.tipo || '';
+    const canal = datos.canal || '';
+
+    let duracionMs = 500;
+    let veces = 1;
+    let amplitud = 200;
+
+    if (tipo === 'sos' || canal === 'sos-alertas') {
+      duracionMs = 2500;
+      veces = 3;
+      amplitud = 255;
+    } else if (canal === 'zona-alertas' || (tipo === 'zona_segura' && canal !== 'zona-estado')) {
+      duracionMs = 1500;
+      veces = 3;
+      amplitud = 255;
+    } else if (canal === 'zona-estado') {
+      duracionMs = 400;
+      veces = 1;
+      amplitud = 150;
+    }
+
+    SiempreCerca.vibrar({ duracionMs, veces, amplitud, descansoMs: 300 }).catch(() => {});
+  }
+
+  /**
+   * Marca la sesión SOS como confirmada para que el adulto deje de
+   * reenviar avisos (el aviso se reenvía hasta que alguien contesta).
+   */
+  private async confirmarSos(idSos: string): Promise<void> {
+    try {
+      const client = this.supabaseService.getClient();
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) return;
+
+      const { error } = await client
+        .from('sos_alerta')
+        .update({
+          confirmada_por: user.id,
+          confirmada_en: new Date().toISOString()
+        })
+        .eq('id', idSos)
+        .is('confirmada_por', null);
+
+      if (error) {
+        console.warn('No se pudo confirmar la alerta SOS:', error.message);
+      }
+    } catch (e) {
+      console.warn('No se pudo confirmar la alerta SOS:', e);
+    }
   }
 
   async solicitarPermisoNotificaciones(): Promise<boolean> {
@@ -273,18 +344,29 @@ export class PushNotificationService {
       if (perm.display !== 'granted') {
         await LocalNotifications.requestPermissions();
       }
+
+      const datos: any = (notification as any).data || {};
+      const canal = this.canalDeDatos(datos);
+
       await LocalNotifications.schedule({
         notifications: [{
           title: notification.title || 'Alerta SOS',
           body: notification.body || 'Emergencia detectada',
           id: Date.now() % 2147483647,
-          channelId: 'sos-alertas'
+          channelId: canal
         }]
       });
       console.log('Notificación publicada en barra');
     } catch (e) {
       console.warn('Error publicando en barra:', e);
     }
+  }
+
+  /** Canal de Android que corresponde según los datos del push. */
+  private canalDeDatos(datos: any): string {
+    if (typeof datos?.canal === 'string' && datos.canal) return datos.canal;
+    if (datos?.tipo === 'zona_segura') return 'zona-alertas';
+    return 'sos-alertas';
   }
 
   getToken(): string | null {

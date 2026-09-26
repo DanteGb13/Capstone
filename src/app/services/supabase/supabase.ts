@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { SiempreCerca } from '../alarmas/siempre-cerca';
 
 
 @Injectable({
@@ -106,6 +107,67 @@ export class SupabaseService {
         }
       });
     }
+
+    // Segundo plano (sólo móvil): el servicio nativo necesita la sesión para
+    // evaluar las zonas seguras con la app cerrada. Guardamos el token al
+    // cambiar la sesión y, al volver a la app, traemos el token si el servicio
+    // lo refrescó él mismo mientras la app estaba cerrada.
+    if (isNative) {
+      this.sincronizarSesionNativa();
+
+      this.supabase.auth.onAuthStateChange((_evento, sesion) => {
+        this.guardarSesionNativa(sesion);
+      });
+
+      App.addListener('resume', () => {
+        this.sincronizarSesionNativa();
+      });
+    }
+  }
+
+  private guardarSesionNativa(sesion: Session | null): void {
+    if (!Capacitor.isNativePlatform()) return;
+
+    try {
+      SiempreCerca.guardarSesionBackend({
+        url: environment.supabaseUrl,
+        anonKey: environment.supabaseKey,
+        accessToken: sesion?.access_token || '',
+        refreshToken: sesion?.refresh_token || '',
+        userId: sesion?.user?.id || '',
+        expiresAt: (sesion?.expires_at || 0) * 1000
+      }).catch(() => {});
+    } catch { /* sin plugin nativo */ }
+  }
+
+  private async sincronizarSesionNativa(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+
+    try {
+      const nativa = await SiempreCerca.obtenerSesionBackend();
+      const { data } = await this.supabase.auth.getSession();
+      const local = data?.session ?? null;
+
+      if (!nativa?.accessToken) {
+        this.guardarSesionNativa(local);
+        return;
+      }
+
+      const expiraNativa = Math.floor((nativa.expiresAt || 0) / 1000);
+      const expiraLocal = local?.expires_at || 0;
+      const nativaEsMasReciente = expiraNativa > expiraLocal + 120;
+
+      if (nativa.refreshToken && (nativaEsMasReciente || !local)) {
+        // El servicio refrescó el token con la app cerrada: lo adoptamos aquí
+        await this.supabase.auth.setSession({
+          access_token: nativa.accessToken,
+          refresh_token: nativa.refreshToken
+        });
+        return;
+      }
+
+      this.guardarSesionNativa(local);
+    } catch { /* sin sesión utilizable */ }
   }
 
   getClient(): SupabaseClient {

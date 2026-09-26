@@ -3,6 +3,7 @@ import { SupabaseService } from '../../supabase/supabase';
 import { PushNotificationService } from '../push-notification/push-notification';
 import { PermisosExtra } from '../permisos-extra/permisos-extra';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { AlertController } from '@ionic/angular';
 
 export interface CuidadorVinculado {
@@ -27,11 +28,28 @@ export class SOSService {
 
   private isNative = Capacitor.isNativePlatform();
 
+  // Reintentos: el SOS se reenvía hasta que un cuidador contesta
+  // (tocando la notificación) o pasan ~30 minutos.
+  private timerReintentosSOS: any = null;
+  private intentosSOS = 0;
+  private idSosActivo: string = '';
+
+  private static readonly INTERVALO_REINTENTO_MS = 45000;
+  private static readonly MAXIMO_REINTENTOS = 40;
+
   constructor(
     private supabaseService: SupabaseService,
     private pushService: PushNotificationService,
     private alertCtrl: AlertController
-  ) {}
+  ) {
+    if (this.isNative) {
+      // Al volver a la app, si el cuidador ya contestó mientras estábamos
+      // en segundo plano, se cortan los reintentos y se avisa.
+      App.addListener('resume', () => {
+        this.verificarSosPendiente();
+      }).catch(() => {});
+    }
+  }
 
   async obtenerCuidadores(): Promise<CuidadorVinculado[]> {
     try {
@@ -166,14 +184,27 @@ export class SOSService {
       ? `https://maps.google.com/?q=${ubicacion.lat},${ubicacion.lng}`
       : 'Ubicación no disponible';
 
+    const cuerpoSOS = `${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`;
+
+    const datosSOS: { [clave: string]: string } = {
+      tipo: 'sos',
+      canal: 'sos-alertas',
+      id_sos: '',
+      latitud: ubicacion?.lat?.toString() || '',
+      longitud: ubicacion?.lng?.toString() || ''
+    };
+
+    // Sesión SOS: el aviso se reenvía hasta que un cuidador conteste
+    datosSOS['id_sos'] = await this.crearSesionSOS();
+
     for (const cuidador of cuidadores) {
       console.log('SOS: Enviando push a:', cuidador.id, cuidador.nombre);
       try {
         const ok = await this.pushService.enviarPushAUsuario(
           cuidador.id,
           'SOS - Alerta de Emergencia',
-          `${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`,
-          { tipo: 'sos', latitud: ubicacion?.lat?.toString() || '', longitud: ubicacion?.lng?.toString() || '' }
+          cuerpoSOS,
+          datosSOS
         );
         console.log('SOS: Push resultado para', cuidador.nombre, ':', ok);
         if (ok) resultado.pushEnviado = true;
@@ -181,6 +212,8 @@ export class SOSService {
         console.error('SOS: Error push para', cuidador.nombre, ':', e);
       }
     }
+
+    this.iniciarReintentosSOS(datosSOS['id_sos'], cuidadores, cuerpoSOS);
 
     const cuidadorConTelefono = cuidadores.find(c => c.telefono && c.telefono.length >= 9);
     if (cuidadorConTelefono) {
@@ -196,6 +229,123 @@ export class SOSService {
     }
 
     return resultado;
+  }
+
+  // =====================================================
+  // REINTENTOS: EL AVISO NO PARA HASTA QUE ALGUIEN CONTESTE
+  // =====================================================
+
+  private async crearSesionSOS(): Promise<string> {
+    try {
+      const client = this.supabaseService.getClient();
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) return '';
+
+      const { data, error } = await client
+        .from('sos_alerta')
+        .insert({ id_adulto: user.id })
+        .select('id')
+        .single();
+
+      if (error || !data) {
+        console.warn('SOS: no se pudo crear la sesión de alerta:', error?.message);
+        return '';
+      }
+      return data.id;
+    } catch (e) {
+      console.warn('SOS: no se pudo crear la sesión de alerta:', e);
+      return '';
+    }
+  }
+
+  private iniciarReintentosSOS(
+    idSos: string,
+    cuidadores: CuidadorVinculado[],
+    cuerpo: string
+  ): void {
+    this.detenerReintentosSOS();
+    if (!idSos || !cuidadores.length) return;
+
+    this.idSosActivo = idSos;
+    this.intentosSOS = 0;
+
+    this.timerReintentosSOS = setInterval(async () => {
+      this.intentosSOS++;
+
+      if (this.intentosSOS > SOSService.MAXIMO_REINTENTOS) {
+        console.warn('SOS: se llegó al máximo de reintentos');
+        this.detenerReintentosSOS();
+        return;
+      }
+
+      try {
+        if (await this.sosConfirmado(idSos)) {
+          this.detenerReintentosSOS();
+          await this.avisarConfirmacionSOS();
+          return;
+        }
+      } catch { /* se vuelve a intentar en el próximo ciclo */ }
+
+      for (const cuidador of cuidadores) {
+        try {
+          await this.pushService.enviarPushAUsuario(
+            cuidador.id,
+            `SOS - Alerta de Emergencia (aviso ${this.intentosSOS + 1})`,
+            cuerpo,
+            { ...this.datosDe(idSos) }
+          );
+        } catch { /* se reintenta en el próximo ciclo */ }
+      }
+    }, SOSService.INTERVALO_REINTENTO_MS);
+  }
+
+  private datosDe(idSos: string): { [clave: string]: string } {
+    return { tipo: 'sos', canal: 'sos-alertas', id_sos: idSos };
+  }
+
+  private detenerReintentosSOS(): void {
+    if (this.timerReintentosSOS) {
+      clearInterval(this.timerReintentosSOS);
+      this.timerReintentosSOS = null;
+    }
+  }
+
+  private async sosConfirmado(idSos: string): Promise<boolean> {
+    try {
+      const client = this.supabaseService.getClient();
+      const { data } = await client
+        .from('sos_alerta')
+        .select('confirmada_por')
+        .eq('id', idSos)
+        .maybeSingle();
+      return !!data?.confirmada_por;
+    } catch {
+      return false;
+    }
+  }
+
+  private async verificarSosPendiente(): Promise<void> {
+    if (!this.idSosActivo) return;
+    try {
+      if (await this.sosConfirmado(this.idSosActivo)) {
+        this.detenerReintentosSOS();
+        await this.avisarConfirmacionSOS();
+      }
+    } catch { /* sin conexión: lo retoma el siguiente ciclo */ }
+  }
+
+  private async avisarConfirmacionSOS(): Promise<void> {
+    if (!this.idSosActivo) return;
+    this.idSosActivo = '';
+
+    try {
+      const alert = await this.alertCtrl.create({
+        header: 'Alerta atendida',
+        message: 'Tu cuidador vio la alerta SOS. Ya no se reenviarán avisos.',
+        buttons: ['Entendido']
+      });
+      await alert.present();
+    } catch { /* sin UI disponible */ }
   }
 
   async realizarLlamada(telefono: string): Promise<void> {

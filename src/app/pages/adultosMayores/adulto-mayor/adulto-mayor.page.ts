@@ -226,6 +226,10 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     //    sin bloquear la visualización del panel.
     this.reportarUbicacion();
 
+    //    Servicio de ubicación: con la app cerrada el servicio sigue evaluando
+    //    las zonas seguras y avisando a los cuidadores.
+    this.iniciarMonitoreoSegundoPlano();
+
 
     // 5. Recordatorios: repone las alarmas programadas y escucha el toque
     //    en las notificaciones para abrir el panel de consolar con "Apagar".
@@ -293,6 +297,23 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   // =====================================================
   // ZONA SEGURA: AVISA A LOS CUIDADORES SI SALIÓ DE ZONA
   // =====================================================
+
+  /**
+   * Mantiene vivo el servicio de ubicación (sólo si ya tiene permiso):
+   * con la app cerrada, el servicio sigue revisando las zonas seguras y
+   * avisa a los cuidadores (funciona aunque el panel no esté a la vista).
+   */
+  private async iniciarMonitoreoSegundoPlano() {
+    if (!Capacitor.isNativePlatform()) return;
+
+    try {
+      const permisos = await this.gpsService.verificarPermisosUbicacion();
+      if (!permisos.ubicacionForeground) return;
+      await this.gpsService.iniciarUbicacionForeground(30000, 20);
+    } catch {
+      // sin servicio en segundo plano: el chequeo con la app abierta sigue
+    }
+  }
 
   private async verificarZonaSegura(latitud: number, longitud: number) {
     if (!this.idUsuarioActual) return;

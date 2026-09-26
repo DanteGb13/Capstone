@@ -11,5 +11,10 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(UbicacionForegroundPlugin.class);
         registerPlugin(PermisosExtraPlugin.class);
         super.onCreate(savedInstanceState);
+
+        // Canales de notificación listos desde el arranque:
+        // si llega un SOS o una alerta de zona antes de abrir un panel,
+        // Android ya sabe con qué vibración/sonido mostrarla.
+        SiempreCercaPlugin.crearCanales(this);
     }
 }

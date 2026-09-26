@@ -56,6 +56,7 @@ export const RADIO_POR_DEFECTO = 500;
 
 const TABLA = 'zona_segura';
 const CLAVE_ALERTA = 'zs_alerta_';
+const CLAVE_ESTADO = 'zs_estado_';
 const ESPERA_ALERTA_MS = 10 * 60 * 1000;
 
 @Injectable({
@@ -733,9 +734,16 @@ export class ZonaSeguraService {
   }
 
   /**
-   * Evalúa la posición de un adulto mayor y, si está fuera de zona,
-   * avisa a sus cuidadores por push (con espera de 10 minutos entre avisos).
-   * Se debe llamar desde el dispositivo del adulto mayor.
+   * Evalúa la posición de un adulto mayor y avisa a los cuidadores.
+   *
+   * El aviso lo manda la Edge Function "evaluar-zona", que guarda el cooldown
+   * en la base de datos: así con la app abierta (este camino) y con la app
+   * cerrada (servicio nativo) nunca se duplican los avisos.
+   *
+   * Cadencia:
+   *  - al salir de zona: alerta intensa (canal zona-alertas),
+   *  - después: actualización de estado cada 10 minutos (zona-estado),
+   *  - al volver: aviso de estado.
    */
   async evaluarYNotificar(
     idAdulto: string,
@@ -748,18 +756,83 @@ export class ZonaSeguraService {
     if (!zonas.length) return null;
 
     const estado = this.evaluar(zonas, latitud, longitud);
+    const antes = this.estadoPrevio(idAdulto);
 
     if (estado.dentro) {
+      if (antes === 'fuera') {
+        // Volvió: el servidor cierra la alerta y avisa a los cuidadores
+        const r = await this.llamarEvaluarZona(latitud, longitud, idAdulto);
+        estado.alertaEnviada = r === 'enviada';
+      }
       this.limpiarAlerta(idAdulto);
+      this.guardarEstadoPrevio(idAdulto, 'dentro');
       return estado;
     }
 
-    if (this.puedeAlertar(idAdulto)) {
-      estado.alertaEnviada = await this.enviarAlertaSalida(idAdulto, latitud, longitud, estado);
-      if (estado.alertaEnviada) this.registrarAlerta(idAdulto);
+    const transicion = antes !== 'fuera';
+    if (transicion || this.puedeAlertar(idAdulto)) {
+      const r = await this.llamarEvaluarZona(latitud, longitud, idAdulto);
+
+      if (r === 'error') {
+        // Servicio no disponible: respaldo local (cooldown en este dispositivo)
+        const enviada = await this.enviarAlertaSalida(idAdulto, latitud, longitud, estado);
+        if (enviada) this.registrarAlerta(idAdulto);
+        estado.alertaEnviada = enviada;
+      } else {
+        estado.alertaEnviada = r === 'enviada';
+        // Mientras siga fuera, esperamos 10 min antes de volver a consultar
+        this.registrarAlerta(idAdulto);
+      }
     }
 
+    this.guardarEstadoPrevio(idAdulto, 'fuera');
     return estado;
+  }
+
+  /**
+   * Llama a la Edge Function evaluar-zona.
+   *  - 'enviada'  -> correspondía avisar y se envió
+   *  - 'sin_aviso'-> fuera de zona pero aún no toca actualizar (cooldown en BD)
+   *  - 'error'    -> la función no respondió (usar respaldo local)
+   */
+  private async llamarEvaluarZona(
+    latitud: number,
+    longitud: number,
+    idAdulto: string
+  ): Promise<'enviada' | 'sin_aviso' | 'error'> {
+    try {
+      const { data, error } = await this.supabase.functions.invoke('evaluar-zona', {
+        body: { latitud, longitud, id_usuario: idAdulto }
+      });
+
+      if (error) {
+        console.warn('evaluar-zona devolvió error:', error?.message || error);
+        return 'error';
+      }
+
+      const accion = data?.accion;
+      return accion === 'primera' || accion === 'actualizacion' || accion === 'volvio'
+        ? 'enviada'
+        : 'sin_aviso';
+    } catch (e) {
+      console.warn('No se pudo evaluar la zona en el servidor:', e);
+      return 'error';
+    }
+  }
+
+  private estadoPrevio(idAdulto: string): 'dentro' | 'fuera' | null {
+    try {
+      const v = localStorage.getItem(CLAVE_ESTADO + idAdulto);
+      return v === 'dentro' || v === 'fuera' ? v : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private guardarEstadoPrevio(idAdulto: string, estado: 'dentro' | 'fuera'): void {
+    try {
+      localStorage.setItem(CLAVE_ESTADO + idAdulto, estado);
+    } catch { /* sin persistencia */ }
   }
 
   private async enviarAlertaSalida(
@@ -791,6 +864,7 @@ export class ZonaSeguraService {
             `${cuerpo} Ubicación: ${mensajeMaps}`,
             {
               tipo: 'zona_segura',
+              canal: 'zona-alertas',
               latitud: latitud.toString(),
               longitud: longitud.toString(),
               zona: zona?.nombre || ''

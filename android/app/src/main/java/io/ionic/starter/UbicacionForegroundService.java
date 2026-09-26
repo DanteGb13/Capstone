@@ -124,6 +124,16 @@ public class UbicacionForegroundService extends Service implements LocationListe
     @Override
     public void onLocationChanged(Location location) {
         if (location == null) return;
+
+        // Evalúa las zonas seguras aunque la app esté cerrada:
+        // llama a la Edge Function evaluar-zona y, si corresponde,
+        // avisa a los cuidadores (primera alerta intensa / actualización).
+        EvaluacionZonaBackground.evaluar(
+            this,
+            location.getLatitude(),
+            location.getLongitude()
+        );
+
         if (callback != null) {
             callback.onLocationChanged(
                 location.getLatitude(),
