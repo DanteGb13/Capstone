@@ -33,7 +33,7 @@ import {
 import { AlarmaRecordatorio, AlarmasService, DIAS_SEMANA_TODOS } from '../../../services/alarmas/alarmas';
 import { RuedaComponent } from '../../../components/rueda/rueda.component';
 import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
-import { validarNombreOApellido } from '../../../services/utils/validators';
+
 
 @Component({
   selector: 'app-recordatorios',
@@ -369,7 +369,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   private formatearProxima(fecha: Date): string {
-    const horaTexto = this.horaTextoAmPm(this.nuevaHoraSel, this.nuevoMinutoSel);
+    const horaTexto = this.horaTexto24(this.nuevaHoraSel, this.nuevoMinutoSel);
 
     const hoy = new Date();
     const manana = new Date(hoy);
@@ -388,14 +388,20 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     return `${diaNombre} a las ${horaTexto}`;
   }
 
+  /** Permite letras, números, emojis y espacios; solo rechaza caracteres de control. */
+  private nombreValido(texto: string): boolean {
+    const t = texto.trim();
+    return t.length > 0 && t.length <= 40 && !/[\u0000-\u001F\u007F]/.test(t);
+  }
+
   onNombreInput() {
     const limpio = this.nuevoNombre.trim();
-    this.errorNombre = limpio.length > 0 && !validarNombreOApellido(limpio);
+    this.errorNombre = limpio.length > 0 && !this.nombreValido(limpio);
   }
 
   async guardarNueva() {
     const nombre = this.nuevoNombre.trim();
-    if (!validarNombreOApellido(nombre)) {
+    if (!this.nombreValido(nombre)) {
       this.errorNombre = true;
       this.changeDetectorRef.detectChanges();
       return;
@@ -498,13 +504,12 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   horaTexto(alarma: AlarmaRecordatorio): string {
-    return this.horaTextoAmPm(alarma.hora, alarma.minuto);
+    const ampm = alarma.hora < 12 ? 'AM' : 'PM';
+    return `${this.dosDigitos(alarma.hora)}:${this.dosDigitos(alarma.minuto)} ${ampm}`;
   }
 
-  horaTextoAmPm(hora: number, minuto: number): string {
-    const ampm = hora < 12 ? 'AM' : 'PM';
-    const h12 = hora % 12 === 0 ? 12 : hora % 12;
-    return `${this.dosDigitos(h12)}:${this.dosDigitos(minuto)} ${ampm}`;
+  horaTexto24(hora: number, minuto: number): string {
+    return `${this.dosDigitos(hora)}:${this.dosDigitos(minuto)}`;
   }
 
   get amPm(): string {

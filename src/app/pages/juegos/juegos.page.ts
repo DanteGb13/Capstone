@@ -15,11 +15,9 @@ import { addIcons } from 'ionicons';
 import {
   arrowBack,
   albumsOutline,
-  helpCircleOutline,
   gridOutline,
   extensionPuzzleOutline,
   appsOutline,
-  layersOutline,
   flashOutline,
   play
 } from 'ionicons/icons';
@@ -46,13 +44,6 @@ const JUEGOS_DISPONIBLES: JuegoDisponible[] = [
     ruta: '/juegos/memoria'
   },
   {
-    nombre: 'Trivia',
-    descripcion: 'Responde preguntas de cultura general.',
-    icono: 'help-circle-outline',
-    dificultad: 'Media',
-    ruta: '/juegos/trivia'
-  },
-  {
     nombre: 'Sopa de letras',
     descripcion: 'Busca las palabras ocultas en la cuadrícula.',
     icono: 'grid-outline',
@@ -60,8 +51,8 @@ const JUEGOS_DISPONIBLES: JuegoDisponible[] = [
     ruta: '/juegos/sopa-letras'
   },
   {
-    nombre: 'Rompecabezas',
-    descripcion: 'Ordena las piezas para armar la imagen.',
+    nombre: 'Rompecabeza',
+    descripcion: 'Ordena las piezas para armar la imagen. Usa tu propia foto.',
     icono: 'extension-puzzle-outline',
     dificultad: 'Media',
     ruta: '/juegos/rompecabezas'
@@ -72,13 +63,6 @@ const JUEGOS_DISPONIBLES: JuegoDisponible[] = [
     icono: 'apps-outline',
     dificultad: '3 niveles',
     ruta: '/juegos/tic-tac-toe'
-  },
-  {
-    nombre: 'Torres de Hanoi',
-    descripcion: 'Ordena los discos de una torre a otra.',
-    icono: 'layers-outline',
-    dificultad: 'Fácil',
-    ruta: '/juegos/torres-hanoi'
   },
   {
     nombre: 'Memoria de secuencias',
@@ -116,11 +100,9 @@ export class JuegosPage {
     addIcons({
       arrowBack,
       albumsOutline,
-      helpCircleOutline,
       gridOutline,
       extensionPuzzleOutline,
       appsOutline,
-      layersOutline,
       flashOutline,
       play
     });

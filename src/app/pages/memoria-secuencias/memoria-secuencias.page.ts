@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonContent,
@@ -44,6 +44,8 @@ export class MemoriaSecuenciasPage implements OnDestroy {
   fase: FaseSimon = 'listo';
   /** Luz encendida actualmente (null = ninguna). */
   activo: number | null = null;
+  /** True durante la pausa "¡Prepárate!" al comenzar. */
+  preparando = false;
 
   nivel = 0;
   puntaje = 0;
@@ -55,9 +57,21 @@ export class MemoriaSecuenciasPage implements OnDestroy {
   private timers: any[] = [];
   private readonly CLAVE_MEJOR = 'sc_simon_mejor_v1';
 
-  constructor(private router: Router) {
+  constructor(
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {
     addIcons({ arrowBack, refreshOutline, play });
     this.cargarMejor();
+  }
+
+  /** Ejecuta `fn` después de `ms` y fuerza el renderizado al completarse. */
+  private luego(ms: number, fn: () => void): void {
+    const timer = setTimeout(() => {
+      fn();
+      this.cdr.detectChanges();
+    }, ms);
+    this.timers.push(timer);
   }
 
   /** Velocidad de las luces: más rápida a medida que sube el nivel. */
@@ -69,7 +83,9 @@ export class MemoriaSecuenciasPage implements OnDestroy {
   get mensaje(): string {
     switch (this.fase) {
       case 'mostrando':
-        return 'Memoriza la secuencia...';
+        return this.preparando
+          ? '¡Prepárate!'
+          : 'Observa y memoriza la secuencia...';
       case 'entrada':
         return this.pasoEntrada < this.secuencia.length
           ? `Repite la secuencia (paso ${this.pasoEntrada + 1} de ${this.secuencia.length})`
@@ -97,7 +113,14 @@ export class MemoriaSecuenciasPage implements OnDestroy {
     this.activo = null;
     this.partidas++;
     this.fase = 'mostrando';
-    this.avanzarNivel();
+    // Aviso inicial para que el inicio de la partida sea evidente.
+    this.preparando = true;
+    this.luego(800, () => {
+      this.preparando = false;
+      if (this.fase !== 'fin') {
+        this.avanzarNivel();
+      }
+    });
   }
 
   /** Agrega un color a la secuencia y la reproduce. */
@@ -129,6 +152,7 @@ export class MemoriaSecuenciasPage implements OnDestroy {
   /** Enciende las luces de la secuencia, una por una. */
   private mostrarSecuencia(): void {
     this.fase = 'mostrando';
+    this.pasoEntrada = 0;
     this.activo = null;
     const vel = this.velocidad;
     const pausa = Math.max(120, vel * 0.35);
@@ -142,11 +166,11 @@ export class MemoriaSecuenciasPage implements OnDestroy {
       }
 
       self.activo = self.secuencia[indice];
-      self.timers.push(setTimeout(() => (self.activo = null), vel));
-      self.timers.push(setTimeout(() => reproducir(indice + 1), vel + pausa));
+      self.luego(vel, () => (self.activo = null));
+      self.luego(vel + pausa, () => reproducir(indice + 1));
     };
 
-    this.timers.push(setTimeout(() => reproducir(0), 550));
+    this.luego(360, () => reproducir(0));
   }
 
   /** Maneja un toque del usuario sobre un botón de color. */
@@ -161,11 +185,11 @@ export class MemoriaSecuenciasPage implements OnDestroy {
 
     // Retroalimentación visual inmediata.
     this.activo = color;
-    this.timers.push(setTimeout(() => {
+    this.luego(230, () => {
       if (this.fase === 'entrada') {
         this.activo = null;
       }
-    }, 230));
+    });
 
     const esperado = this.secuencia[this.pasoEntrada];
     if (color !== esperado) {
@@ -177,11 +201,11 @@ export class MemoriaSecuenciasPage implements OnDestroy {
     if (this.pasoEntrada >= this.secuencia.length) {
       // Nivel completado: suma puntos y avanza.
       this.puntaje += this.nivel * 10;
-      this.timers.push(setTimeout(() => {
+      this.luego(750, () => {
         if (this.fase !== 'fin') {
           this.avanzarNivel();
         }
-      }, 750));
+      });
     }
   }
 

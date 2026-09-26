@@ -16,17 +16,32 @@
       Desliza el dedo sobre la palabra para marcarla.
     </p>
 
-    <!-- Selector de tema -->
-    <div class="temas">
-      @for (temaItem of temas; track temaItem.nombre; let i = $index) {
+    <!-- Selector de tema (botón que despliega las opciones) -->
+    <div class="tema-selector">
+      <button
+        type="button"
+        class="tema-boton"
+        (click)="temasAbierta = !temasAbierta"
+        [attr.aria-expanded]="temasAbierta">
+        <span>Tema: {{ tema.nombre }}</span>
+        <ion-icon [name]="temasAbierta ? 'chevron-up-outline' : 'chevron-down-outline'"></ion-icon>
+      </button>
 
-        <button
-          type="button"
-          class="tema-btn"
-          [class.activo]="i === temaIndex"
-          (click)="elegirTema(i)">
-          {{ temaItem.nombre }}
-        </button>
+      @if (temasAbierta) {
+
+        <div class="temas">
+          @for (temaItem of temas; track temaItem.nombre; let i = $index) {
+
+            <button
+              type="button"
+              class="tema-btn"
+              [class.activo]="i === temaIndex"
+              (click)="elegirTema(i)">
+              {{ temaItem.nombre }}
+            </button>
+
+          }
+        </div>
 
       }
     </div>
