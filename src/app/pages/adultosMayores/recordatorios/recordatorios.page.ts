@@ -504,7 +504,8 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   horaTexto(alarma: AlarmaRecordatorio): string {
-    return this.horaTexto24(alarma.hora, alarma.minuto);
+    const ampm = alarma.hora < 12 ? 'AM' : 'PM';
+    return `${this.dosDigitos(alarma.hora)}:${this.dosDigitos(alarma.minuto)} ${ampm}`;
   }
 
   horaTexto24(hora: number, minuto: number): string {
