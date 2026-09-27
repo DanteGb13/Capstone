@@ -80,6 +80,12 @@ export class PermisosInicialPage implements OnInit {
       this.cargando = false;
       this.actual = this.pendientes[0] ?? null;
       this.cdr.detectChanges();
+
+      // Si no queda nada por pedir, esta pantalla se queda con "Todo listo"
+      // para siempre: hay que salir de ella, si no la app no entra nunca.
+      if (!this.actual) {
+        await this.terminar();
+      }
     }
   }
 
