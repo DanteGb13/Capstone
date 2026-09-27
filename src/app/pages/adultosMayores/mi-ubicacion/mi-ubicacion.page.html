@@ -97,9 +97,10 @@
         <button
           type="button"
           class="btn-control btn-casa"
+          [disabled]="!ubicacionActiva"
           (click)="irACasa()">
           <ion-icon name="home-outline"></ion-icon>
-          <span>Ir a mi casa</span>
+          <span>{{ ubicacionActiva ? 'Ir a mi casa' : 'Esperando ubicación...' }}</span>
         </button>
 
       </div>

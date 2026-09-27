@@ -62,6 +62,10 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   alarmas: AlarmaRecordatorio[] = [];
   sonando: AlarmaRecordatorio[] = [];
 
+  private suscripcionAlarma?: { unsubscribe: () => void };
+
+  private suscripcionSonando?: { unsubscribe: () => void };
+
   cargando = false;
 
   mostrarModal = false;
@@ -124,6 +128,20 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
       this.changeDetectorRef.detectChanges();
     });
 
+    // Al empezar a sonar una alarma, la tarjeta "Apagar alarma" aparece sola.
+    this.suscripcionSonando?.unsubscribe();
+    this.suscripcionSonando = this.alarmasService.alarmaSonando$.subscribe(() => {
+      this.refrescarSonando();
+    });
+
+    // Si la alarma se apaga desde la barra de notificaciones o desde la pagina
+    // principal, la tarjeta de esta lista desaparece al instante.
+    this.suscripcionAlarma?.unsubscribe();
+    this.suscripcionAlarma = this.alarmasService.alarmaApagada$.subscribe((idAlarma) => {
+      this.sonando = this.sonando.filter((a) => a.id !== idAlarma);
+      this.changeDetectorRef.detectChanges();
+    });
+
     this.primeraVezAsistente();
   }
 
@@ -145,15 +163,19 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     }
   };
 
+  private refrescarSonando() {
+    // Revisar si algún recordatorio está sonando SIN golpear la red
+    void this.alarmasService.estanSonando(this.alarmas).then((sonando) => {
+      this.sonando = sonando;
+      this.changeDetectorRef.detectChanges();
+    });
+  }
+
   private iniciarTimer() {
     this.detenerTimer();
-    this.timer = setInterval(() => {
-      // Revisar si algún recordatorio está sonando SIN golpear la red
-      void this.alarmasService.estanSonando(this.alarmas).then((sonando) => {
-        this.sonando = sonando;
-        this.changeDetectorRef.detectChanges();
-      });
-    }, 10000);
+    // Cada 5 s: la alarma suena sola y el evento del sistema no siempre llega
+    // (el teléfono lo descarta con la app en segundo plano).
+    this.timer = setInterval(() => this.refrescarSonando(), 5000);
   }
 
   private detenerTimer() {
@@ -189,6 +211,8 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     if (this.timer) {
       clearInterval(this.timer);
     }
+    this.suscripcionAlarma?.unsubscribe();
+    this.suscripcionSonando?.unsubscribe();
     this.detenerRepeticion();
   }
 

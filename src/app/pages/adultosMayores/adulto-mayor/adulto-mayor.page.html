@@ -41,6 +41,49 @@
       </div>
 
 
+    <!-- ================================================= -->
+    <!-- ALARMA SONANDO (RECORDATORIOS) -->
+    <!-- Va antes que todo lo demás: si hay una alarma activa es lo primero
+         que el adulto tiene que ver, y así ya no se junta con la tarjeta
+         del cuidador asignado. -->
+    <!-- ================================================= -->
+
+    @if (alarmasSonando.length > 0) {
+
+    <div class="alarma-sonando">
+
+      @for (alarma of alarmasSonando; track alarma.id) {
+
+      <div class="alarma-sonando-card">
+
+        <div class="alarma-sonando-cabecera">
+
+          <div class="alarma-sonando-icon">
+            <ion-icon name="alarm"></ion-icon>
+          </div>
+
+          <div class="alarma-sonando-info">
+            <small>RECORDATORIO SONANDO</small>
+            <strong>{{ alarma.nombre }}</strong>
+            <span>{{ alarma.descripcion || 'Tienes un recordatorio ahora' }}</span>
+          </div>
+
+        </div>
+
+        <button class="btn-apagar" type="button" (click)="apagarAlarma(alarma)">
+          <ion-icon name="stop-circle"></ion-icon>
+          <span>Apagar alarma</span>
+        </button>
+
+      </div>
+
+      }
+
+    </div>
+
+    }
+
+
       <!-- Botón vincular cuidador -->
       <div class="vincular-cuidador">
 
@@ -108,40 +151,6 @@
       }
 
     </div>
-
-
-    <!-- ================================================= -->
-    <!-- ALARMA SONANDO (RECORDATORIOS) -->
-    <!-- ================================================= -->
-
-    @if (alarmasSonando.length > 0) {
-
-    <div class="alarma-sonando">
-
-      @for (alarma of alarmasSonando; track alarma.id) {
-
-      <div class="alarma-sonando-card">
-
-        <div class="alarma-sonando-icon">
-          <ion-icon name="alarm"></ion-icon>
-        </div>
-
-        <div class="alarma-sonando-info">
-          <strong>{{ alarma.nombre }}</strong>
-          <span>{{ alarma.descripcion || 'Tienes un recordatorio ahora' }}</span>
-        </div>
-
-        <button class="btn-apagar" type="button" (click)="apagarAlarma(alarma)">
-          Apagar alarma
-        </button>
-
-      </div>
-
-      }
-
-    </div>
-
-    }
 
 
     <!-- ================================================= -->

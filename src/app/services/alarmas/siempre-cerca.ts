@@ -55,6 +55,35 @@ export interface EstadoPermisoAndroid {
   puedePedir: boolean;
 }
 
+export interface OcurrenciaNativa {
+  idAlarma: string;
+  /** Fecha y hora de la ocurrencia: YYYY-MM-DDTHH:mm. */
+  clave: string;
+  titulo: string;
+  cuerpo: string;
+  fecha: number;
+  idNotificacion: number;
+}
+
+export interface ApagadaNativa {
+  idAlarma: string;
+  clave: string;
+  fecha: number;
+}
+
+/** Una alarma que el sistema tiene sonando ahora mismo. */
+export interface SonandoNativa {
+  idAlarma: string;
+  idNotificacion: number;
+}
+
+export interface AccionNotificacion {
+  /** Botón que se apretó ("apagar"), o null si la app se abrió de otra forma. */
+  accion: string | null;
+  /** Notificación completa en JSON, de donde salen idAlarma y fecha. */
+  notificacion?: string | null;
+}
+
 export interface SiempreCercaPlugin {
   crearCanalAlarma(): Promise<void>;
   crearCanalSOS(): Promise<void>;
@@ -69,6 +98,12 @@ export interface SiempreCercaPlugin {
   /** Deja constancia de que se mostró el diálogo de un permiso. */
   marcarPermisoPreguntado(permiso: string): Promise<void>;
   abrirAjustesNotificaciones(): Promise<void>;
+  accionNotificacion(): Promise<AccionNotificacion>;
+  programarAlarmas(opts: { alarmas: OcurrenciaNativa[]; exacta: boolean }): Promise<{ programadas: number }>;
+  detenerAlarma(opts: { idAlarma: string; clave: string; fecha: number; idNotificacion: number; marcar?: boolean }): Promise<void>;
+  leerAlarmasApagadas(): Promise<{ apagadas: string }>;
+  /** Las alarmas sonando ahora mismo en Android. */
+  leerAlarmasSonando(): Promise<{ sonando: string }>;
 }
 
 export const SiempreCerca = registerPlugin<SiempreCercaPlugin>('SiempreCerca');

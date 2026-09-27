@@ -189,6 +189,15 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   alarmasSonando: AlarmaRecordatorio[] = [];
 
+  private suscripcionAlarma?: { unsubscribe: () => void };
+
+  private suscripcionSonando?: { unsubscribe: () => void };
+
+  /** Revisa la tarjeta cada 5 s solo mientras esta pantalla esta a la vista. */
+  private timerSonando: any = null;
+
+  private destruido: boolean = false;
+
 
   // =====================================================
   // MENSAJES
@@ -283,6 +292,21 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.alarmasService.escucharTap(() => {
       this.actualizarSonando();
       this.router.navigate(['/recordatorios']);
+    });
+
+    // Al empezar a sonar una alarma aparece la tarjeta "Apagar alarma" al
+    // instante, sin esperar a que la persona vuelva a esta pantalla.
+    this.suscripcionSonando?.unsubscribe();
+    this.suscripcionSonando = this.alarmasService.alarmaSonando$.subscribe(() => {
+      this.actualizarSonando();
+    });
+
+    // Si la alarma se apaga desde la barra de notificaciones o desde
+    // Recordatorios, la tarjeta de esta página desaparece al instante.
+    this.suscripcionAlarma?.unsubscribe();
+    this.suscripcionAlarma = this.alarmasService.alarmaApagada$.subscribe((idAlarma) => {
+      this.alarmasSonando = this.alarmasSonando.filter((a) => a.id !== idAlarma);
+      this.changeDetectorRef.detectChanges();
     });
 
     // Crear canal SOS + registrar push después de cargar la página (no bloquear)
@@ -508,7 +532,37 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     await this.cargarFotoPerfil();
     // Al volver a la pantalla puede haber cambiado algo en Ajustes.
     await this.revisarPermisos();
+    // Al volver a la página, las alarmas que se apagaron en la barra de
+    // notificaciones ya no deben seguir apareciendo.
+    this.actualizarSonando();
+    this.iniciarTimerSonando();
     this.changeDetectorRef.detectChanges();
+  }
+
+  ionViewWillLeave() {
+    this.detenerTimerSonando();
+  }
+
+  /**
+   * La tarjeta depende de una alarma que suena sola, sin que la persona toque
+   * nada. El evento del sistema a veces no llega (el teléfono lo ahorra cuando
+   * la app esta en segundo plano), asi que ademas se revisa cada 5 s mientras
+   * la pantalla esta visible. Es una consulta local, no golpea la red.
+   */
+  private iniciarTimerSonando() {
+    this.detenerTimerSonando();
+    this.timerSonando = setInterval(() => {
+      if (!this.destruido) {
+        this.actualizarSonando();
+      }
+    }, 5000);
+  }
+
+  private detenerTimerSonando() {
+    if (this.timerSonando) {
+      clearInterval(this.timerSonando);
+      this.timerSonando = null;
+    }
   }
 
   async reportarUbicacion() {
@@ -596,6 +650,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   // =====================================================
 
   ngOnDestroy() {
+    this.destruido = true;
 
     if (this.solicitudesInterval) {
 
@@ -606,6 +661,9 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     // La suscripción de Realtime es compartida: se suelta la escucha de esta
     // pantalla, no el canal. El canal se cierra al cambiar de cuenta.
     this.soltarRealtime?.();
+    this.suscripcionAlarma?.unsubscribe();
+    this.suscripcionSonando?.unsubscribe();
+    this.detenerTimerSonando();
 
   }
 
@@ -855,7 +913,21 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   }
 
   async actualizarSonando() {
-    this.alarmasSonando = await this.alarmasService.estanSonando();
+    try {
+      // Se revisa primero lo guardado en el telefono (instantaneo). Antes se
+      // consultaba solo la red, y con mala conexion la tarjeta no aparecia.
+      const locales = this.alarmasService.getAlarmasLocales();
+      const sonando = locales.length > 0
+        ? await this.alarmasService.estanSonando(locales)
+        : await this.alarmasService.estanSonando();
+
+      this.alarmasSonando = sonando;
+    } catch {
+      // Si la revision falla no se borra la tarjeta que ya se estaba viendo:
+      // una alarma que sigue sonando no puede desaparecer por un fallo de red.
+    }
+
+    this.changeDetectorRef.detectChanges();
   }
 
   async apagarAlarma(alarma: AlarmaRecordatorio) {

@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
+import { Subject } from 'rxjs';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Network } from '@capacitor/network';
-import { SiempreCerca } from './siempre-cerca';
+import { ApagadaNativa, SiempreCerca, SonandoNativa } from './siempre-cerca';
 import { SupabaseService } from '../supabase/supabase';
 
 interface OperacionCola {
@@ -29,7 +30,6 @@ export interface AlarmaRecordatorio {
 
 export const DIAS_SEMANA_TODOS = [1, 2, 3, 4, 5, 6, 7];
 
-const CANAL = 'recordatorios-alarma';
 const TABLA = 'alarma_recordatorio';
 const TIPO_ACCION = 'apagar-alarma';
 const ACCION_APAGAR = 'apagar';
@@ -38,6 +38,21 @@ const ACCION_APAGAR = 'apagar';
   providedIn: 'root'
 })
 export class AlarmasService {
+
+  /**
+   * Se emite el id de la alarma cada vez que se apaga, sin importar desde dónde
+   * (la tarjeta de la página principal, la de Recordatorios o el botón de la
+   * barra de notificaciones). Las páginas se suscriben para quitar la tarjeta al
+   * instante: antes quedaba mostrando "Apagar alarma" hasta el siguiente refresco.
+   */
+  readonly alarmaApagada$ = new Subject<string>();
+
+  /**
+   * Se emite el id de la alarma en el momento en que empieza a sonar. Las
+   * páginas lo escuchan para mostrar la tarjeta "Apagar alarma" al instante,
+   * sin depender de que la persona entre y vuelva a la pantalla.
+   */
+  readonly alarmaSonando$ = new Subject<string>();
 
   private tapHandler: ((idAlarma: string) => void) | null = null;
   private disparoHandler: (() => void) | null = null;
@@ -51,6 +66,8 @@ export class AlarmasService {
   private redConectada: boolean | null = null;
   private redRegistrada = false;
   private sincronizando = false;
+  /** Apagados ya atendidos, para no repetir cuando llegan por las dos rutas. */
+  private accionesProcesadas = new Set<string>();
 
   private alarmasCache: AlarmaRecordatorio[] = [];
 
@@ -467,6 +484,20 @@ export class AlarmasService {
   // FECHAS
   // =====================================================
 
+  /**
+   * Identifica UNA ocurrencia concreta (dia y hora). Es la clave con que se
+   * marca "esta alarma ya se apagó".
+   *
+   * Antes se usaba solo el dia, y eso hacia que al apagar una alarma quedaban
+   * bloqueadas TODAS las de ese dia: la tarjeta no volvia a aparecer aunque la
+   * alarma sonara de nuevo. Con la hora incluida solo se apaga esa.
+   */
+  private claveOcurrencia(fecha: Date): string {
+    const hh = String(fecha.getHours()).padStart(2, '0');
+    const mi = String(fecha.getMinutes()).padStart(2, '0');
+    return `${this.fechaClave(fecha)}T${hh}:${mi}`;
+  }
+
   private fechaClave(fecha: Date): string {
     const mm = String(fecha.getMonth() + 1).padStart(2, '0');
     const dd = String(fecha.getDate()).padStart(2, '0');
@@ -526,6 +557,26 @@ export class AlarmasService {
   // ALARMAS SONANDO
   // =====================================================
 
+  /**
+   * Ids que Android tiene sonando ahora mismo. Es la fuente de la verdad: una
+   * alarma puede seguir sonando las horas que haga falta, y si la app la
+   * olvidara por un reloj propio la tarjeta se esconderia sin dejar apagarla.
+   */
+  private sonandoNativo = new Set<string>();
+
+  private async refrescarSonandoNativo(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    try {
+      const { sonando } = await SiempreCerca.leerAlarmasSonando();
+      const filas: SonandoNativa[] = sonando ? JSON.parse(sonando) : [];
+      this.sonandoNativo = new Set(filas.map((f) => f.idAlarma));
+    } catch (e) {
+      // Si no se puede preguntar, se sigue con la cuenta por hora de abajo.
+    }
+  }
+
   private ocurrenciaEnCurso(alarma: AlarmaRecordatorio, ahora: Date): Date | null {
     if (!alarma.activa) {
       return null;
@@ -550,10 +601,20 @@ export class AlarmasService {
     }
 
     const inicio = ocurrencia.getTime() - 2 * 60 * 1000;
-    const fin = ocurrencia.getTime() + 15 * 60 * 1000;
     const ahoraMs = ahora.getTime();
 
-    if (ahoraMs < inicio || ahoraMs > fin) {
+    if (ahoraMs < inicio) {
+      return null;
+    }
+
+    // Si Android dice que esta sonando, manda el sistema: la alarma suena hasta
+    // que la apaguen y la app no puede ponerla un limite, o la tarjeta
+    // desapareceria y no habria forma de pararla desde la app.
+    if (this.sonandoNativo.has(alarma.id)) {
+      return ocurrencia;
+    }
+
+    if (ahoraMs - ocurrencia.getTime() > this.VENTANA_SONANDO_MS) {
       return null;
     }
 
@@ -566,21 +627,41 @@ export class AlarmasService {
       return null;
     }
 
-    const fecha = this.fechaClave(ocurrencia);
-    if (this.estaApagada(`${alarma.id}:${fecha}`)) {
-      return null;
-    }
-    if (alarma.confirmado === fecha) {
+    if (this.estaApagada(`${alarma.id}:${this.claveOcurrencia(ocurrencia)}`)) {
       return null;
     }
 
-    return fecha;
+    // No se compara "confirmado": el servidor guarda solo el dia, asi que
+    // una alarma confirmada a las 13:10 tapaba tambien la de las 18:00.
+    return this.claveOcurrencia(ocurrencia);
   }
 
   async estanSonando(alarmas?: AlarmaRecordatorio[], ahora = new Date()): Promise<AlarmaRecordatorio[]> {
+    // Con la app abierta se puede apagar la alarma desde la barra, y ese apagado
+    // queda anotado en el sistema: sin esto la tarjeta seguiria pidiendo apagarla
+    // hasta la proxima sincronizacion.
+    await Promise.all([this.importarApagadasNativas(), this.refrescarSonandoNativo()]);
+
     const lista = alarmas ?? (await this.getAlarmas());
-    return lista.filter((alarma) => this.ocurrenciaSonando(alarma, ahora) !== null);
+    const sonando = lista.filter((alarma) => this.ocurrenciaSonando(alarma, ahora) !== null);
+
+    // La alarma la publica Android, asi que ya no llega el evento del plugin al
+    // empezar a sonar. Aqui se avisa de las que aparecen, para que la tarjeta no
+    // espere al siguiente sondeo. El Set se recalcula en cada llamada porque si
+    // se fuera acumulando, la misma alarma no volveria a avisar al sonar otra vez
+    // (13:10, se apaga, 18:00) y la tarjeta no apareceria.
+    const sonandoIds = new Set(sonando.map((a) => a.id));
+    for (const alarma of sonando) {
+      if (!this.sonandoActual.has(alarma.id)) {
+        this.alarmaSonando$.next(alarma.id);
+      }
+    }
+    this.sonandoActual = sonandoIds;
+
+    return sonando;
   }
+
+  private sonandoActual = new Set<string>();
 
   private cargarApagadas(): void {
     if (this.apagadasCargadas) {
@@ -619,8 +700,22 @@ export class AlarmasService {
   // =====================================================
 
   private readonly VENTANA_DIAS = 8;
+  /** Minutos de margen: si la hora acaba de pasar, se avisa igual. */
+  private readonly TOLERANCIA_HORA_MS = 3 * 60 * 1000;
+
+  /**
+   * Margen de seguridad para la cuenta por reloj. La alarma NO se detiene a la
+   * hora: mientras Android diga que suena, suena (ver sonandoNativo). Esta hora
+   * solo se usa cuando no se puede preguntar al sistema, para que una alarma
+   * que ya no suena no se quede con la tarjeta puesta eternamente.
+   */
+  private readonly VENTANA_SONANDO_MS = 60 * 60 * 1000;
+
 
   private idNumerico(id: string): number {
+    if (!id) {
+      return 0;
+    }
     let hash = 0;
     for (let i = 0; i < id.length; i++) {
       const char = id.charCodeAt(i);
@@ -650,7 +745,8 @@ export class AlarmasService {
   private generarOcurrencias(
     alarma: AlarmaRecordatorio,
     base: Date,
-    ventanaDias: number = this.VENTANA_DIAS
+    ventanaDias: number = this.VENTANA_DIAS,
+    toleranciaMs: number = 0
   ): Date[] {
     const ocurrencias: Date[] = [];
 
@@ -666,6 +762,20 @@ export class AlarmasService {
       );
 
       if (fecha.getTime() <= base.getTime()) {
+        // La app sincroniza cada minuto. Si la hora de hoy ya paso por unos
+        // segundos, descartarla en silencio dejaba al usuario sin aviso y la
+        // alarma se saltaba al dia siguiente. Con margen se deja pasar la
+        // ocurrencia tal cual: se programa en un instante ya vencido, asi que
+        // Android la dispara de inmediato.
+        //
+        // OJO: la fecha NO se corre unos segundos. La clave y el id de la
+        // notificacion se derivan de ella, y si se moviera, al apagar se
+        // marcaria una clave distinta de la que esta sonando y la alarma
+        // seguiria reemitiendo con la clave nueva.
+        const retraso = base.getTime() - fecha.getTime();
+        if (i === 0 && retraso <= toleranciaMs) {
+          ocurrencias.push(fecha);
+        }
         continue;
       }
 
@@ -685,6 +795,76 @@ export class AlarmasService {
   // APAGAR ALARMA
   // =====================================================
 
+  /**
+   * Corta en Android la alarma de una ocurrencia: quita la notificacion que
+   * esta sonando y detiene la cadena que la vuelve a emitir. Sin esto el
+   * sonido seguiria hasta que la app abriera el foco.
+   */
+  private async detenerEnSistema(idAlarma: string, ocurrencia: Date, marcar = true) {
+    if (!Capacitor.isNativePlatform() || !idAlarma) {
+      return;
+    }
+    try {
+      await SiempreCerca.detenerAlarma({
+        idAlarma,
+        clave: this.claveOcurrencia(ocurrencia),
+        fecha: ocurrencia.getTime(),
+        idNotificacion: this.idOcurrencia(this.idNumerico(idAlarma), ocurrencia),
+        marcar
+      });
+    } catch (e) {
+      console.error('No se pudo cortar la alarma en el sistema', e);
+    }
+  }
+
+  /** Vuelve a construir la fecha de una clave de ocurrencia. */
+  private fechaDesdeClave(clave: string): Date | null {
+    const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(clave);
+    if (!m) {
+      return null;
+    }
+    return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0, 0);
+  }
+
+  /**
+   * Trae las alarmas que se apagaron desde la barra de notificaciones. Puede
+   * pasar con la app cerrada (el boton la apaga sin abrirla), y en ese caso la
+   * app se entera recien cuando vuelve a abrirse: sin esto la tarjeta seguiria
+   * mostrando "Apagar alarma" de algo que ya esta callado.
+   */
+  private async importarApagadasNativas() {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    try {
+      const { apagadas } = await SiempreCerca.leerAlarmasApagadas();
+      const filas: ApagadaNativa[] = apagadas ? JSON.parse(apagadas) : [];
+      for (const fila of filas) {
+        const clave = `${fila.idAlarma}:${fila.clave}`;
+        if (this.estaApagada(clave)) {
+          continue;
+        }
+        this.marcarApagada(clave);
+        this.sonandoActual.delete(fila.idAlarma);
+        this.alarmaApagada$.next(fila.idAlarma);
+
+        const fecha = this.fechaDesdeClave(fila.clave);
+        if (!fecha) {
+          continue;
+        }
+        const alarma =
+          this.alarmasCache.find((a) => a.id === fila.idAlarma) ||
+          this.getAlarmasLocales().find((a) => a.id === fila.idAlarma);
+        if (alarma) {
+          // El servidor guarda el dia, asi que se le manda el dia de la ocurrencia.
+          await this.actualizarAlarma(alarma.id, { confirmado: this.fechaClave(fecha) });
+        }
+      }
+    } catch (e) {
+      console.error('No se pudieron leer las alarmas apagadas', e);
+    }
+  }
+
   async apagarAlarma(alarma: AlarmaRecordatorio, ahora = new Date()) {
     const ocurrencia = this.ocurrenciaEnCurso(alarma, ahora);
     if (!ocurrencia) {
@@ -692,22 +872,27 @@ export class AlarmasService {
     }
 
     const fecha = this.fechaClave(ocurrencia);
-    this.marcarApagada(`${alarma.id}:${fecha}`);
+    this.marcarApagada(`${alarma.id}:${this.claveOcurrencia(ocurrencia)}`);
+
+    // Avisar ANTES de tocar la red: si no hay internet el aviso igual tiene que
+    // llegar, o la tarjeta "Apagar alarma" se quedaría visible en las páginas.
+    this.alarmaApagada$.next(alarma.id);
 
     this.alarmasCache = this.alarmasCache.map((a) =>
       a.id === alarma.id ? { ...a, confirmado: fecha } : a
     );
 
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const idEntregada = this.idOcurrencia(this.idNumerico(alarma.id), ocurrencia);
-        await LocalNotifications.removeDeliveredNotificationsById({ ids: [idEntregada] });
-      } catch (e) {
-        console.error('No se pudo quitar la notificación', e);
-      }
-    }
+    this.sonandoActual.delete(alarma.id);
+    await this.detenerEnSistema(alarma.id, ocurrencia);
+    await this.quitarNotificacion(alarma.id, ocurrencia);
 
-    await this.actualizarAlarma(alarma.id, { confirmado: fecha });
+    try {
+      await this.actualizarAlarma(alarma.id, { confirmado: fecha });
+    } catch (e) {
+      // El sonido ya se corto: si la red falla, la alarma queda marcada solo en
+      // el telefono y se sincroniza en la proxima conexion.
+      console.error('No se pudo registrar el apagado en el servidor', e);
+    }
   }
 
 
@@ -833,7 +1018,12 @@ export class AlarmasService {
 
     const exacta = await this.checarAlarmaExacta();
 
-    const ocurrencias = this.generarOcurrencias(alarma, new Date());
+    const ocurrencias = this.generarOcurrencias(
+      alarma,
+      new Date(),
+      this.VENTANA_DIAS,
+      this.TOLERANCIA_HORA_MS
+    );
     if (ocurrencias.length === 0) {
       return;
     }
@@ -843,34 +1033,23 @@ export class AlarmasService {
         notifications: this.idsNotificacion(alarma).map((id) => ({ id }))
       });
 
-      const notificaciones = ocurrencias.map((fecha) => ({
-        id: this.idOcurrencia(this.idNumerico(alarma.id), fecha),
-        title: `🔔 ${alarma.nombre}`,
-        body: alarma.descripcion || 'Tienes un recordatorio programado',
-        channelId: CANAL,
-        sound: 'alarmmelodia',
-        actionTypeId: TIPO_ACCION,
-        schedule: {
-          at: fecha,
-          allowWhileIdle: true
-        },
-        foreground: true,
-        autoCancel: true,
-        isExactNotification: exacta,
-        extra: {
-          tipo: 'recordatorio',
+      // La publica Android, no la app: asi sigue sonando con la app cerrada y el
+      // boton "Apagar" funciona sin abrirla.
+      const base = this.idNumerico(alarma.id);
+      const resultado = await SiempreCerca.programarAlarmas({
+        exacta,
+        alarmas: ocurrencias.map((fecha) => ({
           idAlarma: alarma.id,
-          fecha: fecha.getTime()
-        }
-      }));
-
-      const resultado = await LocalNotifications.schedule({
-        notifications: notificaciones
+          clave: this.claveOcurrencia(fecha),
+          titulo: `🔔 ${alarma.nombre}`,
+          cuerpo: alarma.descripcion || 'Tienes un recordatorio programado',
+          fecha: fecha.getTime(),
+          idNotificacion: this.idOcurrencia(base, fecha)
+        }))
       });
 
-      if (resultado.warning) {
-        console.warn('Alarma programada como INEXACTA (se aviso en Ajustes):',
-          resultado.warning.code, resultado.warning.message);
+      if (resultado.programadas === 0) {
+        console.warn('Ninguna alarma quedo programada', alarma.id);
       }
     } catch (e) {
       console.error('No se pudo programar la alarma', e);
@@ -885,6 +1064,13 @@ export class AlarmasService {
       await LocalNotifications.cancel({
         notifications: this.idsNotificacion(alarma).map((id) => ({ id }))
       });
+
+      // La alarma publica por Android tambien hay que sacarla de AlarmManager.
+      // Sin "marcar": desactivar un recordatorio no puede dejar anotados los
+      // próximos dias como apagados, o al reactivarlo no volveria a sonar.
+      for (const fecha of this.generarOcurrencias(alarma, new Date())) {
+        await this.detenerEnSistema(alarma.id, fecha, false);
+      }
     } catch (e) {
       console.error('No se pudo cancelar la alarma', e);
     }
@@ -906,6 +1092,7 @@ export class AlarmasService {
     }
     this.sincronizando = true;
     try {
+      await this.importarApagadasNativas();
       await this.flushCola();
       const alarmas = await this.getAlarmas();
       for (const alarma of alarmas) {
@@ -916,8 +1103,29 @@ export class AlarmasService {
         }
       }
       await this.limpiarApagadas(alarmas);
+      await this.limpiarNotificacionesVencidas();
     } finally {
       this.sincronizando = false;
+    }
+  }
+
+  private async limpiarNotificacionesVencidas() {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    try {
+      const entregadas = await LocalNotifications.getDeliveredNotifications();
+      const ahora = Date.now();
+      const vencidas = (entregadas.notifications ?? [])
+        .filter((n) => n.extra?.tipo === 'recordatorio' && typeof n.extra?.fecha === 'number')
+        .filter((n) => ahora - Number(n.extra.fecha) > this.VENTANA_SONANDO_MS)
+        .map((n) => n.id);
+
+      if (vencidas.length > 0) {
+        await LocalNotifications.removeDeliveredNotificationsById({ ids: vencidas });
+      }
+    } catch (e) {
+      console.error('No se pudieron limpiar las notificaciones vencidas', e);
     }
   }
 
@@ -931,7 +1139,7 @@ export class AlarmasService {
         continue;
       }
       const fecha = this.fechaClave(ocurrencia);
-      if (this.estaApagada(`${alarma.id}:${fecha}`)) {
+      if (this.estaApagada(`${alarma.id}:${this.claveOcurrencia(ocurrencia)}`)) {
         try {
           const idEntregada = this.idOcurrencia(this.idNumerico(alarma.id), ocurrencia);
           await LocalNotifications.removeDeliveredNotificationsById({ ids: [idEntregada] });
@@ -961,6 +1169,11 @@ export class AlarmasService {
           const idAlarma = data?.notification?.extra?.idAlarma;
           const fechaMs = data?.notification?.extra?.fecha;
           if (data?.actionId === ACCION_APAGAR && typeof idAlarma === 'string') {
+            const dedupe = `${idAlarma}:${typeof fechaMs === 'number' ? fechaMs : 0}`;
+            if (this.accionesProcesadas.has(dedupe)) {
+              return;
+            }
+            this.accionesProcesadas.add(dedupe);
             this.apagarDesdeNotificacion(idAlarma, typeof fechaMs === 'number' ? fechaMs : undefined);
           } else if (typeof idAlarma === 'string' && this.tapHandler) {
             this.tapHandler(idAlarma);
@@ -970,7 +1183,11 @@ export class AlarmasService {
 
       LocalNotifications.addListener(
         'localNotificationReceived',
-        () => {
+        (data: any) => {
+          const idAlarma = data?.notification?.extra?.idAlarma;
+          if (typeof idAlarma === 'string') {
+            this.alarmaSonando$.next(idAlarma);
+          }
           if (this.disparoHandler) {
             this.disparoHandler();
           }
@@ -979,6 +1196,7 @@ export class AlarmasService {
 
       App.addListener('appStateChange', (estado) => {
         if (estado.isActive) {
+          this.revisarAccionDeArranque();
           this.sincronizar();
         }
       });
@@ -987,7 +1205,55 @@ export class AlarmasService {
     this.registrarRed();
 
     this.registrarAccionApagar();
+    this.revisarAccionDeArranque();
     this.sincronizar();
+  }
+
+  /**
+   * Recupera el "Apagar alarma" que se apretó en la barra de notificaciones.
+   *
+   * El evento del plugin de notificaciones solo se entrega si la app ya estaba
+   * viva (viene de onNewIntent). Si Android la habia cerrado, el boton se perdia
+   * y la alarma seguia sonando. Por eso el plugin propio lee el intent con el que
+   * arranco la app, que es donde quedo guardada esa accion.
+   */
+  private async revisarAccionDeArranque() {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    try {
+      const { accion, notificacion } = await SiempreCerca.accionNotificacion();
+      if (!accion || !notificacion) {
+        return;
+      }
+
+      const extra = JSON.parse(notificacion)?.extra;
+      const idAlarma = extra?.idAlarma;
+      if (typeof idAlarma !== 'string') {
+        return;
+      }
+
+      if (accion !== ACCION_APAGAR) {
+        // Toque normal sobre la notificacion: se abre la app en esa alarma.
+        if (this.tapHandler) {
+          this.tapHandler(idAlarma);
+        }
+        return;
+      }
+
+      const fechaMs = typeof extra?.fecha === 'number' ? extra.fecha : undefined;
+      // Con la app viva llegan las dos rutas (el evento del plugin y esta). Con
+      // este guardia se apaga una sola vez.
+      const dedupe = `${idAlarma}:${fechaMs ?? 0}`;
+      if (this.accionesProcesadas.has(dedupe)) {
+        return;
+      }
+      this.accionesProcesadas.add(dedupe);
+
+      await this.apagarDesdeNotificacion(idAlarma, fechaMs);
+    } catch (e) {
+      console.error('No se pudo recuperar la acción de la notificación', e);
+    }
   }
 
   private registrarRed() {
@@ -1044,15 +1310,58 @@ export class AlarmasService {
   }
 
   private async apagarDesdeNotificacion(idAlarma: string, fechaMs?: number) {
-    if (fechaMs) {
-      this.marcarApagada(`${idAlarma}:${this.fechaClave(new Date(fechaMs))}`);
-    }
-    const alarma =
-      this.alarmasCache.find((a) => a.id === idAlarma) ||
-      (await this.getAlarmas()).find((a) => a.id === idAlarma);
-    if (!alarma) {
+    if (!idAlarma) {
       return;
     }
-    await this.apagarAlarma(alarma, fechaMs ? new Date(fechaMs) : new Date());
+    const ocurrencia = fechaMs ? new Date(fechaMs) : new Date();
+    const clave = fechaMs ? `${idAlarma}:${this.claveOcurrencia(ocurrencia)}` : '';
+
+    // 1) Se corta el sonido y se apaga la notificacion SIEMPRE, aunque no
+    //    tengamos el objeto de la alarma (app recien abierta o sin internet).
+    //    Antes se hacia un return temprano y la alarma seguia sonando.
+    if (clave) {
+      this.marcarApagada(clave);
+    }
+    await this.detenerEnSistema(idAlarma, ocurrencia);
+    await this.quitarNotificacion(idAlarma, ocurrencia);
+    this.alarmaApagada$.next(idAlarma);
+    // La alarma ya no esta sonando: se saca del Set para que la proxima vez que
+    // suene a otra hora vuelva a avisar.
+    this.sonandoActual.delete(idAlarma);
+
+    // 2) Con la alarma a mano se actualiza en el servidor. Si la red falla, el
+    //    sonido ya esta cortado: no se revierte nada.
+    try {
+      const alarma =
+        this.alarmasCache.find((a) => a.id === idAlarma) ||
+        (await this.getAlarmas()).find((a) => a.id === idAlarma);
+
+      if (alarma && clave) {
+        await this.actualizarAlarma(alarma.id, { confirmado: this.fechaClave(ocurrencia) });
+      }
+    } catch (e) {
+      console.error('No se pudo registrar el apagado en el servidor', e);
+    }
+  }
+
+  /**
+   * Quita la notificacion que esta sonando (con eso se corta el sonido) y
+   * tambien cancela lo que quedara programado, para que no vuelva a aparecer
+   * despues de apagarla.
+   */
+  private async quitarNotificacion(idAlarma: string, ocurrencia: Date) {
+    if (!Capacitor.isNativePlatform() || !idAlarma) {
+      return;
+    }
+    try {
+      const idEntregada = this.idOcurrencia(this.idNumerico(idAlarma), ocurrencia);
+      if (idEntregada <= 0) {
+        return;
+      }
+      await LocalNotifications.cancel({ notifications: [{ id: idEntregada }] });
+      await LocalNotifications.removeDeliveredNotificationsById({ ids: [idEntregada] });
+    } catch (e) {
+      console.error('No se pudo quitar la notificacion', e);
+    }
   }
 }
