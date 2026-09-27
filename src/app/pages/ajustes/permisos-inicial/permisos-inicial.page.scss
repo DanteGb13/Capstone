@@ -1,0 +1,251 @@
+// Usa los tokens de src/theme/variables.scss.
+
+:host {
+  display: block;
+}
+
+ion-content {
+  --background: var(--sc-bg);
+}
+
+.onboarding {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: calc(var(--sc-gap-lg) + env(safe-area-inset-top)) var(--sc-gap-lg)
+           calc(var(--sc-gap-lg) + env(safe-area-inset-bottom));
+  max-width: 560px;
+  margin: 0 auto;
+  gap: var(--sc-gap-lg);
+}
+
+// ------------------------------------------------------------------ cargando
+
+.cargando {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sc-gap);
+
+  p {
+    color: var(--sc-ink-muted);
+    font-size: 14px;
+    margin: 0;
+  }
+}
+
+.logo-spin {
+  width: 96px;
+  height: 96px;
+  animation: latir 1.6s ease-in-out infinite;
+}
+
+@keyframes latir {
+  0%, 100% { transform: scale(1); opacity: 0.9; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+
+// ------------------------------------------------------------------ cabecera
+
+.onboarding-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-gap-xs);
+}
+
+.logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  box-shadow: var(--sc-shadow);
+}
+
+.progreso-texto {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sc-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.progreso {
+  --background: var(--sc-primary-soft);
+  --progress-background: var(--sc-primary);
+  height: 6px;
+  border-radius: var(--sc-radius-pill);
+}
+
+// ------------------------------------------------------------------ cuerpo
+
+.onboarding-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--sc-gap-sm);
+  padding-top: var(--sc-gap);
+}
+
+.icono-grande {
+  width: 96px;
+  height: 96px;
+  border-radius: 28px;
+  display: grid;
+  place-items: center;
+  background: var(--sc-primary-soft);
+  margin-bottom: var(--sc-gap-xs);
+
+  ion-icon {
+    font-size: 48px;
+    color: var(--sc-primary);
+  }
+}
+
+h1 {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--sc-ink);
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.para-que {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--sc-ink-2);
+  margin: 0;
+  max-width: 34ch;
+}
+
+// ------------------------------------------------------------------ avisos
+
+.aviso-bloqueado,
+.aviso-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sc-gap-sm);
+  border-radius: var(--sc-radius);
+  padding: var(--sc-gap-sm) var(--sc-gap);
+  text-align: left;
+  width: 100%;
+
+  ion-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+}
+
+.aviso-bloqueado {
+  background: var(--sc-danger-soft);
+  color: var(--sc-danger-dark);
+  border: 1px solid color-mix(in srgb, var(--sc-danger) 25%, transparent);
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  strong {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  span {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+}
+
+.aviso-nota {
+  background: var(--sc-warn-soft);
+  color: var(--sc-warn-dark);
+  border: 1px solid color-mix(in srgb, var(--sc-warn) 25%, transparent);
+
+  span {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+}
+
+// ------------------------------------------------------------------ acciones
+
+.onboarding-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sc-gap-xs);
+}
+
+.btn-primario {
+  --border-radius: var(--sc-radius-lg);
+  --background: var(--sc-primary);
+  --background-hover: var(--sc-primary-dark);
+  --color: var(--sc-ink-invert);
+  font-size: 16px;
+  font-weight: 700;
+  text-transform: none;
+  height: 52px;
+  margin: 0;
+  box-shadow: var(--sc-shadow);
+
+  ion-spinner {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.btn-despues {
+  --color: var(--sc-ink-2);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: none;
+  margin: 0;
+}
+
+.saltar {
+  background: none;
+  border: none;
+  font-size: 12.5px;
+  color: var(--sc-ink-muted);
+  text-decoration: underline;
+  padding: var(--sc-gap-xs);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+// ------------------------------------------------------------------ lista
+
+.restantes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: var(--sc-gap-xs);
+    font-size: 12.5px;
+    color: var(--sc-ink-muted);
+    padding: 3px 0;
+
+    ion-icon {
+      font-size: 15px;
+    }
+
+    &[data-estado='ok'] {
+      color: var(--sc-ok-dark);
+    }
+
+    &[data-actual] {
+      color: var(--sc-ink);
+      font-weight: 700;
+    }
+  }
+}

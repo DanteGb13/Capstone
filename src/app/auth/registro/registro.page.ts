@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { IonButton, IonContent, IonIcon, IonInput, NavController } from '@ionic/angular';
+import { IonButton, IonContent, IonIcon, IonInput, IonSpinner, NavController } from '@ionic/angular';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { addIcons } from 'ionicons';
 import {
   arrowBackOutline,
+  arrowForwardOutline,
   personOutline,
   callOutline,
   mailOutline,
@@ -36,6 +37,7 @@ import {
     IonButton,
     IonIcon,
     IonInput,
+    IonSpinner,
     CommonModule,
     FormsModule,
     RouterLink
@@ -68,6 +70,69 @@ export class RegistroPage implements OnInit, OnDestroy {
 
   formularioIntentado: boolean = false;
 
+  // =====================================================
+  // PASOS DEL FORMULARIO
+  // =====================================================
+
+  /**
+   * El formulario va en 2 pasos en vez de los 5 campos de una vez.
+   *
+   * Motivo, más allá de que se vea mejor: una pantalla larga con 5 campos es la
+   * que más se abandona a la mitad, sobre todo en la primera vez que entra
+   * alguien. En el segundo paso el botón "Continuar" además actúa como disparador
+   * de la validación de los campos del primero, así que no se avanza con datos
+   * malos.
+   */
+  readonly pasos = [
+    { titulo: 'Sobre ti', campos: ['nombreCompleto', 'telefono'] as const },
+    { titulo: 'Tu acceso', campos: ['correo', 'contrasena', 'confirmarContrasena'] as const }
+  ];
+
+  pasoActual = 0;
+
+  get pasoActualInfo() {
+    return this.pasos[this.pasoActual];
+  }
+
+  get esUltimoPaso(): boolean {
+    return this.pasoActual === this.pasos.length - 1;
+  }
+
+  /** Nombre corto del paso, para el indicador de progreso. */
+  get etiquetaProgreso(): string {
+    return `Paso ${this.pasoActual + 1} de ${this.pasos.length}`;
+  }
+
+  /** Avanza al siguiente paso, validando primero los campos del actual. */
+  async siguientePaso(): Promise<void> {
+    (document.activeElement as HTMLElement)?.blur();
+
+    if (!this.validarPasoActual()) {
+      return;
+    }
+
+    this.pasoActual = Math.min(this.pasoActual + 1, this.pasos.length - 1);
+  }
+
+  pasoAnterior(): void {
+    (document.activeElement as HTMLElement)?.blur();
+    this.pasoActual = Math.max(this.pasoActual - 1, 0);
+  }
+
+  /** Valida sólo los campos del paso visible. */
+  private validarPasoActual(): boolean {
+    const campos = this.pasoActualInfo.campos;
+
+    if (campos.includes('nombreCompleto' as never)) this.validarCampoNombre();
+    if (campos.includes('telefono' as never)) this.validarCampoTelefono();
+    if (campos.includes('correo' as never)) this.validarCampoCorreo();
+    if (campos.includes('contrasena' as never)) this.validarCampoContrasena();
+    if (campos.includes('confirmarContrasena' as never)) this.validarCampoConfirmar();
+
+    // Se recorren los errores del paso: si hay alguno, no se avanza.
+    return !campos.some((campo) => !!this.errores[campo]);
+  }
+
   constructor(
     private registroService: registro,
     private loginService: Login,
@@ -78,6 +143,7 @@ export class RegistroPage implements OnInit, OnDestroy {
   ) {
     addIcons({
       arrowBackOutline,
+      arrowForwardOutline,
       personOutline,
       callOutline,
       mailOutline,

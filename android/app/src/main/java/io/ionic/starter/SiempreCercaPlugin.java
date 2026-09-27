@@ -5,6 +5,7 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.media.AudioAttributes;
 import android.net.Uri;
@@ -13,6 +14,9 @@ import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationManagerCompat;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -129,6 +133,148 @@ public class SiempreCercaPlugin extends Plugin {
     public void crearCanalSOS(PluginCall call) {
         crearCanales(getContext());
         call.resolve();
+    }
+
+    // =====================================================
+    // ESTADO REAL DE LAS NOTIFICACIONES
+    // =====================================================
+
+    /**
+     * Dice si las notificaciones están de verdad activas, canal por canal.
+     *
+     * Hace falta porque el permiso POST_NOTIFICATIONS y los canales son cosas
+     * distintas: el usuario puede dejar el permiso concedido y aun así apagar
+     * a mano el canal "Alertas SOS" en Ajustes. Con solo mirar
+     * checkPermissions() la app creed que tiene notificaciones y el SOS suena
+     * en silencio. Esto es exactamente el caso "creo que está todo bien pero no
+     * me avisa nada".
+     */
+    @PluginMethod
+    public void verificarNotificaciones(PluginCall call) {
+        Context contexto = getContext();
+
+        boolean habilitadas;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            NotificationManager nm = contexto.getSystemService(NotificationManager.class);
+            habilitadas = nm != null && nm.areNotificationsEnabled();
+        } else {
+            NotificationManagerCompat compat = NotificationManagerCompat.from(contexto);
+            habilitadas = compat.areNotificationsEnabled();
+        }
+
+        JSObject canales = new JSObject();
+        canales.put(CANAL_SOS_ID, canalActivo(contexto, CANAL_SOS_ID));
+        canales.put(CANAL_ZONA_ALERTA_ID, canalActivo(contexto, CANAL_ZONA_ALERTA_ID));
+        canales.put(CANAL_ZONA_ESTADO_ID, canalActivo(contexto, CANAL_ZONA_ESTADO_ID));
+        canales.put(CANAL_ALARMA_ID, canalActivo(contexto, CANAL_ALARMA_ID));
+
+        JSObject ret = new JSObject();
+        ret.put("habilitadas", habilitadas);
+        // Un canal todavía no creado se considera activo: se crea al primer uso
+        // y no debe reportarse como "apagado" (generaría una alerta falsa).
+        ret.put("sosActivo", canalActivo(contexto, CANAL_SOS_ID));
+        ret.put("zonaAlertaActivo", canalActivo(contexto, CANAL_ZONA_ALERTA_ID));
+        ret.put("zonaEstadoActivo", canalActivo(contexto, CANAL_ZONA_ESTADO_ID));
+        ret.put("alarmaActivo", canalActivo(contexto, CANAL_ALARMA_ID));
+        ret.put("canales", canales);
+        // Sin POST_NOTIFICATIONS no suena nada, aunque los canales estén bien.
+        ret.put("alertaFunciona", habilitadas && canalActivo(contexto, CANAL_SOS_ID));
+        call.resolve(ret);
+    }
+
+    /**
+     * Importancia real de un canal. null / IMPORTANCE_NONE = apagado.
+     * En Android < O no existen canales, así que se informa true.
+     */
+    private boolean canalActivo(Context contexto, String id) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true;
+        NotificationManager nm = contexto.getSystemService(NotificationManager.class);
+        if (nm == null) return false;
+        NotificationChannel canal = nm.getNotificationChannel(id);
+        if (canal == null) return true; // aún no creado: se creará al primer uso
+        return canal.getImportance() != NotificationManager.IMPORTANCE_NONE;
+    }
+
+    /** Abre los ajustes de notificaciones DE ESTA app, no los generales. */
+    /**
+     * Estado real de un permiso de Android, incluido si quedó bloqueado para
+     * siempre.
+     *
+     * Hace falta porque `checkPermissions()` de los plugins de Capacitor sólo
+     * dicen concedido / denegado. No dicen cuándo el usuario ya eligió "no
+     * volver a preguntar", y en ese caso pedir el permiso NO muestra nada: la
+     * app cree que el alta funcionó, falla en silencio y el usuario ve un
+     * interruptor que ya no se enciende nunca más.
+     *
+     * Se resuelve con `shouldShowRequestPermissionRationale`, que devuelve
+     * false tanto si nunca se pidió como si quedó bloqueado; por eso se
+     * combina con un registro de "ya lo pedimos".
+     */
+    @PluginMethod
+    public void estadoPermiso(PluginCall call) {
+        String permiso = call.getString("permiso", "");
+        if (permiso.isEmpty()) {
+            call.reject("Falta el permiso a consultar");
+            return;
+        }
+
+        Context contexto = getContext();
+        SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+
+        boolean concedido = Build.VERSION.SDK_INT < Build.VERSION_CODES.M
+                || contexto.checkSelfPermission(permiso) == PackageManager.PERMISSION_GRANTED;
+
+        boolean muestraDialogo = ActivityCompat.shouldShowRequestPermissionRationale(
+                getActivity(), permiso);
+
+        boolean yaPreguntado = prefs.getBoolean("preguntado_" + permiso, false);
+
+        JSObject ret = new JSObject();
+        ret.put("concedido", concedido);
+        ret.put("muestraDialogo", muestraDialogo);
+        ret.put("yaPreguntado", yaPreguntado);
+        // Sin diálogo Y ya preguntado = el usuario lo bloqueó para siempre.
+        ret.put("bloqueado", !concedido && !muestraDialogo && yaPreguntado);
+        // Un permiso que nunca se preguntó siempre se puede pedir.
+        ret.put("puedePedir", !concedido && (muestraDialogo || !yaPreguntado));
+        call.resolve(ret);
+    }
+
+    /** Deja constancia de que se mostró el diálogo de este permiso. */
+    @PluginMethod
+    public void marcarPermisoPreguntado(PluginCall call) {
+        String permiso = call.getString("permiso", "");
+        if (permiso.isEmpty()) {
+            call.reject("Falta el permiso");
+            return;
+        }
+
+        getContext()
+                .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean("preguntado_" + permiso, true)
+                .apply();
+
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void abrirAjustesNotificaciones(PluginCall call) {
+        try {
+            Intent intent = new Intent();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                intent.putExtra(Settings.EXTRA_APP_PACKAGE, getContext().getPackageName());
+            } else {
+                intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("No se pudieron abrir los ajustes de notificaciones", e);
+        }
     }
 
     // =====================================================

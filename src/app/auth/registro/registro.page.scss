@@ -1,10 +1,12 @@
 ion-content {
-  --background: #ffffff;
+  --background: var(--sc-bg);
 }
 
 .register-page {
   min-height: 100%;
-  padding: 0 18px;
+  padding: calc(env(safe-area-inset-top) + 8px) var(--sc-gap) calc(env(safe-area-inset-bottom) + var(--sc-gap-lg));
+  max-width: 480px;
+  margin: 0 auto;
   box-sizing: border-box;
 }
 
@@ -17,7 +19,7 @@ ion-content {
 }
 
 .back-button {
-  --color: #27323d;
+  --color: var(--sc-ink);
   --padding-start: 0;
   --padding-end: 0;
   margin: 0;
@@ -34,26 +36,84 @@ ion-content {
 ========================= */
 
 .register-header {
-  margin-top: 16px;
-  margin-bottom: 24px;
+  margin-top: var(--sc-gap-sm);
+  margin-bottom: var(--sc-gap);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.brand-mini {
+  margin-bottom: var(--sc-gap-sm);
+
+  img {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    box-shadow: var(--sc-shadow-sm);
+  }
 }
 
 .register-header h1 {
   margin: 0;
 
-  font-size: 25px;
-  font-weight: 700;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
 
-  color: #202a33;
+  color: var(--sc-ink);
 }
 
 .register-header p {
   margin: 3px 0 0;
 
-  font-size: 13px;
-  color: #667585;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--sc-primary);
 }
 
+/* =========================
+   INDICADOR DE PROGRESO
+========================= */
+
+.progreso {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--sc-gap);
+}
+
+.progreso-puntos {
+  display: flex;
+  gap: 6px;
+
+  span {
+    width: 28px;
+    height: 5px;
+    border-radius: var(--sc-radius-pill);
+    background: var(--sc-border);
+    transition: background 0.25s ease, width 0.25s ease;
+
+    &.activo {
+      background: var(--sc-primary);
+      width: 40px;
+    }
+
+    &.hecho {
+      background: var(--sc-primary-mid);
+    }
+  }
+}
+
+.progreso-texto {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--sc-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
 
 /* =========================
    FORMULARIO
@@ -64,9 +124,46 @@ ion-content {
 }
 
 .input-group {
-  margin-bottom: 12px;
+  margin-bottom: var(--sc-gap);
   display: flex;
   flex-direction: column;
+}
+
+.input-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sc-ink-2);
+  margin-bottom: 6px;
+  margin-left: 2px;
+}
+
+.field-help {
+  font-size: 11.5px;
+  color: var(--sc-ink-muted);
+  margin-top: 5px;
+  margin-left: 2px;
+  line-height: 1.4;
+}
+
+.separador {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-gap-sm);
+  margin: var(--sc-gap) 0;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--sc-border);
+  }
+
+  span {
+    font-size: 12px;
+    color: var(--sc-ink-muted);
+    font-weight: 600;
+  }
 }
 
 .register-input {
@@ -74,36 +171,36 @@ ion-content {
   height: 52px;
   margin-bottom: 0;
 
-  --background: #f1f5f8;
-  --border-color: #9fb4c8;
+  --background: var(--sc-surface-alt);
+  --border-color: var(--sc-border-strong);
   --border-width: 1.5px;
   --border-style: solid;
   --border-radius: 8px;
 
-  --color: #344454;
-  --placeholder-color: #68798a;
+  --color: var(--sc-ink);
+  --placeholder-color: var(--sc-ink-muted);
 
   font-size: 15px;
   transition: all 0.2s ease-in-out;
 }
 
 .register-input ion-icon {
-  color: #657789;
+  color: var(--sc-ink-muted);
   font-size: 21px;
 }
 
 /* Estado de error en input */
 .register-input.has-error {
-  --border-color: #e53935 !important;
-  --background: #fef2f2 !important;
+  --border-color: var(--sc-danger) !important;
+  --background: var(--sc-danger-soft) !important;
 }
 
 .register-input.has-error ion-icon {
-  color: #e53935 !important;
+  color: var(--sc-danger) !important;
 }
 
 .field-error {
-  color: #d32f2f;
+  color: var(--sc-danger-dark);
   font-size: 12px;
   font-weight: 600;
   margin-top: 4px;
@@ -126,7 +223,7 @@ ion-content {
   font-size: 14px;
   font-weight: 600;
 
-  color: #202a33;
+  color: var(--sc-ink);
 }
 
 .account-type h2 strong {
@@ -149,9 +246,9 @@ ion-content {
   border: none;
   border-radius: 25px;
 
-  background: #eee8fa;
+  background: var(--sc-primary-soft);
 
-  color: #644bb1;
+  color: var(--sc-primary);
 
   font-size: 14px;
   font-weight: 700;
@@ -161,8 +258,8 @@ ion-content {
 }
 
 .account-option.active {
-  background: #6545b4;
-  color: #ffffff;
+  background: var(--sc-primary);
+  color: var(--sc-surface);
   box-shadow: 0 4px 10px rgba(101, 69, 180, 0.25);
 }
 
@@ -175,34 +272,34 @@ ion-content {
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #fee2e2;
-  border-left: 4px solid #ef4444;
+  background-color: var(--sc-danger-soft);
+  border-left: 4px solid var(--sc-danger);
   border-radius: 8px;
   padding: 10px 14px;
   margin-top: 14px;
 }
 
 .alert-box-exito {
-  background-color: #dcfce7;
-  border-left-color: #22c55e;
+  background-color: var(--sc-ok-soft);
+  border-left-color: var(--sc-ok);
 }
 
 .alert-box-exito ion-icon {
-  color: #16a34a;
+  color: var(--sc-ok-dark);
 }
 
 .alert-box-exito .error-message {
-  color: #15803d;
+  color: var(--sc-ok-dark);
 }
 
 .alert-box ion-icon {
-  color: #dc2626;
+  color: var(--sc-danger);
   font-size: 20px;
   flex-shrink: 0;
 }
 
 .error-message {
-  color: #b91c1c;
+  color: var(--sc-danger-dark);
   font-size: 13px;
   font-weight: 600;
   margin: 0;
@@ -220,9 +317,9 @@ ion-content {
 
   margin: 20px 0 0;
 
-  --background: #7715c7;
-  --background-activated: #5f0fa3;
-  --background-hover: #8a2bd6;
+  --background: var(--sc-primary);
+  --background-activated: var(--sc-primary-dark);
+  --background-hover: var(--sc-primary-mid);
 
   --border-radius: 9px;
 
@@ -241,12 +338,12 @@ ion-content {
   height: 49px;
   margin-top: 12px;
 
-  --background: #ffffff;
-  --background-hover: #f7f9fa;
-  --background-activated: #edf2f7;
+  --background: var(--sc-surface);
+  --background-hover: var(--sc-surface-alt);
+  --background-activated: var(--sc-surface-alt);
 
-  --color: #3c4043;
-  --border-color: #dadce0;
+  --color: var(--sc-ink);
+  --border-color: var(--sc-border-strong);
   --border-width: 1.5px;
   --border-radius: 9px;
 
@@ -275,13 +372,13 @@ ion-content {
 
   font-size: 13px;
 
-  color: #667585;
+  color: var(--sc-ink-muted);
 }
 
 .login-link a {
   margin-left: 4px;
 
-  color: #6545b4;
+  color: var(--sc-primary);
 
   font-weight: 700;
 

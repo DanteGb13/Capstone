@@ -1,13 +1,88 @@
-.permisos-container {
-  padding: 16px;
+/*
+ * Pantalla de Permisos.
+ *
+ * Diseño de una tarjeta por permiso: ícono a la izquierda, nombre y descripción
+ * al centro, estado y acción a la derecha, y la explicación debajo.
+ *
+ * El estado al lado del nombre es lo que cambia respecto de antes: no se puede
+ * representar con un interruptor. Un permiso puede estar concedido, denied o
+ * "bloqueado" (cuando Android ya no vuelve a mostrar la ventana y hay que ir a
+ * los ajustes del sistema), y con un sí/no la app informaba "todo bien"
+ * teniendo, por ejemplo, el canal de alertas apagado: el SOS sonaba en
+ * silencio sin ninguna señal visible.
+ *
+ * Usa los tokens de src/theme/variables.scss.
+ */
+
+ion-content {
+  --background: var(--sc-bg);
 }
 
+.permisos-container {
+  padding: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+// ------------------------------------------------------------------ cajas de aviso
+
+.permiso-nota-recordatorios {
+  background: #f3e8ff;
+  border: 1px solid #dcc6f5;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+
+  ion-icon {
+    font-size: 20px;
+    color: var(--sc-primary);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  span {
+    font-size: 12.5px;
+    color: #4c1d95;
+    line-height: 1.5;
+  }
+}
+
+.permiso-aviso-faltan {
+  background: var(--sc-warn-soft);
+  border: 1px solid color-mix(in srgb, var(--sc-warn) 30%, transparent);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+
+  ion-icon {
+    font-size: 20px;
+    color: var(--sc-warn-dark);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  span {
+    font-size: 12.5px;
+    color: var(--sc-warn-dark);
+    line-height: 1.5;
+    font-weight: 600;
+  }
+}
+
+// ------------------------------------------------------------------ tarjeta
+
 .permiso-card {
-  background: white;
+  background: var(--sc-surface);
   border-radius: 16px;
   padding: 14px 16px;
   margin-bottom: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--sc-shadow-sm);
 }
 
 .permiso-header {
@@ -25,11 +100,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
 
-.permiso-icono ion-icon {
-  font-size: 20px;
-  color: #7715c7;
+  ion-icon {
+    font-size: 20px;
+    color: var(--sc-primary);
+  }
 }
 
 .permiso-info {
@@ -43,6 +118,39 @@
   font-size: 15px;
   font-weight: 600;
   color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+// Estado, al lado del nombre. Es texto y no color de fondo para no competir
+// con el ícono verde ni con la tarjeta.
+.permiso-estado {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--sc-ink-muted);
+  background: var(--sc-surface-alt);
+  border-radius: var(--sc-radius-pill);
+  padding: 2px 8px;
+  white-space: nowrap;
+
+  &[data-estado='ok'] {
+    color: var(--sc-ok-dark);
+    background: var(--sc-ok-soft);
+  }
+
+  &[data-estado='aviso'] {
+    color: var(--sc-warn-dark);
+    background: var(--sc-warn-soft);
+  }
+
+  &[data-estado='bloqueado'] {
+    color: var(--sc-danger-dark);
+    background: var(--sc-danger-soft);
+  }
 }
 
 .permiso-desc {
@@ -51,63 +159,107 @@
   margin-top: 2px;
 }
 
-ion-toggle {
-  --track-background: #e2e8f0;
-  --track-background-checked: #22c55e;
-  --thumb-background: white;
-  --thumb-background-checked: white;
-  min-width: 48px;
+.permiso-ok {
+  font-size: 26px;
+  color: var(--sc-ok);
   flex-shrink: 0;
 }
+
+.permiso-cargando {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+// ------------------------------------------------------------------ interruptor
+
+.permiso-toggle {
+  --track-background: #e2e8f0;
+  --track-background-checked: var(--sc-ok);
+  --handle-background: white;
+  --handle-background-checked: white;
+  --handle-width: 20px;
+  --handle-height: 20px;
+  min-width: 50px;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.permiso-btn {
+  flex-shrink: 0;
+  background: var(--sc-primary);
+  color: var(--sc-ink-invert);
+  border: none;
+  border-radius: var(--sc-radius-pill);
+  padding: 8px 15px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.1s ease;
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.permiso-btn-suave {
+  background: var(--sc-primary-soft);
+  color: var(--sc-primary-dark);
+}
+
+// ------------------------------------------------------------------ detalle
 
 .permiso-detalle {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid #f1f5f9;
-}
 
-.permiso-detalle p {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.5;
-  margin: 0;
-}
-
-.permiso-nota-recordatorios {
-  background: #f3e8ff;
-  border: 1px solid #dcc6f5;
-  border-radius: 14px;
-  padding: 12px 14px;
-  margin-bottom: 14px;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.permiso-nota-recordatorios ion-icon {
-  font-size: 20px;
-  color: #7715c7;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-.permiso-nota-recordatorios span {
-  font-size: 12.5px;
-  color: #4c1d95;
-  line-height: 1.5;
+  p {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.5;
+    margin: 0;
+  }
 }
 
 .permiso-nota {
-  margin-top: 6px !important;
-  font-weight: 600;
-  color: #7715c7 !important;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 8px 0 0;
+  color: var(--sc-warn-dark);
+  background: var(--sc-warn-soft);
+  border-radius: 10px;
+  padding: 8px 10px;
+
+  ion-icon {
+    font-size: 15px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
 }
+
+// ------------------------------------------------------------------ aviso flotante
 
 .toast {
   position: fixed;
   bottom: 24px;
   left: 16px;
   right: 16px;
+  max-width: 560px;
+  margin: 0 auto;
   background: #1e293b;
   color: white;
   padding: 14px 18px;
@@ -116,14 +268,15 @@ ion-toggle {
   align-items: center;
   gap: 10px;
   font-size: 13px;
+  line-height: 1.45;
   z-index: 9999;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   animation: slideUp 0.3s ease;
-}
 
-.toast ion-icon {
-  font-size: 18px;
-  flex-shrink: 0;
+  ion-icon {
+    font-size: 19px;
+    flex-shrink: 0;
+  }
 }
 
 @keyframes slideUp {
@@ -135,4 +288,93 @@ ion-toggle {
     transform: translateY(0);
     opacity: 1;
   }
+}
+
+// ------------------------------------------------------------------ diagnóstico
+// (oculto; ver mostrarDiagnostico en permisos.page.ts)
+
+.diag {
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: var(--sc-shadow-sm);
+}
+
+.diag-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.diag-titulo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sc-ink);
+}
+
+.diag-build {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--sc-ink-muted);
+  font-family: ui-monospace, monospace;
+}
+
+.diag-fila {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--sc-ink-2);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--sc-surface-alt);
+
+  ion-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+    color: var(--sc-danger);
+  }
+
+  strong {
+    margin-left: auto;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--sc-danger-dark);
+  }
+
+  &[data-ok='true'] {
+    ion-icon { color: var(--sc-ok); }
+    strong { color: var(--sc-ok-dark); }
+  }
+
+  ion-spinner {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+.diag-msj {
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 10px 0 0;
+  color: var(--sc-danger-dark);
+  background: var(--sc-danger-soft);
+  border-radius: 10px;
+  padding: 8px 10px;
+
+  &[data-ok='true'] {
+    color: var(--sc-ok-dark);
+    background: var(--sc-ok-soft);
+  }
+}
+
+.diag-acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
 }

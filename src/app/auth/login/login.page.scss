@@ -1,218 +1,279 @@
+/*
+ * Pantalla de inicio de sesión.
+ *
+ * Usa los tokens de src/theme/variables.scss. Antes esta pantalla usaba
+ * #6750b8 (gris azulado) mientras el resto de la app usaba #7715c7: era la
+ * pantalla más desviada de la paleta, y ahora comparte los tokens con el
+ * panel.
+ */
+
 ion-content {
-  --background: #ffffff;
+  --background: var(--sc-bg);
 }
 
-/* Pantalla de carga mientras se verifica auto-login */
-.loading-container {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 0 20px;
-}
-
-.verifying-text {
-  margin-top: 14px;
-  font-size: 14px;
-  color: #64748b;
-  font-weight: 600;
+:host {
+  display: block;
 }
 
 .login-container {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  padding: 0 24px;
+  padding: calc(var(--sc-gap-lg) + env(safe-area-inset-top)) var(--sc-gap-lg)
+           calc(var(--sc-gap-lg) + env(safe-area-inset-bottom));
   box-sizing: border-box;
+  max-width: 480px;
+  margin: 0 auto;
 }
 
-/* Logo + nombre */
+// ------------------------------------------------------------------ marca
+
 .brand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 28px;
+  gap: 2px;
+  margin-bottom: var(--sc-gap-xl);
 }
 
-.brand-icon {
-  font-size: 34px;
-  color: #6750b8;
-  margin-right: 8px;
+.brand-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  box-shadow: var(--sc-shadow-lg);
+  margin-bottom: var(--sc-gap-sm);
 }
 
 .brand-name {
-  font-size: 30px;
-  font-weight: 700;
-  color: #111111;
+  font-size: 27px;
+  font-weight: 800;
+  color: var(--sc-ink);
+  letter-spacing: -0.4px;
+  line-height: 1.1;
 }
 
-/* Título */
-h1 {
-  margin: 0 0 21px 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #111111;
+.brand-name-lite {
+  color: var(--sc-primary);
+}
+
+.brand-claim {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--sc-ink-muted);
   text-align: center;
 }
 
-/* Formulario */
+// ------------------------------------------------------------------ título
+
+h1 {
+  margin: 0 0 var(--sc-gap);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--sc-ink);
+  text-align: center;
+}
+
+// ------------------------------------------------------------------ formulario
+
 .login-form {
   width: 100%;
-  max-width: 400px;
 }
 
 .input-group {
-  margin-bottom: 12px;
+  margin-bottom: var(--sc-gap);
   display: flex;
   flex-direction: column;
 }
 
+.input-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sc-ink-2);
+  margin-bottom: 6px;
+  margin-left: 2px;
+}
+
+.input-label-fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sc-gap-xs);
+
+  .input-label {
+    margin-bottom: 6px;
+  }
+}
+
+.label-link {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--sc-primary);
+  text-decoration: none;
+  margin-bottom: 6px;
+}
+
 .login-input {
   width: 100%;
-  margin-bottom: 0;
+  margin: 0;
 
-  --background: #edf2f6;
-  --border-color: #a8bacb;
-  --border-radius: 8px;
+  --background: var(--sc-surface);
+  --border-color: var(--sc-border-strong);
+  --border-radius: var(--sc-radius);
   --border-width: 1.5px;
   --border-style: solid;
-  --color: #333333;
-  --placeholder-color: #6f7d8b;
+  --color: var(--sc-ink);
+  --placeholder-color: var(--sc-ink-muted);
+  --placeholder-opacity: 1;
+  --highlight-color-focused: var(--sc-primary);
+  --highlight-color-valid: var(--sc-primary);
 
-  font-size: 14px;
-  transition: all 0.2s ease-in-out;
+  font-size: 15px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .login-input ion-icon {
-  color: #6750b8;
-  font-size: 20px;
-  margin-right: 6px;
+  color: var(--sc-ink-muted);
+  font-size: 19px;
+  margin-right: 8px;
 }
 
-/* Estado de error en inputs */
+// El foco se marca con un halo, no sólo con el cambio de color del borde:
+// ayuda a quien usa lector de pantalla o tiene baja visión.
+.login-input:focus-within {
+  box-shadow: 0 0 0 3px rgba(119, 21, 199, 0.16);
+}
+
 .login-input.has-error {
-  --border-color: #e53935 !important;
-  --background: #fef2f2 !important;
+  --border-color: var(--sc-danger);
+  --background: var(--sc-danger-soft);
 }
 
 .login-input.has-error ion-icon {
-  color: #e53935 !important;
+  color: var(--sc-danger);
 }
 
 .field-error {
-  color: #d32f2f;
+  color: var(--sc-danger-dark);
   font-size: 12px;
   font-weight: 600;
-  margin-top: 4px;
-  margin-left: 6px;
+  margin-top: 5px;
+  margin-left: 2px;
   display: block;
 }
 
-/* Alerta de Error Destacada */
+// ------------------------------------------------------------------ alerta
+
 .alert-box {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: #fee2e2;
-  border-left: 4px solid #ef4444;
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-top: 8px;
-  margin-bottom: 12px;
-}
+  align-items: flex-start;
+  gap: 9px;
+  background: var(--sc-danger-soft);
+  border: 1px solid color-mix(in srgb, var(--sc-danger) 28%, transparent);
+  border-radius: var(--sc-radius);
+  padding: 11px 13px;
+  margin-bottom: var(--sc-gap);
 
-.alert-box ion-icon {
-  color: #dc2626;
-  font-size: 20px;
-  flex-shrink: 0;
+  ion-icon {
+    color: var(--sc-danger);
+    font-size: 19px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
 }
 
 .error-message {
-  color: #b91c1c;
+  color: var(--sc-danger-dark);
   font-size: 13px;
   font-weight: 600;
   margin: 0;
   text-align: left;
+  line-height: 1.45;
 }
 
-/* Botón Principal */
+// ------------------------------------------------------------------ botones
+
 .login-button {
   width: 100%;
-  height: 48px;
-  margin-top: 8px;
+  height: 52px;
+  margin: 0;
 
-  --background: #6750b8;
-  --background-activated: #5843a2;
-  --background-hover: #5f49aa;
+  --background: var(--sc-primary);
+  --background-hover: var(--sc-primary-dark);
+  --background-activated: var(--sc-primary-dark);
+  --border-radius: var(--sc-radius-lg);
+  --box-shadow: var(--sc-shadow);
 
-  --border-radius: 25px;
-
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   text-transform: none;
+
+  ion-spinner {
+    width: 20px;
+    height: 20px;
+  }
 }
 
-/* Botón Google */
+.separador {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-gap-sm);
+  margin: var(--sc-gap) 0;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--sc-border);
+  }
+
+  span {
+    font-size: 12px;
+    color: var(--sc-ink-muted);
+    font-weight: 600;
+  }
+}
+
 .google-button {
   width: 100%;
-  height: 48px;
-  margin-top: 12px;
+  height: 50px;
+  margin: 0;
 
-  --background: #ffffff;
-  --background-hover: #f7f9fa;
-  --background-activated: #edf2f7;
+  --background: var(--sc-surface);
+  --background-hover: var(--sc-surface-alt);
+  --background-activated: var(--sc-surface-alt);
 
-  --color: #3c4043;
-  --border-color: #dadce0;
+  --color: var(--sc-ink);
+  --border-color: var(--sc-border-strong);
   --border-width: 1.5px;
-  --border-radius: 25px;
+  --border-radius: var(--sc-radius-lg);
 
   font-size: 14px;
   font-weight: 600;
   text-transform: none;
-  box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08);
-  transition: all 0.2s ease;
+  box-shadow: var(--sc-shadow-sm);
+  transition: all 0.15s ease;
+
+  .google-icon {
+    font-size: 19px;
+    color: #ea4335;
+    margin-right: 8px;
+  }
 }
 
-.google-button .google-icon {
-  font-size: 20px;
-  color: #ea4335;
-  margin-right: 8px;
-}
+// ------------------------------------------------------------------ registro
 
-/* Registro */
 .register-container {
-  margin-top: 28px;
-  margin-bottom: 20px;
-
-  font-size: 13px;
+  margin-top: var(--sc-gap-xl);
   text-align: center;
-  color: #6750b8;
-  font-weight: 600;
-}
+  font-size: 13.5px;
+  color: var(--sc-ink-2);
 
-.register-container a {
-  color: #6750b8;
-  font-weight: 700;
-  text-decoration: none;
-  margin-left: 4px;
-  cursor: pointer;
-}
-
-/* Recuperación de contraseña */
-.forgot-password-container {
-  margin-top: 0px;
-  margin-bottom: 25px;
-
-  font-size: 13px;
-  text-align: center;
-}
-
-.forgot-password-container a {
-  color: #6750b8;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
+  a {
+    color: var(--sc-primary);
+    font-weight: 700;
+    text-decoration: none;
+    margin-left: 4px;
+  }
 }

@@ -1,2 +1,219 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+// =============================================================================
+// SISTEMA DE DISEÑO - SiempreCerca
+// =============================================================================
+// Tokens extraídos de los colores que la app YA usaba (863 ocurrencias en 39
+// archivos) y del gradiente real del ícono de la app.
+//
+// Regla de este archivo: un token nuevo no reemplaza a un color hardcodeado de
+// golpe. Se agregan los equivalentes de los 12 colores más repetidos y cada
+// pantalla se migra en una pasada propia y verificable.
+//
+// El gradiente de marca sale de resources/icon.png muestreado píxel a píxel:
+// el ícono es un cuadrado morado con el corazón y las figuras recortados
+// (transparentes), no blancos. Por eso el logo dentro de la app siempre necesita
+// su fondo morado: sin él, el corazón no se ve.
+// =============================================================================
+
+:root {
+  // ===========================================================================
+  // MARCA
+  // ===========================================================================
+
+  // Morado funcional: botones, enlaces, elementos accionables.
+  // Contraste sobre blanco 7.77:1 (WCAG AAA).
+  --sc-primary: #7715c7;
+  // Tinta del primario: texto e íconos sobre fondos claros morados.
+  --sc-primary-dark: #5a0f96;
+  // Tinte del primario: fondos suaves, chips, estados selected.
+  --sc-primary-soft: #ede9fe;
+  // Medio: bordes y separadores con identidad.
+  --sc-primary-mid: #9c3ded;
+  // Primario sobre blanco puro (bordes de botón outline).
+  --sc-primary-on-light: #7715c7;
+
+  // Gradiente de marca, muestreado del ícono de la app. Es casi vertical:
+  // cae ~18 de luminancia de arriba a abajo y solo ~3 de izquierda a derecha,
+  // por eso el ángulo es 168deg y no 135deg.
+  --sc-brand-gradient: linear-gradient(168deg, #813edc 0%, #7734d9 50%, #6c2dd4 100%);
+  --sc-brand-1: #813edc;
+  --sc-brand-2: #7734d9;
+  --sc-brand-3: #6c2dd4;
+  // Morado legible de marca: textos sobre blanco (6.6:1, AAA).
+  --sc-brand-ink: #7332d8;
+
+  // ===========================================================================
+  // NEUTRALES
+  // ===========================================================================
+
+  --sc-bg: #f8f7fc;          // Fondo de página
+  --sc-surface: #ffffff;     // Tarjetas, hojas, campos
+  --sc-surface-alt: #f1effa; // Fill sutil, filas alternadas
+  --sc-border: #e2ddf2;      // Bordes suaves
+  --sc-border-strong: #c9bfe6;
+
+  --sc-ink: #1a1d26;         // Texto principal
+  --sc-ink-2: #443c56;       // Texto secundario
+  --sc-ink-muted: #6b6480;   // Texto terciario, placeholders
+  --sc-ink-invert: #ffffff;
+
+  // ===========================================================================
+  // SEMÁNTICOS
+  // ===========================================================================
+
+  --sc-ok: #22a447;          // Verde: dentro de zona, en línea, confirmado
+  --sc-ok-dark: #1b8a3a;
+  --sc-ok-soft: #e6f7ec;
+
+  --sc-danger: #dc2626;      // Rojo: SOS, fuera de zona, error
+  --sc-danger-dark: #b91c1c;
+  --sc-danger-soft: #fdeaea;
+
+  --sc-warn: #e07b00;        // Ámbar: permisos incompletos, avisos
+  --sc-warn-dark: #b86300;
+  --sc-warn-soft: #fdf2e0;
+
+  --sc-info: #2563eb;
+  --sc-info-soft: #e8effd;
+
+  // ===========================================================================
+  // ESTADO (los toggles de Ajustes > Permisos se leen de acá)
+  // ===========================================================================
+
+  --sc-on: #22a447;
+  --sc-off: #9ca3af;
+
+  // ===========================================================================
+  // RADIOS, SOMBRAS Y ESPACIADO
+  // ===========================================================================
+
+  --sc-radius-sm: 10px;
+  --sc-radius: 14px;
+  --sc-radius-lg: 20px;
+  --sc-radius-xl: 28px;
+  --sc-radius-pill: 999px;
+
+  --sc-shadow-sm: 0 1px 3px rgba(26, 29, 38, 0.08);
+  --sc-shadow: 0 4px 14px rgba(119, 21, 199, 0.1);
+  --sc-shadow-lg: 0 10px 30px rgba(26, 29, 38, 0.14);
+
+  --sc-gap-xs: 6px;
+  --sc-gap-sm: 10px;
+  --sc-gap: 16px;
+  --sc-gap-lg: 22px;
+  --sc-gap-xl: 30px;
+
+  // ===========================================================================
+  // ACCESIBILIDAD
+  // ===========================================================================
+
+  // Contraste mínimo AA para texto normal. Se usa en validaciones de color.
+  --sc-min-contrast: 4.5;
+
+  --sc-focus-ring: 0 0 0 3px rgba(119, 21, 199, 0.35);
+}
+
+// -----------------------------------------------------------------------------
+// Mapeo a las variables de Ionic, para que los componentes nativos (alert,
+// toast, modal, input) hereden la marca sin tocarlos uno por uno.
+// -----------------------------------------------------------------------------
+:root {
+  --ion-color-primary: #7715c7;
+  --ion-color-primary-rgb: 119, 21, 199;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #6813b1;
+  --ion-color-primary-tint: #7d2ccc;
+
+  --ion-color-danger: #dc2626;
+  --ion-color-danger-rgb: 220, 38, 38;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #c22121;
+  --ion-color-danger-tint: #e03c3c;
+
+  --ion-color-success: #22a447;
+  --ion-color-success-rgb: 34, 164, 71;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #1e9040;
+  --ion-color-success-tint: #38ac58;
+
+  --ion-color-warning: #e07b00;
+  --ion-color-warning-rgb: 224, 123, 0;
+  --ion-color-warning-contrast: #ffffff;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #c56c00;
+  --ion-color-warning-tint: #e3881a;
+
+  --ion-color-medium: #6b6480;
+  --ion-color-medium-rgb: 107, 100, 128;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #5e5870;
+  --ion-color-medium-tint: #79738c;
+
+  --ion-color-light: #f1effa;
+  --ion-color-light-rgb: 241, 239, 250;
+  --ion-color-light-contrast: #1a1d26;
+  --ion-color-light-contrast-rgb: 26, 29, 38;
+  --ion-color-light-shade: #d4d1dd;
+  --ion-color-light-tint: #f2f0fb;
+
+  --ion-color-dark: #1a1d26;
+  --ion-color-dark-rgb: 26, 29, 38;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #171921;
+  --ion-color-dark-tint: #31343b;
+
+  --ion-background-color: #f8f7fc;
+  --ion-text-color: #1a1d26;
+  --ion-toolbar-background: #ffffff;
+  --ion-item-background: #ffffff;
+}
+
+// -----------------------------------------------------------------------------
+// Utilidades de marca reutilizables
+// -----------------------------------------------------------------------------
+
+// Fondo de marca: el corazón del logo es un recorte transparente, así que
+// sin este fondo la figura desaparece.
+.sc-marca {
+  background: var(--sc-brand-gradient);
+}
+
+.sc-marca-ink {
+  color: var(--sc-brand-ink);
+}
+
+// Foco visible para navegación por teclado y lectores de pantalla.
+.sc-focusable:focus-visible,
+.sc-focusable:focus {
+  outline: none;
+  box-shadow: var(--sc-focus-ring);
+}
+
+// Sólo para lectores de pantalla.
+.sc-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Respetar la preferencia de menos movimiento.
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

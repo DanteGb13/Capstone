@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Colores de la marca en el lado nativo.
+
+    Son los mismos valores que los tokens de src/theme/variables.scss, y ambos
+    salen del ícono de la app (resources/marca-original.png), muestreado
+    píxel a píxel. Si se cambia el ícono, hay que regenerar los assets con
+    `node scripts/generar-marca.mjs` y actualizar estos valores.
+-->
+<resources>
+
+    <!-- Morado funcional: botones y barras. Contraste 7.77:1 sobre blanco. -->
+    <color name="colorPrimary">#7715c7</color>
+    <color name="colorPrimaryDark">#5a0f96</color>
+    <color name="colorAccent">#9c3ded</color>
+
+    <!--
+        Morado de marca, para fondos (pantalla de arranque, barra de estado).
+        Es el punto medio del gradiente del ícono.
+    -->
+    <color name="brandMorado">#7734d9</color>
+    <color name="brandMoradoClaro">#813edc</color>
+    <color name="brandMoradoOscuro">#6c2dd4</color>
+
+    <!-- Fondo de la app mientras carga. -->
+    <color name="appBackground">#f8f7fc</color>
+
+</resources>

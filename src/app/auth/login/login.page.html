@@ -2,23 +2,35 @@
 
   <div class="login-container">
 
-    <!-- Logo y nombre -->
+    <!--
+      Marca.
+
+      El logo es el mismo archivo que el ícono de la app (assets/logo/logo-256.png,
+      generado con scripts/generar-marca.mjs desde resources/marca-original.png).
+      Antes se usaba un ion-icon "people-outline" genérico, que no tenía nada que
+      ver con el ícono que la persona ve en su teléfono.
+    -->
     <div class="brand">
-      <ion-icon name="people-outline" class="brand-icon"></ion-icon>
-      <span class="brand-name">Siempre Cerca</span>
+      <img src="assets/logo/logo-256.png" alt="" class="brand-logo" width="88" height="88" />
+      <span class="brand-name">Siempre<span class="brand-name-lite">Cerca</span></span>
+      <p class="brand-claim">Tu familia te cuida, estés donde estés</p>
     </div>
 
     <!-- Título -->
-    <h1>Iniciar Sesión</h1>
+    <h1>Iniciar sesión</h1>
 
     <!-- Formulario -->
     <div class="login-form">
 
       <!-- Correo -->
       <div class="input-group">
+        <label class="input-label" for="campo-correo">Correo electrónico</label>
         <ion-input
+          id="campo-correo"
           type="email"
-          placeholder="Correo electrónico"
+          inputmode="email"
+          autocomplete="email"
+          placeholder="tucorreo@ejemplo.cl"
           fill="outline"
           class="login-input"
           [class.has-error]="errores.correo"
@@ -28,15 +40,21 @@
           <ion-icon slot="start" name="mail-outline"></ion-icon>
         </ion-input>
         @if (errores.correo) {
-          <span class="field-error">{{ errores.correo }}</span>
+          <span class="field-error" role="alert">{{ errores.correo }}</span>
         }
       </div>
 
       <!-- Contraseña -->
       <div class="input-group">
+        <div class="input-label-fila">
+          <label class="input-label" for="campo-contrasena">Contraseña</label>
+          <a [routerLink]="['/recuperar-contrasena']" class="label-link">¿La olvidaste?</a>
+        </div>
         <ion-input
+          id="campo-contrasena"
           type="password"
-          placeholder="Contraseña"
+          autocomplete="current-password"
+          placeholder="Tu contraseña"
           fill="outline"
           class="login-input"
           [class.has-error]="errores.contrasena"
@@ -46,17 +64,15 @@
           <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
         </ion-input>
         @if (errores.contrasena) {
-          <span class="field-error">{{ errores.contrasena }}</span>
+          <span class="field-error" role="alert">{{ errores.contrasena }}</span>
         }
       </div>
 
       <!-- Alerta de Error Destacada -->
       @if (mensajeError) {
-        <div class="alert-box">
+        <div class="alert-box" role="alert">
           <ion-icon name="alert-circle-outline"></ion-icon>
-          <p class="error-message">
-            {{ mensajeError }}
-          </p>
+          <p class="error-message">{{ mensajeError }}</p>
         </div>
       }
 
@@ -66,8 +82,15 @@
         class="login-button"
         (click)="ingresar()"
         [disabled]="cargando">
-        {{ cargando ? 'Ingresando...' : 'Ingresar' }}
+        @if (cargando) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+          Ingresar
+        }
       </ion-button>
+
+      <!-- Separador -->
+      <div class="separador"><span>o</span></div>
 
       <!-- Login con Google -->
       <ion-button
@@ -88,13 +111,8 @@
 
     <!-- Registro -->
     <div class="register-container">
-      <span>¿No tienes cuenta?</span>
-      <a [routerLink]="['/registro']">Regístrate aquí</a>
-    </div>
-
-    <!-- Recuperación de contraseña -->
-    <div class="forgot-password-container">
-      <a [routerLink]="['/recuperar-contrasena']">¿Olvidaste tu contraseña?</a>
+      <span>¿Todavía no tienes cuenta?</span>
+      <a [routerLink]="['/registro']">Crear cuenta</a>
     </div>
 
   </div>

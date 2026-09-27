@@ -1,0 +1,102 @@
+<ion-content [fullscreen]="true">
+
+  <div class="onboarding">
+
+    @if (cargando) {
+      <div class="cargando">
+        <img src="assets/logo/logo-128.png" alt="SiempreCerca" class="logo-spin" />
+        <p>Comprobando tus permisos...</p>
+      </div>
+    } @else if (!actual) {
+      <div class="cargando">
+        <img src="assets/logo/logo-128.png" alt="SiempreCerca" class="logo-spin" />
+        <p>Todo listo. Te llevamos a tu panel.</p>
+      </div>
+    } @else {
+
+      <!-- Encabezado -->
+      <header class="onboarding-head">
+        <img src="assets/logo/logo-64.png" alt="" class="logo" />
+        <div class="progreso-texto">
+          Permiso {{ hechos }} de {{ total }}
+        </div>
+        <ion-progress-bar [value]="progreso" class="progreso"></ion-progress-bar>
+      </header>
+
+      <!-- Permiso actual -->
+      <main class="onboarding-main">
+        <div class="icono-grande">
+          <ion-icon [name]="actual.icono"></ion-icon>
+        </div>
+
+        <h1>{{ actual.nombre }}</h1>
+        <p class="para-que">{{ actual.paraQue }}</p>
+
+        @if (actual.estado === 'bloqueado') {
+          <div class="aviso-bloqueado">
+            <ion-icon name="lock-closed-outline"></ion-icon>
+            <div>
+              <strong>Ya no podemos mostrar la ventana</strong>
+              <span>
+                Activaste la opción de "no volver a preguntar". Tienes que
+                habilitarlo en los ajustes de tu teléfono.
+              </span>
+            </div>
+          </div>
+        }
+
+        @if (actual.nota) {
+          <div class="aviso-nota">
+            <ion-icon name="information-circle-outline"></ion-icon>
+            <span>{{ actual.nota }}</span>
+          </div>
+        }
+      </main>
+
+      <!-- Acciones -->
+      <footer class="onboarding-foot">
+        <ion-button
+          expand="block"
+          class="btn-primario"
+          [disabled]="procesando"
+          (click)="actual.estado === 'bloqueado' ? irAAjustes() : activar()">
+          @if (procesando) {
+            <ion-spinner name="crescent"></ion-spinner>
+          } @else {
+            {{ actual.estado === 'bloqueado' ? 'Ir a los ajustes' : 'Activar ' + actual.nombre.toLowerCase() }}
+          }
+        </ion-button>
+
+        <ion-button
+          expand="block"
+          fill="clear"
+          class="btn-despues"
+          [disabled]="procesando"
+          (click)="despues()">
+          Ahora no
+        </ion-button>
+
+        <button type="button" class="saltar" (click)="saltar()">
+          Saltar y usar la app igual
+        </button>
+      </footer>
+
+      <!-- Lo que ya está listo -->
+      @if (pendientes.length > 1) {
+        <ul class="restantes">
+          @for (p of pendientes; track p.id) {
+            <li [attr.data-actual]="p.id === actual.id" [attr.data-estado]="estadoDe(p)">
+              <ion-icon
+                [name]="p.id === actual.id
+                  ? 'ellipse'
+                  : (estadoDe(p) === 'ok' ? 'checkmark-circle' : 'ellipse-outline')">
+              </ion-icon>
+              {{ p.nombre }}
+            </li>
+          }
+        </ul>
+      }
+    }
+
+  </div>
+</ion-content>

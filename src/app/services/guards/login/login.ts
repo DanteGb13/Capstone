@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
 import { NavegacionRolService } from '../../navegacion-rol/navegacion-rol';
 import { PushNotificationService } from '../../Backend/push-notification/push-notification';
+import { PerfilCacheService } from '../../perfil-cache/perfil-cache.service';
 
 @Injectable({
   providedIn: 'root'
@@ -11,7 +12,8 @@ export class Login {
   constructor(
     private supabaseService: SupabaseService,
     private navRol: NavegacionRolService,
-    private pushService: PushNotificationService
+    private pushService: PushNotificationService,
+    private perfilCache: PerfilCacheService
   ) {}
 
 
@@ -263,8 +265,21 @@ export class Login {
       this.supabaseService.getClient();
 
     // El token del dispositivo se suelta antes de cerrar sesión: si no, la
-    // cuenta queda suscrita a las alertas en este celular
-    await this.pushService.eliminarToken();
+    // cuenta queda suscrita a las alertas en este celular.
+    //
+    // Va en su propio try a propósito: si la limpieza falla por falta de red,
+    // igual hay que cerrar sesión. Dejarla pegada por un error de red es
+    // justamente lo que hace que después sigan llegando avisos de la cuenta
+    // anterior.
+    try {
+      await this.pushService.eliminarToken();
+    } catch (e) {
+      console.warn('No se pudo liberar el token de esta cuenta:', e);
+    }
+
+    // Los datos en caché son de la cuenta que sale: si no se borran, el
+    // siguiente usuario de este teléfono vería su nombre y su foto.
+    this.perfilCache.limpiar();
 
     const { error } =
       await supabase.auth.signOut();

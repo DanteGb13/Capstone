@@ -12,7 +12,9 @@ import {
   IonModal,
   IonButtons,
   IonInput,
-  IonIcon
+  IonIcon,
+  IonRefresher,
+  IonRefresherContent
 } from '@ionic/angular';
 
 import { addIcons } from 'ionicons';
@@ -24,6 +26,7 @@ import { Capacitor } from '@capacitor/core';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
 import { FooterComponent } from '../../../components/footer/footer.component';
+import { AvisoPermisosComponent } from '../../../components/aviso-permisos/aviso-permisos.component';
 import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
 import {
   PresenciaService,
@@ -31,6 +34,9 @@ import {
 } from '../../../services/Backend/presencia/presencia';
 import { SupabaseService } from '../../../services/supabase/supabase';
 import { BarcodeScanner, BarcodeFormat } from '@capacitor-mlkit/barcode-scanning';
+import { PerfilCacheService } from '../../../services/perfil-cache/perfil-cache.service';
+import { PermisosService } from '../../../services/permisos/permisos.service';
+import { RealtimeService } from '../../../services/realtime/realtime.service';
 
 
 @Component({
@@ -47,9 +53,12 @@ import { BarcodeScanner, BarcodeFormat } from '@capacitor-mlkit/barcode-scanning
     IonButtons,
     IonInput,
     IonIcon,
+    IonRefresher,
+    IonRefresherContent,
     CommonModule,
     FormsModule,
     FooterComponent,
+    AvisoPermisosComponent,
     EstadoConexionComponent
   ]
 })
@@ -81,6 +90,27 @@ export class CuidadorPage implements OnInit, OnDestroy {
 
   private inicializado = false;
 
+  /** Cuánto se espera entre sondeos cuando Realtime no está delivering. */
+  private readonly INTERVALO_SONDEO_MS = 30000;
+
+  /**
+   * Con Realtime activo el sondeo queda como red de seguridad (por si el
+   * WebSocket se cae) y no como el mecanismo principal.
+   */
+  private readonly INTERVALO_SONDEO_CON_REALTIME_MS = 120000;
+
+  private soltarRealtime: (() => void) | null = null;
+
+  // =====================================================
+  // AVISO DE PERMISOS
+  // =====================================================
+
+  avisoPermisos: { titulo: string; detalle: string } | null = null;
+
+  avisoPermisosUrgente = false;
+
+  avisoPermisosOculto = false;
+
 
   // =====================================================
   // MODAL DE VINCULACIÓN
@@ -108,7 +138,10 @@ export class CuidadorPage implements OnInit, OnDestroy {
     private router: Router,
     private pushService: PushNotificationService,
     private supabaseService: SupabaseService,
-    private presenciaService: PresenciaService
+    private presenciaService: PresenciaService,
+    private perfilCache: PerfilCacheService,
+    private permisosService: PermisosService,
+    private realtimeService: RealtimeService
   ) {
     addIcons(icons);
   }
@@ -119,18 +152,13 @@ export class CuidadorPage implements OnInit, OnDestroy {
   // =====================================================
 
   async ngOnInit() {
-    this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
-    await this.cargarFotoPerfil();
+    // El nombre y la foto salen de la caché: la pantalla se ve de inmediato en
+    // vez de esperar dos viajes a la red (que era lo que pasaba con getUser()).
+    void this.cargarPerfilRapido();
 
     await this.cargarAdultos();
 
     this.changeDetectorRef.detectChanges();
-
-    // Refrescar cada 30 segundos
-    this.refreshInterval = setInterval(async () => {
-      await this.cargarAdultos();
-      this.changeDetectorRef.detectChanges();
-    }, 30000);
 
     // Crear canal SOS + push después de cargar la página (no bloquear)
     setTimeout(() => {
@@ -140,7 +168,128 @@ export class CuidadorPage implements OnInit, OnDestroy {
       }
     }, 2000);
 
+    // Vinculaciones en vivo + aviso de permisos.
+    await this.activarRealtime();
+    await this.revisarPermisos();
+
     this.inicializado = true;
+  }
+
+  // =====================================================
+  // PERFIL RÁPIDO
+  // =====================================================
+
+  private async cargarPerfilRapido(): Promise<void> {
+    try {
+      const perfil = await this.perfilCache.perfil();
+      if (!perfil) return;
+
+      this.nombreUsuario = perfil.nombre || perfil.nombreCompleto || '';
+      this.changeDetectorRef.detectChanges();
+
+      const foto = await this.perfilCache.cargarFoto(perfil.id);
+      if (foto) {
+        this.fotoUrl = foto;
+        this.changeDetectorRef.detectChanges();
+      }
+    } catch (e) {
+      console.warn('No se pudo cargar el perfil rápido:', e);
+      // Sin caché (primera vez): se pide a la base.
+      this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
+      await this.cargarFotoPerfil();
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  // =====================================================
+  // REALTIME DE VINCULACIONES
+  // =====================================================
+
+  /**
+   * Para el cuidador esto es lo más importante: si vincula a un adulto y ese
+   * adulto acepta, la tarjeta tiene que aparecer al instante. Antes había que
+   * esperar hasta 30 s y sólo si la pantalla estaba abierta.
+   */
+  private async activarRealtime(): Promise<void> {
+    try {
+      const idUsuario = await this.perfilCache.idUsuario();
+      if (!idUsuario) {
+        this.programarSondeo();
+        return;
+      }
+
+      await this.realtimeService.suscribir(idUsuario);
+
+      this.soltarRealtime = this.realtimeService.escuchar((evento) => {
+        console.log('[Panel cuidador] cambio de vinculación:', evento.tabla, evento.operacion);
+        void this.cargarAdultos();
+        void this.actualizarResumenConexion();
+      });
+
+      await this.realtimeService.comprobar();
+      if (!this.realtimeService.disponible) {
+        console.warn(
+          '[Panel cuidador] Realtime no disponible, se sigue con el sondeo de 30 s. Motivo:',
+          this.realtimeService.motivo
+        );
+      }
+
+      this.programarSondeo();
+    } catch (e) {
+      console.warn('No se pudo activar Realtime:', e);
+      this.programarSondeo();
+    }
+  }
+
+  private programarSondeo(): void {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+      this.refreshInterval = null;
+    }
+
+    // Con Realtime activo el sondeo pasa a red de seguridad, no a protagonista.
+    const cada = this.realtimeService.disponible
+      ? this.INTERVALO_SONDEO_CON_REALTIME_MS
+      : this.INTERVALO_SONDEO_MS;
+
+    this.refreshInterval = setInterval(async () => {
+      await this.cargarAdultos();
+      this.changeDetectorRef.detectChanges();
+    }, cada);
+  }
+
+  /** Refresco manual (tirar hacia abajo). */
+  async refrescar(event?: any): Promise<void> {
+    await this.cargarAdultos();
+    await this.actualizarResumenConexion();
+    this.changeDetectorRef.detectChanges();
+    event?.target?.complete();
+  }
+
+  // =====================================================
+  // PERMISOS
+  // =====================================================
+
+  /**
+   * Para el cuidador el permiso crítico por excelencia son las
+   * notificaciones: sin ellas nunca se entera de un SOS aunque todo lo demás
+   * esté bien. El aviso sale en rojo cuando ese es el que falta.
+   */
+  private async revisarPermisos(): Promise<void> {
+    if (this.avisoPermisosOculto) return;
+
+    try {
+      const resumen = await this.permisosService.resumenProblemas();
+      this.avisoPermisos = resumen;
+      this.avisoPermisosUrgente = !!resumen?.ids.includes('notificaciones');
+    } catch (e) {
+      console.warn('No se pudieron revisar los permisos:', e);
+    }
+  }
+
+  async corregirPermisos(): Promise<void> {
+    await this.router.navigate(['/permisos']);
+    this.avisoPermisosOculto = false;
   }
 
   async cargarFotoPerfil() {
@@ -178,8 +327,11 @@ export class CuidadorPage implements OnInit, OnDestroy {
       return;
     }
 
-    await this.cargarFotoPerfil();
+    // Se relee todo al volver a la pantalla: el perfil pudo cambiar y los
+    // permisos pudieron apagarse en Ajustes.
+    await this.cargarPerfilRapido();
     await this.cargarAdultos();
+    await this.revisarPermisos();
     this.changeDetectorRef.detectChanges();
   }
 
@@ -187,6 +339,7 @@ export class CuidadorPage implements OnInit, OnDestroy {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
     }
+    this.soltarRealtime?.();
   }
 
 
@@ -226,13 +379,15 @@ export class CuidadorPage implements OnInit, OnDestroy {
 
     this.cargandoConexion = true;
 
-    const vistos: Record<string, string | null> = {};
+    // Una sola consulta para todos los adultos a cargo. Antes era una por cada
+    // uno, y esto corre en cada sondeo del panel (cada 30 s), así que con 3
+    // adultos eran 3 viajes a la base cada 30 segundos sólo para saber quién
+    // estaba en línea.
+    const ids = this.adultosACargo
+      .map((a: any) => a?.id_usuario || a?.adulto_mayor?.id)
+      .filter(Boolean) as string[];
 
-    for (const adulto of this.adultosACargo) {
-      const id = adulto?.id_usuario || adulto?.adulto_mayor?.id;
-      if (!id) continue;
-      vistos[id] = await this.presenciaService.obtenerUltimoVisto(id);
-    }
+    const vistos = await this.presenciaService.obtenerUltimosVistos(ids);
 
     this.enLineaCount = Object.values(vistos).filter((v) => estaEnLinea(v) === true).length;
     this.cargandoConexion = false;

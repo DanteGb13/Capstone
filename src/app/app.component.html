@@ -1,3 +1,22 @@
 <ion-app>
   <ion-router-outlet></ion-router-outlet>
+
+  <!--
+    Capa de arranque: SÓLO CSS, sin JavaScript.
+
+    A propósito no depende del router, de un timer ni de ningún estado: se
+    desvanece sola con una animación y, en el peor de los casos, se queda
+    invisible encima sin tapar la app.
+
+    La versión anterior ataba el splash a `NavigationEnd` del router y a un
+    temporizador de 6 s. Si algo fallaba antes (una excepción en el
+    constructor, una navegación que nunca terminaba), la pantalla se quedaba
+    pegada en "Cargando tu información..." sin salida. El precio de quitar
+    esa dependencia es que el logo se vaya antes de tiempo si la app tarda;
+    con `pointer-events: none` eso no rompe nada, porque la app de abajo ya
+    está funcionando.
+  -->
+  <div class="arranque" aria-hidden="true">
+    <img src="assets/logo/logo-256.png" alt="" class="arranque-logo" />
+  </div>
 </ion-app>

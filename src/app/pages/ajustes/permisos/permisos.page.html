@@ -1,7 +1,7 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button (click)="volver()">
+      <ion-button (click)="volver()" aria-label="Volver">
         <ion-icon name="chevron-back-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -18,62 +18,142 @@
       <span><strong>Para que los recordatorios suenen</strong> (aunque cierres la app o apagues la pantalla) activa estos 3: Notificaciones, Alarma exacta y Batería.</span>
     </div>
 
+    @if (!cargando && faltanCriticos > 0) {
+      <div class="permiso-aviso-faltan">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        <span>
+          @if (faltanCriticos === 1) {
+            Falta activar 1 permiso para que la app te pueda avisar.
+          } @else {
+            Faltan {{ faltanCriticos }} permisos para que la app te pueda avisar.
+          }
+        </span>
+      </div>
+    }
+
     <div class="permiso-card" *ngFor="let permiso of permisos">
       <div class="permiso-header">
         <div class="permiso-icono">
           <ion-icon [name]="permiso.icono"></ion-icon>
         </div>
         <div class="permiso-info">
-          <span class="permiso-nombre">{{ permiso.nombre }}</span>
+          <span class="permiso-nombre">
+            {{ permiso.nombre }}
+            <!--
+              Estado real, al lado del nombre. No se puede representar con el
+              interruptor: un permiso puede estar concedido, denegado o
+              "bloqueado" (cuando Android ya no vuelve a mostrar la ventana), y
+              con un sí/no la app informaba "todo bien" teniendo, por ejemplo,
+              el canal de alertas apagado: el SOS sonaba en silencio sin ninguna
+              señal visible.
+            -->
+            <span class="permiso-estado" [attr.data-estado]="estadoDe(permiso)">
+              {{ etiqueta(permiso.estado) }}
+            </span>
+          </span>
           <span class="permiso-desc">{{ permiso.descripcion }}</span>
         </div>
+
         <ion-toggle
-          [checked]="permiso.concedido"
+          class="permiso-toggle"
+          [checked]="sincronizando ? false : activo(permiso)"
           [disabled]="permisoProcesando === permiso.id"
-          (ionChange)="onToggleChange(permiso, $event)"
-          color="success">
+          (ionChange)="cambiar(permiso, $event)"
+          aria-label="{{ permiso.nombre }}">
         </ion-toggle>
       </div>
 
-      <div class="permiso-detalle" *ngIf="permiso.id === 'ubicacion'">
-        <p>Permite que la app acceda a tu ubicación actual para mostrarla en el mapa y rastrear tu posición.</p>
-        <p class="permiso-nota">Para el monitoreo continuo, selecciona "Permitir todo el tiempo" en los ajustes de ubicación.</p>
+      <div class="permiso-detalle">
+        <p>{{ permiso.detalle }}</p>
       </div>
 
-      <div class="permiso-detalle" *ngIf="permiso.id === 'camara'">
-        <p>Permite tomar fotos para el perfil de usuario.</p>
-      </div>
+      @if (permiso.nota) {
+        <p class="permiso-nota">
+          <ion-icon name="information-circle-outline"></ion-icon>
+          {{ permiso.nota }}
+        </p>
+      }
 
-      <div class="permiso-detalle" *ngIf="permiso.id === 'fotos'">
-        <p>Permite acceder a la galería para seleccionar fotos o videos existentes.</p>
-      </div>
-
-      <div class="permiso-detalle" *ngIf="permiso.id === 'notificaciones'">
-        <p>Permite recibir alertas de seguridad, recordatorios de medicinas y avisos importantes. Necesario para que aparezca el aviso del recordatorio en la barra.</p>
-      </div>
-
-      <div class="permiso-detalle" *ngIf="permiso.id === 'alarma-exacta'">
-        <p>Permite que el recordatorio suene EXACTAMENTE a la hora marcada y no llegue con retraso por el modo reposo del teléfono.</p>
-      </div>
-
-      <div class="permiso-detalle" *ngIf="permiso.id === 'telefono'">
-        <p>Permite realizar llamadas de emergencia directamente desde la app.</p>
-      </div>
-
-      <div class="permiso-detalle" *ngIf="permiso.id === 'contactos'">
-        <p>Permite acceder a tu lista de contactos para seleccionar personas de emergencia.</p>
-      </div>
-
-      <div class="permiso-detalle" *ngIf="permiso.id === 'bateria'">
-        <p>Permite que la app funcione en segundo plano sin que Android la cierre automáticamente. Esencial para que la alarma suene con el teléfono en reposo y pantalla apagada.</p>
-      </div>
+      @if (permiso.estado === 'bloqueado') {
+        <p class="permiso-nota">
+          <ion-icon name="lock-closed-outline"></ion-icon>
+          Android ya no va a mostrar esta ventana: hay que activarlo en los ajustes del sistema.
+        </p>
+      }
     </div>
 
   </div>
 
-  <div class="toast" *ngIf="showToast">
-    <ion-icon name="information-circle-outline"></ion-icon>
-    <span>{{ toastMensaje }}</span>
-  </div>
+  <!--
+    Aviso flotante.
+
+    Se usa para lo que el interruptor no puede expresar: que un permiso
+    encendido no se puede apagar desde la app, y que un permiso bloqueado hay
+    que activarlo en los ajustes del sistema. Antes el mensaje iba a un toast
+    propio; ahora se reutiliza este mismo bloque.
+  -->
+  @if (avisoVisible) {
+    <div class="toast" role="status">
+      <ion-icon name="information-circle-outline"></ion-icon>
+      <span>{{ avisoTexto }}</span>
+    </div>
+  }
+
+  <!--
+    Diagnóstico de alertas: OCULTO A PROPÓSITO.
+
+    Sirve para averiguar por qué no llegan los push (permiso, token FCM, fila en
+    push_tokens) sin depender de leer logs. No se muestra porque es una
+    herramienta de diagnóstico, no algo que deba ver una persona mayor en su
+    lista de permisos.
+
+    Para volver a verlo: poner `mostrarDiagnostico = true` en
+    permisos.page.ts. No borrar el bloque.
+  -->
+  @if (mostrarDiagnostico) {
+    <div class="permisos-container">
+      <div class="diag">
+        <div class="diag-head">
+          <span class="diag-titulo">Diagnóstico de alertas</span>
+          <span class="diag-build">build {{ build }}</span>
+        </div>
+
+        @if (cargandoDiag) {
+          <div class="diag-fila"><ion-spinner name="crescent"></ion-spinner> Comprobando...</div>
+        } @else if (diag) {
+          <div class="diag-fila" [attr.data-ok]="diag.permisoNotificaciones === 'granted'">
+            <ion-icon [name]="diag.permisoNotificaciones === 'granted' ? 'checkmark-circle' : 'close-circle'"></ion-icon>
+            <span>Permiso de notificaciones</span>
+            <strong>{{ diag.permisoNotificaciones === 'granted' ? 'Concedido' : 'FALTA' }}</strong>
+          </div>
+
+          <div class="diag-fila" [attr.data-ok]="diag.hayToken">
+            <ion-icon [name]="diag.hayToken ? 'checkmark-circle' : 'close-circle'"></ion-icon>
+            <span>Token del teléfono (FCM)</span>
+            <strong>{{ diag.hayToken ? 'Obtenido' : 'NO SE OBTUVO' }}</strong>
+          </div>
+
+          <div class="diag-fila" [attr.data-ok]="diag.tokenEnBase">
+            <ion-icon [name]="diag.tokenEnBase ? 'checkmark-circle' : 'close-circle'"></ion-icon>
+            <span>Guardado en la base</span>
+            <strong>{{ diag.tokenEnBase ? 'Sí' : 'NO' }}</strong>
+          </div>
+
+          <p class="diag-msj" [attr.data-ok]="diag.tokenEnBase">{{ diag.mensaje }}</p>
+
+          <div class="diag-acciones">
+            @if (!diag.tokenEnBase) {
+              <button type="button" class="permiso-btn" (click)="reintentarRegistro()" [disabled]="reintentando">
+                Reintentar registro
+              </button>
+            }
+            <button type="button" class="permiso-btn permiso-btn-suave" (click)="cargarDiagnostico()">
+              Actualizar
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
 
 </ion-content>

@@ -1,6 +1,25 @@
 <ion-content [fullscreen]="true">
 
+  <!--
+    Refresco manual: con sólo el sondeo de 30 s, si estabas en otra pantalla
+    la vinculación nueva no aparecía hasta volver al panel.
+  -->
+  <ion-refresher slot="fixed" (ionRefresh)="refrescar($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
   <div class="app-container">
+
+    <!-- Aviso de permisos: no bloquea, sólo informa -->
+    <app-aviso-permisos
+      [titulo]="avisoPermisos?.titulo || ''"
+      [detalle]="avisoPermisos?.detalle || ''"
+      [visible]="!!avisoPermisos"
+      [urgente]="avisoPermisosUrgente"
+      [ocupado]="corrigiendoPermisos"
+      (corregir)="corregirPermisos()"
+      (cerrado)="avisoPermisosOculto = true">
+    </app-aviso-permisos>
 
     <!-- Header -->
     <div class="header">
@@ -8,7 +27,7 @@
       <div class="user-info">
 
         <div>
-          <h1>Hola, {{ nombreUsuario }}</h1>
+          <h1>Hola, {{ nombreUsuario || 'bienvenido' }}</h1>
           <p>Tu familia te cuida</p>
         </div>
 
@@ -141,6 +160,9 @@
 
     <h2 class="section-title" style="color: #d32f2f;">
       🔔 Solicitudes pendientes
+      @if (solicitudes.length > 0) {
+        <span class="badge-solicitudes">{{ solicitudes.length }}</span>
+      }
     </h2>
 
     @for (sol of solicitudes; track sol.id) {

@@ -1,9 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Base application theme. -->
+    <!--
+        Tema de la app.
+
+        Los colores salen de los tokens de src/theme/variables.scss, que a su vez
+        se extrajeron del ícono de la app: el morado de marca medido en el PNG
+        es el mismo que aparece en la pantalla de arranque y en el ícono.
+    -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
-        <!-- Customize your theme here. -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorAccent">@color/colorAccent</item>
@@ -15,8 +20,26 @@
         <item name="android:background">@null</item>
     </style>
 
+    <!--
+        Pantalla de arranque.
 
+        Antes se usaba `android:background=@drawable/splash`, que en Android 12+
+        se ignora: el sistema dibuja su propio ícono plano sobre el color de
+        fondo y por eso la pantalla se veía tan "plana".
+
+        Theme.SplashScreen sí usa la API del sistema:
+          - windowSplashScreenBackground      color de fondo (morado de marca)
+          - windowSplashScreenAnimatedIcon    el ícono, centrado y con máscara
+          - postSplashScreenTheme             el tema con el que sigue la app
+
+        El ícono es un layer-list (fondo con el gradiente + figura blanca) en
+        vez de un PNG cuadrado: la API del sistema aplica su propia máscara, y
+        un PNG plano ahí se ve chiquito y borroso.
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="android:background">@drawable/splash</item>
+        <item name="windowSplashScreenBackground">@color/brandMorado</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_marca</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
     </style>
+
 </resources>

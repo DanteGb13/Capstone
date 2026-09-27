@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Geolocation } from '@capacitor/geolocation';
 import { SupabaseService } from '../../supabase/supabase';
-import { UbicacionForeground } from '../ubicacion-foreground/ubicacion-foreground';
+import { UbicacionForeground, PermisosUbicacion } from '../ubicacion-foreground/ubicacion-foreground';
 
 export interface UbicacionInfo {
   latitud: number;
@@ -354,20 +354,27 @@ export class Gps {
     }
   }
 
-  async verificarPermisosUbicacion(): Promise<{
-    ubicacionForeground: boolean;
-    ubicacionBackground: boolean;
-    notificaciones: boolean;
-    todosConcedidos: boolean;
-  }> {
+  /**
+   * Estado de los permisos de ubicación.
+   *
+   * Antes este método declaraba a mano `notificaciones` y `todosConcedidos`,
+   * dos campos que el plugin nativo nunca devolvió: el tipo mentía sobre lo
+   * que venía de verdad. Ahora se usa el tipo real del plugin, que además
+   * distingue precisión de ubicación aproximada.
+   */
+  async verificarPermisosUbicacion(): Promise<PermisosUbicacion> {
     try {
       return await UbicacionForeground.verificarPermisos();
     } catch (error) {
       return {
         ubicacionForeground: false,
         ubicacionBackground: false,
-        notificaciones: false,
-        todosConcedidos: false
+        precisa: false,
+        aproximada: false,
+        backgroundAplica: false,
+        servicioActivo: false,
+        puedePedirForeground: true,
+        puedePedirBackground: true
       };
     }
   }

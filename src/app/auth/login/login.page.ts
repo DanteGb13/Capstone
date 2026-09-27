@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { IonButton, IonContent, IonIcon, IonInput, NavController } from '@ionic/angular';
+import { IonButton, IonContent, IonIcon, IonInput, IonSpinner, NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -26,6 +26,7 @@ import { validarEmail } from '../../services/utils/validators';
     IonIcon,
     IonInput,
     IonButton,
+    IonSpinner,
     CommonModule,
     FormsModule,
     RouterLink

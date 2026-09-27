@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Figura de marca (corazón + dos personas) en blanco sobre transparente.
+
+    Se generó extrayendo el recorte del ícono de la app
+    (scripts/generar-marca.mjs), así que es exactamente el mismo dibujo. Va en
+    blanco porque en la pantalla de arranque se posa sobre el morado de fondo:
+    el ícono original tiene la figura recortada en transparente, no blanca.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Fondo: el gradiente de marca.
+
+        OJO con `android:angle`: en Android la convención es 0 = hacia la
+        derecha, 90 = hacia arriba, y el ángulo DEBE ser múltiplo de 45. Para
+        el gradiente del ícono (claro arriba-izquierda -> oscuro abajo-derecha)
+        el valor correcto es 315 (abajo-derecha). Con un ángulo que no sea
+        múltiplo de 45 el drawable se comporta de forma impredecible y
+        algunas versiones lo rechazan al inflarlo.
+    -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="linear"
+                android:angle="315"
+                android:startColor="@color/brandMoradoClaro"
+                android:endColor="@color/brandMoradoOscuro" />
+        </shape>
+    </item>
+
+    <!--
+        Figura blanca, centrada.
+
+        El sistema dibuja este ícono en una caja de 2/3 del ancho de pantalla y
+        después le aplica su propia máscara circular, así que la figura ocupa
+        ~180dp de los ~288dp de esa caja: el mismo aire visual que deja el
+        ícono en el launcher.
+    -->
+    <item
+        android:drawable="@drawable/splash_figura"
+        android:gravity="center"
+        android:width="180dp"
+        android:height="180dp" />
+
+</layer-list>

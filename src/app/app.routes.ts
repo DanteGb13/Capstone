@@ -1,5 +1,10 @@
 import { Routes } from '@angular/router';
-import { noAuthGuard, siguientePasoGuard, authGuard } from './services/guards/auth.guard';
+import {
+  noAuthGuard,
+  siguientePasoGuard,
+  authGuard,
+  onboardingPermisosGuard
+} from './services/guards/auth.guard';
 
 export const routes: Routes = [
   {
@@ -15,7 +20,7 @@ export const routes: Routes = [
   {
     path: 'cuidador',
     loadComponent: () => import('./pages/cuidadores/cuidador/cuidador.page').then( m => m.CuidadorPage),
-    canActivate: [authGuard]
+    canActivate: [authGuard, onboardingPermisosGuard]
   },
   {
     path: 'cuidado',
@@ -60,7 +65,7 @@ export const routes: Routes = [
   {
     path: 'adulto-mayor',
     loadComponent: () => import('./pages/adultosMayores/adulto-mayor/adulto-mayor.page').then( m => m.AdultoMayorPage),
-    canActivate: [authGuard]
+    canActivate: [authGuard, onboardingPermisosGuard]
   },
   {
     path: 'contacto-emergencia',
@@ -134,6 +139,11 @@ export const routes: Routes = [
   {
     path: 'permisos',
     loadComponent: () => import('./pages/ajustes/permisos/permisos.page').then( m => m.PermisosPage)
+  },
+  {
+    path: 'permisos-inicial',
+    loadComponent: () => import('./pages/ajustes/permisos-inicial/permisos-inicial.page').then( m => m.PermisosInicialPage),
+    canActivate: [authGuard]
   },
   {
     path: 'tamano-letra',

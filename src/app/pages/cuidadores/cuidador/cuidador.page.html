@@ -1,6 +1,22 @@
 <ion-content [fullscreen]="true">
 
+  <!-- Refresco manual: sin esto, una vinculación aceptada sólo aparecía
+       al esperar el sondeo, y sólo si la pantalla estaba abierta. -->
+  <ion-refresher slot="fixed" (ionRefresh)="refrescar($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
   <div class="app-container">
+
+    <!-- Aviso de permisos: no bloquea, sólo informa -->
+    <app-aviso-permisos
+      [titulo]="avisoPermisos?.titulo || ''"
+      [detalle]="avisoPermisos?.detalle || ''"
+      [visible]="!!avisoPermisos"
+      [urgente]="avisoPermisosUrgente"
+      (corregir)="corregirPermisos()"
+      (cerrado)="avisoPermisosOculto = true">
+    </app-aviso-permisos>
 
     <!-- Header -->
     <div class="header">

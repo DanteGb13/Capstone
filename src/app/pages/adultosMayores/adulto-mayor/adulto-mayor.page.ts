@@ -26,7 +26,9 @@ import {
   IonButton,
   IonModal,
   IonButtons,
-  IonSpinner
+  IonSpinner,
+  IonRefresher,
+  IonRefresherContent
 } from '@ionic/angular';
 
 import {
@@ -44,9 +46,13 @@ import { SOSService, ResultadoSOS } from '../../../services/Backend/sos/sos';
 import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
 import { Capacitor } from '@capacitor/core';
 import { FooterComponent } from '../../../components/footer/footer.component';
+import { AvisoPermisosComponent } from '../../../components/aviso-permisos/aviso-permisos.component';
 import { SupabaseService } from '../../../services/supabase/supabase';
 import { PushNotificationService } from '../../../services/Backend/push-notification/push-notification';
 import { AlertController } from '@ionic/angular';
+import { PerfilCacheService } from '../../../services/perfil-cache/perfil-cache.service';
+import { PermisosService } from '../../../services/permisos/permisos.service';
+import { RealtimeService } from '../../../services/realtime/realtime.service';
 
 
 @Component({
@@ -72,7 +78,10 @@ import { AlertController } from '@ionic/angular';
 
     CommonModule,
     FormsModule,
-    FooterComponent
+    FooterComponent,
+    AvisoPermisosComponent,
+    IonRefresher,
+    IonRefresherContent
 
   ]
 
@@ -87,6 +96,37 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   // =====================================================
 
   private solicitudesInterval: any = null;
+
+  /** Cuánto se espera entre sondeos cuando Realtime no está delivering. */
+  private readonly INTERVALO_SONDEO_MS = 30000;
+
+  /**
+   * Con Realtime activo el sondeo pasa a 2 minutos: sigue estando como red de
+   * seguridad (por si el WebSocket se cae en una zona sin datos), pero ya no es
+   * el mecanismo principal.
+   */
+  private readonly INTERVALO_SONDEO_CON_REALTIME_MS = 120000;
+
+  /** Vinculaciones que llegaron mientras la persona no estaba mirando. */
+  private nuevasVinculaciones = 0;
+
+  private soltarRealtime: (() => void) | null = null;
+
+  // =====================================================
+  // AVISO DE PERMISOS
+  // =====================================================
+
+  avisoPermisos: { titulo: string; detalle: string } | null = null;
+
+  avisoPermisosUrgente = false;
+
+  avisoPermisosOculto = false;
+
+  corrigiendoPermisos = false;
+
+  // =====================================================
+  // ZONA SEGURA
+  // =====================================================
 
   private zonaEstadoPrevio: boolean | null = null;
 
@@ -185,7 +225,13 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
     private pushService: PushNotificationService,
 
-    private alertCtrl: AlertController
+    private alertCtrl: AlertController,
+
+    private perfilCache: PerfilCacheService,
+
+    private permisosService: PermisosService,
+
+    private realtimeService: RealtimeService
 
   ) {
 
@@ -203,17 +249,12 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   async ngOnInit() {
 
-    // 1. Cargar datos del usuario UNA sola vez (nombre + id + dirección)
-    const usuario = await this.cuidadoresService.cargarUsuario();
-    if (usuario) {
-      this.nombreUsuario = usuario.nombre || '';
-      this.idUsuarioActual = usuario.id || '';
-      await this.cargarFotoPerfil();
-    } else {
-      this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
-    }
+    // 1. El nombre sale de la caché de inmediato (si no había, se pide una
+    //    vez). Antes se llamaba dos veces a getUser(), que va a la red, y la
+    //    pantalla quedaba vacía hasta que el servidor respondiera.
+    void this.cargarPerfilRapido();
 
-    // 2. Refrescar la vista YA con el nombre para que no se vea vacía
+    // 2. Refrescar la vista YA con lo que haya para que no se vea vacía
     this.changeDetectorRef.detectChanges();
 
 
@@ -253,29 +294,220 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     }, 2000);
 
 
-    // Refrescar solicitudes y cuidadores vinculados cada 30 segundos
-    // para que aparezcan sin recargar la página
+    // 6. Vinculaciones en vivo + permiso + banner de permisos, en paralelo.
+    this.activarRealtime();
+    this.revisarPermisos();
+
+  }
+
+  // =====================================================
+  // PERFIL RÁPIDO
+  // =====================================================
+
+  /**
+   * Pinta el nombre y la foto desde la caché, sin esperar a la red.
+   * Es lo que hace que el saludo aparezca de inmediato al abrir la app.
+   */
+  private async cargarPerfilRapido(): Promise<void> {
+    try {
+      const perfil = await this.perfilCache.perfil();
+      if (perfil) {
+        this.nombreUsuario = perfil.nombre || perfil.nombreCompleto || '';
+        this.idUsuarioActual = perfil.id;
+        this.changeDetectorRef.detectChanges();
+
+        const foto = await this.perfilCache.cargarFoto(perfil.id);
+        if (foto) {
+          this.fotoUrl = foto;
+          this.changeDetectorRef.detectChanges();
+        }
+      }
+    } catch (e) {
+      console.warn('No se pudo cargar el perfil rápido:', e);
+    }
+
+    // Si la caché no tenía nada (primera vez), se pide a la base.
+    if (!this.idUsuarioActual) {
+      const usuario = await this.cuidadoresService.cargarUsuario();
+      if (usuario) {
+        this.nombreUsuario = usuario.nombre || '';
+        this.idUsuarioActual = usuario.id || '';
+        this.changeDetectorRef.detectChanges();
+        await this.cargarFotoPerfil();
+        this.changeDetectorRef.detectChanges();
+      } else {
+        this.nombreUsuario = await this.cuidadoresService.cargarUsuarioNombre();
+      }
+    }
+  }
+
+  // =====================================================
+  // REALTIME DE VINCULACIONES
+  // =====================================================
+
+  /**
+   * Escucha las vinculaciones en vivo.
+   *
+   * Antes sólo había un `setInterval(30s)`, así que una solicitud nueva podía
+   * tardar hasta medio minuto en aparecer, y nada si la persona estaba en otra
+   * pantalla. Con Realtime el cambio llega al instante.
+   *
+   * El sondeo NO se elimina: es la red de seguridad si la tabla no está en la
+   * publicación de Realtime o si el WebSocket se cae.
+   */
+  private async activarRealtime(): Promise<void> {
+    try {
+      if (!this.idUsuarioActual) return;
+
+      await this.realtimeService.suscribir(this.idUsuarioActual);
+
+      this.soltarRealtime = this.realtimeService.escuchar((evento) => {
+        // Sólo interesa lo que el adulto ve: las solicitudes que le llegan.
+        // En un DELETE Postgres no manda la clave primaria salvo con
+        // REPLICA IDENTITY FULL, así que el filtro de la suscripción puede no
+        // dejar pasar el evento: por eso se refresca la lista completa en vez
+        // de parchear un elemento.
+        console.log('[Panel] cambio de vinculación:', evento.tabla, evento.operacion);
+        this.nuevasVinculaciones++;
+        void this.refrescarVinculaciones();
+      });
+
+      // Comprobación de salud: si en 6 s no llega nada, se avisa por log y el
+      // sondeo queda como protagonista.
+      await this.realtimeService.comprobar();
+      if (!this.realtimeService.disponible) {
+        console.warn(
+          '[Panel] Realtime no disponible, se sigue con el sondeo de 30 s. Motivo:',
+          this.realtimeService.motivo
+        );
+      }
+
+      this.programarSondeo();
+    } catch (e) {
+      console.warn('No se pudo activar Realtime:', e);
+      this.programarSondeo();
+    }
+  }
+
+  /** Ajusta la frecuencia del sondeo según si Realtime está delivering. */
+  private programarSondeo(): void {
+    if (this.solicitudesInterval) {
+      clearInterval(this.solicitudesInterval);
+      this.solicitudesInterval = null;
+    }
+
+    const cada = this.realtimeService.disponible
+      ? this.INTERVALO_SONDEO_CON_REALTIME_MS
+      : this.INTERVALO_SONDEO_MS;
 
     this.solicitudesInterval = setInterval(async () => {
 
-      await Promise.all([
-        this.cargarSolicitudes(),
-        this.cargarCuidadoresVinculados()
-      ]);
+      await this.refrescarVinculaciones();
 
-      // Actualiza la ubicación y revisa si sigue dentro de sus zonas seguras
-      this.reportarUbicacion();
+      // La ubicación se reporta con un ritmo propio, más lento que el sondeo.
+      //
+      // Motivo: el servicio nativo en primer plano YA reporta la posición cada
+      // 30 s aunque la app no esté abierta. Si además el panel lo hace en cada
+      // sondeo, se duplican las lecturas de GPS, las escrituras en la base y las
+      // llamadas al servicio de geocodificación, sin ganar nada: el dato que
+      // el panel necesita (¿sigo dentro de mi zona?) ya está en la base.
+      void this.reportarUbicacionSiToca();
 
       this.actualizarSonando();
 
       this.changeDetectorRef.detectChanges();
 
-    }, 30000);
+    }, cada);
+  }
 
+  /**
+   * Reporta la ubicación como máximo una vez cada `MINUTO_ENTRE_REPORTES`.
+   *
+   * Con la app abierta el intervalo de sondeo es de 30 s (o 120 s si Realtime
+   * está funcionando), así que sin este tope cada tick disparaba una lectura
+   * de GPS, una escritura y una llamada a un servicio externo de geocodificación.
+   */
+  private static readonly MINUTO_ENTRE_REPORTES = 120000;
+
+  private ultimoReporte = 0;
+
+  private async reportarUbicacionSiToca(): Promise<void> {
+    const ahora = Date.now();
+    if (ahora - this.ultimoReporte < AdultoMayorPage.MINUTO_ENTRE_REPORTES) return;
+
+    this.ultimoReporte = ahora;
+    await this.reportarUbicacion();
+  }
+
+  /** Refresca solicitudes + cuidadores, en paralelo. */
+  private async refrescarVinculaciones(): Promise<void> {
+    await Promise.all([
+      this.cargarSolicitudes(),
+      this.cargarCuidadoresVinculados()
+    ]);
+    this.changeDetectorRef.detectChanges();
+  }
+
+  /** Refresco manual (tirar hacia abajo). */
+  async refrescar(event?: any): Promise<void> {
+    this.nuevasVinculaciones = 0;
+    // Un refresco a pedido sí reporta la ubicación sí o sí: la persona lo
+    // está pidiendo, y el tope automático no aplica a una acción explícita.
+    this.ultimoReporte = Date.now();
+    await Promise.all([
+      this.refrescarVinculaciones(),
+      this.reportarUbicacion(),
+      this.actualizarSonando()
+    ]);
+    this.changeDetectorRef.detectChanges();
+    event?.target?.complete();
+  }
+
+  // =====================================================
+  // PERMISOS
+  // =====================================================
+
+  /**
+   * Revisa los permisos críticos al abrir el panel.
+   *
+   * Es importante hacerlo acá y no sólo en la pantalla de Ajustes: Android
+   * resetea solo el permiso de notificaciones si el usuario descarta el
+   * diálogo dos veces, y también por "app sin usar". Sin esta comprobación la
+   * app creía que todo estaba bien mientras el SOS sonaba en silencio.
+   */
+  private async revisarPermisos(): Promise<void> {
+    if (this.avisoPermisosOculto) return;
+
+    try {
+      const resumen = await this.permisosService.resumenProblemas();
+      this.avisoPermisos = resumen;
+      // Sin notificaciones el aviso es rojo: es el permiso del que depende el SOS.
+      this.avisoPermisosUrgente = !!resumen?.ids.includes('notificaciones');
+    } catch (e) {
+      console.warn('No se pudieron revisar los permisos:', e);
+    }
+  }
+
+  async corregirPermisos(): Promise<void> {
+    this.corrigiendoPermisos = true;
+    this.changeDetectorRef.detectChanges();
+
+    try {
+      // Se manda a la pantalla de permisos, no a Ajustes del sistema: desde ahí
+      // se puede activar uno por uno con la explicación al lado.
+      await this.router.navigate(['/permisos']);
+    } finally {
+      this.corrigiendoPermisos = false;
+    }
+
+    // Al volver de esa pantalla se vuelve a comprobar (ionViewWillEnter).
+    this.avisoPermisosOculto = false;
   }
 
   async ionViewWillEnter() {
     await this.cargarFotoPerfil();
+    // Al volver a la pantalla puede haber cambiado algo en Ajustes.
+    await this.revisarPermisos();
     this.changeDetectorRef.detectChanges();
   }
 
@@ -370,6 +602,10 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       clearInterval(this.solicitudesInterval);
 
     }
+
+    // La suscripción de Realtime es compartida: se suelta la escucha de esta
+    // pantalla, no el canal. El canal se cierra al cambiar de cuenta.
+    this.soltarRealtime?.();
 
   }
 

@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Color de respaldo del ícono. El adaptive icon usa la capa de fondo en PNG
+    (ic_launcher_background.png, generado por scripts/generar-marca.mjs); este
+    color queda para cualquier recurso que lo referencie.
+    Es el morado del gradiente de marca, medido desde resources/marca-original.png
+-->
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <color name="ic_launcher_background">#7734d9</color>
 </resources>

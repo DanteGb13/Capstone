@@ -3,6 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import type { Session } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase';
 import { NavegacionRolService, RUTAS_CUIDADOR, RUTAS_ADULTO_MAYOR } from '../navegacion-rol/navegacion-rol';
+import { PermisosService } from '../permisos/permisos.service';
 
 /** Espera breve entre reintentos. */
 function esperar(ms: number): Promise<void> {
@@ -175,4 +176,33 @@ export const authGuard: CanActivateFn = async () => {
   }
 
   return true;
+};
+
+/**
+ * Guard de los dos paneles principales: pide la pantalla de permisos la
+ * PRIMERA vez que se entra con el perfil completo.
+ *
+ * Va aparte de authGuard a propósito, y no se engancha a todas las rutas
+ * protegidas: así `/permisos`, `/perfil` o `/ajustes` siguen siendo accesibles
+ * sin haber pasado por la pantalla de permisos.
+ *
+ * No bloquea: en cuanto la persona la salta o termina, se marca como hecha y
+ * no vuelve a aparecer sola. Los permisos que falten se recuerdan con el aviso
+ * del panel.
+ */
+export const onboardingPermisosGuard: CanActivateFn = () => {
+  const router = inject(Router);
+  const permisos = inject(PermisosService);
+
+  // Si ya está en la pantalla de permisos, no se redirige (sería un bucle).
+  if (router.url.startsWith('/permisos-inicial')) {
+    return true;
+  }
+
+  if (permisos.onboardingCompletado()) {
+    return true;
+  }
+
+  router.navigate(['/permisos-inicial'], { replaceUrl: true });
+  return false;
 };

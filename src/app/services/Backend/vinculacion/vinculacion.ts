@@ -298,32 +298,97 @@ export class Vinculacion {
           solicitudes = data ?? [];
         }
     
-        // Enriquecer datos de cuidador si faltan
-        for (const sol of solicitudes) {
-          if (!sol.cuidador?.usuario && sol.id_cuidador) {
-            const { data: cuidadorData } = await this.supabase
-              .from('cuidador')
-              .select('id, id_usuario')
-              .eq('id', sol.id_cuidador)
-              .maybeSingle();
-    
-            if (cuidadorData?.id_usuario) {
-              const { data: usuarioData } = await this.supabase
-                .from('usuario')
-                .select('id, nombre, apellidopa, apellidoma, telefono')
-                .eq('id', cuidadorData.id_usuario)
-                .maybeSingle();
-    
-              sol.cuidador = {
-                ...cuidadorData,
-                usuario: usuarioData
-              };
-            }
+        // Enriquecer datos de cuidador si faltan.
+        //
+        // ANTES: un bucle que hacía 2 consultas POR CADA solicitud (cuidador y
+        // luego usuario). Con 3 solicitudes pendientes eran 6 viajes a la base,
+        // y esto corre en cada sondeo del panel, o sea cada 30 segundos.
+        //
+        // AHORA: se juntan todos los ids y se resuelven con dos consultas en
+        // total, sin importar cuántas solicitudes haya. Un panel abierto todo
+        // el día pasa de ~1700 consultas/día a 2 por sondeo.
+        const idsCuidadorFaltantes = [
+          ...new Set(
+            solicitudes
+              .filter((s: any) => !s.cuidador?.usuario && s.id_cuidador)
+              .map((s: any) => s.id_cuidador)
+          )
+        ] as string[];
+
+        if (idsCuidadorFaltantes.length > 0) {
+          const mapaCuidador = await this.cuidadoresPorId(idsCuidadorFaltantes);
+          const idsUsuario = [...new Set(
+            [...mapaCuidador.values()].map((c) => c.id_usuario).filter(Boolean)
+          )] as string[];
+
+          const mapaUsuario = await this.usuariosPorId(idsUsuario);
+
+          for (const sol of solicitudes as any[]) {
+            if (sol.cuidador?.usuario || !sol.id_cuidador) continue;
+
+            const cuidador = mapaCuidador.get(sol.id_cuidador);
+            if (!cuidador?.id_usuario) continue;
+
+            sol.cuidador = {
+              ...cuidador,
+              usuario: mapaUsuario.get(cuidador.id_usuario) ?? null
+            };
           }
         }
-    
+
         return solicitudes;
       }
+
+    /**
+     * Varios cuidadores en UNA consulta.
+     *
+     * Existe para eliminar los bucles N+1 de esta pantalla. Antes se consultaba
+     * un cuidador por solicitud, y cada consulta es un viaje de red más un
+     * registro de log en Supabase.
+     */
+    private async cuidadoresPorId(ids: string[]): Promise<Map<string, any>> {
+      const mapa = new Map<string, any>();
+      if (ids.length === 0) return mapa;
+
+      try {
+        const { data, error } = await this.supabase
+          .from('cuidador')
+          .select('id, id_usuario')
+          .in('id', ids);
+
+        if (error) throw error;
+        for (const c of (data ?? []) as any[]) mapa.set(c.id, c);
+      } catch (e) {
+        console.warn('No se pudieron leer los cuidadores:', e);
+      }
+
+      return mapa;
+    }
+
+    /** Varios usuarios en UNA consulta (mismo motivo que `cuidadoresPorId`). */
+    private async usuariosPorId(
+      ids: string[],
+      columnas = 'id, nombre, appellidopa, appellidoma, telefono'
+    ): Promise<Map<string, any>> {
+      const mapa = new Map<string, any>();
+      if (ids.length === 0) return mapa;
+
+      try {
+        const { data, error } = await this.supabase
+          .from('usuario')
+          .select(columnas)
+          .in('id', ids);
+
+        if (error) throw error;
+        for (const u of (data ?? []) as any[]) mapa.set(u.id, u);
+      } catch (e) {
+        console.warn('No se pudieron leer los usuarios:', e);
+      }
+
+      return mapa;
+    }
+
+
     
     
       // =====================================================
@@ -390,31 +455,39 @@ export class Vinculacion {
 
     
         const lista = Array.from(cuidadoresMap.values());
-    
-        // 3. Enriquecer datos completos del cuidador desde public.cuidador y public.usuario
-        for (const item of lista) {
-          if (item.id_cuidador) {
-            const { data: cuidadorRow } = await this.supabase
-              .from('cuidador')
-              .select('id, id_usuario')
-              .eq('id', item.id_cuidador)
-              .maybeSingle();
-    
-            const idUsuarioCuidador = cuidadorRow?.id_usuario;
-    
-            if (idUsuarioCuidador) {
-              const { data: usuarioData } = await this.supabase
-                .from('usuario')
-                .select('id, nombre, apellidopa, apellidoma, telefono, correo, rut')
-                .eq('id', idUsuarioCuidador)
-                .maybeSingle();
-    
-              item.cuidador = {
-                id: item.id_cuidador,
-                id_usuario: idUsuarioCuidador,
-                usuario: usuarioData
-              };
-            }
+
+        // 3. Enriquecer datos completos del cuidador.
+        //
+        // Igual que en obtenerSolicitudes: antes esto consultaba cuidador y
+        // usuario uno por uno dentro de un bucle (2 viajes por cada cuidador,
+        // en cada sondeo del panel). Ahora son 2 consultas en total.
+        if (lista.length > 0) {
+          const idsCuidador = [
+            ...new Set(lista.map((i: any) => i.id_cuidador).filter(Boolean))
+          ] as string[];
+
+          const mapaCuidador = await this.cuidadoresPorId(idsCuidador);
+          const idsUsuario = [...new Set(
+            [...mapaCuidador.values()].map((c) => c.id_usuario).filter(Boolean)
+          )] as string[];
+
+          const mapaUsuario = await this.usuariosPorId(
+            idsUsuario,
+            'id, nombre, appellidopa, appellidoma, telefono, correo, rut'
+          );
+
+          for (const item of lista as any[]) {
+            if (!item.id_cuidador) continue;
+
+            const filaCuidador = mapaCuidador.get(item.id_cuidador);
+            const idUsuarioCuidador = filaCuidador?.id_usuario;
+            if (!idUsuarioCuidador) continue;
+
+            item.cuidador = {
+              id: item.id_cuidador,
+              id_usuario: idUsuarioCuidador,
+              usuario: mapaUsuario.get(idUsuarioCuidador) ?? null
+            };
           }
         }
     

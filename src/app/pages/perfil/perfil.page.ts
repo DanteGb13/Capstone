@@ -39,6 +39,7 @@ import {
 import { SupabaseService } from '../../services/supabase/supabase';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
 import { PushNotificationService } from '../../services/Backend/push-notification/push-notification';
+import { PerfilCacheService } from '../../services/perfil-cache/perfil-cache.service';
 import { environment } from '../../../environments/environment';
 import {
   validarNombreOApellido,
@@ -80,7 +81,8 @@ export class PerfilPage implements OnInit {
     private toastController: ToastController,
     private actionSheetController: ActionSheetController,
     private navRol: NavegacionRolService,
-    private pushService: PushNotificationService
+    private pushService: PushNotificationService,
+    private perfilCache: PerfilCacheService
   ) {
     addIcons({
       arrowBackOutline, person, personOutline, cardOutline, mailOutline,
@@ -440,6 +442,11 @@ export class PerfilPage implements OnInit {
         console.error("Error al actualizar el usuario en Supabase:", error.message);
         return false;
       }
+
+      // El panel pinta el nombre desde el caché de perfil, que dura 5 minutos.
+      // Sin invalidarlo acá, la persona cambiaría su nombre, volvería al
+      // panel y seguiría viendo el anterior.
+      this.perfilCache.limpiar();
 
       this.usuarioOriginal = JSON.parse(JSON.stringify(this.usuario));
       return true;
