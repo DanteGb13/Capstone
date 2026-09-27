@@ -1,0 +1,147 @@
+ion-content {
+  --background: #f8f7fc;
+}
+
+.voz-container {
+  padding: 30px 20px;
+}
+
+.seccion {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin: 26px 0 10px;
+  padding-left: 4px;
+}
+
+.intro {
+  color: #6b6480;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 4px 16px;
+}
+
+.fila-opcion {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.fila-texto {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.fila-nombre {
+  font-weight: 600;
+  color: #1a1d26;
+  font-size: 15px;
+}
+
+.fila-desc {
+  color: #6b6480;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.probar {
+  display: flex;
+  justify-content: center;
+}
+
+.btn-voz {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 0 24px;
+  border: none;
+  border-radius: 18px;
+  background: #7715c7;
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(119, 21, 199, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  ion-icon {
+    font-size: 24px;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.velocidad {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 4px 18px 4px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+
+  ion-range {
+    flex: 1;
+    --track-background: #ede9fe;
+    --handle-background: #7715c7;
+  }
+}
+
+.velocidad-valor {
+  font-weight: 700;
+  color: #7715c7;
+  font-size: 15px;
+  min-width: 48px;
+  text-align: right;
+}
+
+.aviso {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-top: 16px;
+  background: #fdf2e0;
+  border-radius: 16px;
+  padding: 18px;
+
+  ion-icon {
+    font-size: 24px;
+    color: #e07b00;
+    flex-shrink: 0;
+  }
+}
+
+.aviso-texto {
+  margin: 0;
+  font-size: 14px;
+  color: #443c56;
+  line-height: 1.5;
+}
+
+.btn-enlace {
+  width: 100%;
+  min-height: 52px;
+  border: 2px solid #7715c7;
+  border-radius: 16px;
+  background: #ffffff;
+  color: #7715c7;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}

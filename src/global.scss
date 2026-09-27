@@ -37,6 +37,28 @@ body {
 }
 
 /* =====================================================
+   FILTRO PARA DALTÓNICOS
+   ===================================================== */
+:root {
+  --cb-filtro: none;
+}
+
+/*
+ * El filtro va en `ion-app` y no en `body`/`html` a propósito: los overlays de
+ * Ionic (modales, alerts, toasts) se posicionan con `position: fixed` y, al
+ * estar dentro de un ancestro con `filter`, el navegador los ancla a `ion-app`
+ * en lugar del viewport. Como `ion-app` ocupa la pantalla completa, el efecto
+ * es imperceptible salvo con el teclado abierto.
+ *
+ * La alternativa sería un overlay con `backdrop-filter`, pero eso crea una capa
+ * de composición por encima de TODO el contenido y en WebView de Android
+ * cuesta en el relleno; se deja para más adelante si hiciera falta.
+ */
+ion-app {
+  filter: var(--cb-filtro);
+}
+
+/* =====================================================
    Alerta de confirmación - Cerrar sesión
    (Estilos globales porque el alert es un overlay)
    ===================================================== */

@@ -24,6 +24,25 @@
 </head>
 
 <body>
+  <!--
+    Filtro de daltonismo (Ajustes > Filtro para daltónicos).
+
+    Vive aquí y no se crea desde JavaScript para que el filtro ya esté aplicado
+    en el primer pintado: si el nodo se generara en runtime, la app se vería
+    normal un instante y luego saltaría al color filtrado.
+
+    `values` son 20 números: la matriz 3x3 (9) más la fila de traslación
+    (0 0 0 1 0). La escribe ColorblindService según el modo y la intensidad
+    elegidos; el valor inicial es la identidad, es decir, sin filtro.
+  -->
+  <svg width="0" height="0" aria-hidden="true" focusable="false"
+       style="position:absolute;pointer-events:none">
+    <filter id="cb-colorblind">
+      <feColorMatrix id="cb-colorblind-matrix" type="matrix"
+                     values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" />
+    </filter>
+  </svg>
+
   <app-root></app-root>
 </body>
 

@@ -10,6 +10,7 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(SiempreCercaPlugin.class);
         registerPlugin(UbicacionForegroundPlugin.class);
         registerPlugin(PermisosExtraPlugin.class);
+        registerPlugin(VozPlugin.class);
         super.onCreate(savedInstanceState);
 
         // Canales de notificación listos desde el arranque:

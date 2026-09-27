@@ -1,0 +1,84 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Leer en voz alta</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="voz-container">
+
+    <div class="fila-opcion">
+      <div class="fila-texto">
+        <span class="fila-nombre">Anunciar lo que tocas</span>
+        <span class="fila-desc">
+          Cada vez que toques algo, el teléfono te dirá en voz alta qué es.
+        </span>
+      </div>
+
+      <ion-toggle
+        aria-label="Anunciar lo que tocas"
+        [checked]="voz.activo()"
+        (ionChange)="cambiar($any($event.detail).checked)">
+      </ion-toggle>
+    </div>
+
+    @if (aviso) {
+      <div class="aviso">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        <p class="aviso-texto">{{ aviso }}</p>
+      </div>
+    }
+
+    @if (voz.activo()) {
+
+      <h2 class="seccion">Probar</h2>
+
+      <p class="intro">
+        Lee en voz alta los botones de esta pantalla, para que sepas a qué
+        suena.
+      </p>
+
+      <div class="probar">
+        <button type="button" class="btn-voz" (click)="probar()">
+          <ion-icon name="volume-high-outline"></ion-icon>
+          <span>Escuchar esta pantalla</span>
+        </button>
+      </div>
+
+      <h2 class="seccion">Velocidad de la voz</h2>
+
+      <div class="velocidad">
+        <ion-range
+          min="0.5"
+          max="2"
+          step="0.1"
+          [value]="voz.velocidad()"
+          (ionChange)="velocidad($any($event.detail).value)">
+        </ion-range>
+        <span class="velocidad-valor">
+          {{ voz.velocidad().toFixed(1).replace('.', ',') }}×
+        </span>
+      </div>
+
+    }
+
+    <h2 class="seccion">¿Ya usas TalkBack?</h2>
+
+    <p class="intro">
+      TalkBack es el lector de pantalla del propio teléfono, en los ajustes del
+      sistema. Hace lo mismo que esta opción y además controla el volumen, la
+      velocidad y las teclas. Si lo tienes activado, no enciendas las dos: se
+      pondrían a hablar al mismo tiempo.
+    </p>
+
+    <button type="button" class="btn-enlace" (click)="abrirAccesibilidad()">
+      Abrir ajustes de accesibilidad
+    </button>
+
+  </div>
+</ion-content>

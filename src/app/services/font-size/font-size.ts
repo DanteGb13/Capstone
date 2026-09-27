@@ -33,6 +33,14 @@ export class FontSizeService {
     return guardado || this.DEFAULT;
   }
 
+  /**
+   * Texto para la lista de Ajustes. `obtener()` devuelve el id interno
+   * ('extra-grande'), que no es lo que debe leerse en pantalla.
+   */
+  obtenerEtiqueta(): string {
+    return this.opciones.find(o => o.id === this.obtener())?.label ?? '';
+  }
+
   obtenerScale(): number {
     const actual = this.obtener();
     const opcion = this.opciones.find(o => o.id === actual);

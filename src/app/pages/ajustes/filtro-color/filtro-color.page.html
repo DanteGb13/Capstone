@@ -1,0 +1,75 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Filtro para daltónicos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="filtro-container">
+
+    <h2 class="seccion">Tipo de daltonismo</h2>
+
+    <div class="filtro-list">
+      @for (opcion of colorService.opciones; track opcion.id) {
+        <div
+          class="filtro-item"
+          [class.seleccionado]="seleccionActual === opcion.id"
+          (click)="seleccionar(opcion.id)">
+
+          <div class="filtro-info">
+            <span class="filtro-label">{{ opcion.label }}</span>
+            <span class="filtro-desc">{{ opcion.descripcion }}</span>
+          </div>
+
+          <div class="filtro-check">
+            @if (seleccionActual === opcion.id) {
+              <ion-icon name="checkmark-outline"></ion-icon>
+            }
+          </div>
+
+        </div>
+      }
+    </div>
+
+    <!--
+      La intensidad solo aparece con un filtro puesto: al 100% sin filtro el
+      control no hace nada y le quitaría sentido a la pantalla.
+    -->
+    @if (filtroActivo) {
+      <h2 class="seccion">Intensidad</h2>
+
+      <div class="intensidad">
+        <ion-range
+          min="0"
+          max="100"
+          step="5"
+          [value]="intensidad"
+          (ionChange)="cambiarIntensidad($any($event.detail).value)">
+        </ion-range>
+        <span class="intensidad-valor">{{ intensidad }}%</span>
+      </div>
+    }
+
+    <h2 class="seccion">Vista previa</h2>
+
+    <div class="previa">
+      @for (m of muestras; track m.nombre) {
+        <div class="previa-fila">
+          <span class="previa-punto" [style.background]="m.color">{{ m.figura }}</span>
+          <span class="previa-nombre">{{ m.nombre }}</span>
+        </div>
+      }
+    </div>
+
+    <p class="previa-nota">
+      Los avisos de la app se distinguen por su forma además de su color, para
+      que se entiendan aunque los colores no se vean bien.
+    </p>
+
+  </div>
+</ion-content>

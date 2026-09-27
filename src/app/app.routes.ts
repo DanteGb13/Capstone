@@ -150,6 +150,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/ajustes/tamano-letra/tamano-letra.page').then( m => m.TamanoLetraPage)
   },
   {
+    path: 'filtro-color',
+    loadComponent: () => import('./pages/ajustes/filtro-color/filtro-color.page').then( m => m.FiltroColorPage)
+  },
+  {
+    path: 'voz',
+    loadComponent: () => import('./pages/ajustes/voz/voz.page').then( m => m.VozPage)
+  },
+  {
     path: 'recuperar-contrasena',
     loadComponent: () => import('./auth/recuperar-contrasena/recuperar-contrasena.page').then( m => m.RecuperarContrasenaPage)
   },

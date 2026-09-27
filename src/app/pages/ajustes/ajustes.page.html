@@ -13,33 +13,57 @@
 
   <div class="ajustes-container">
 
-    <div class="ajustes-card" (click)="irAPermisos()">
+    <!--
+      Cada tarjeta lleva `aria-label` aunque su texto ya sea legible.
+
+      No es redundante: sin él, quien lee en voz alta anunciaría el texto
+      concatenado de la tarjeta, o sea "Tamaño de letraGrande", porque el
+      nombre y el estado están en dos elementos distintos. Con la etiqueta se
+      anuncia el nombre y el estado se lee aparte.
+    -->
+    <div class="ajustes-card" aria-label="Permisos" (click)="irAPermisos()">
       <ion-icon name="shield-checkmark-outline"></ion-icon>
       <span>Permisos</span>
       <ion-icon name="chevron-forward-outline" class="flecha"></ion-icon>
     </div>
 
-    <div class="ajustes-card" (click)="irATamanoLetra()">
+    <h2 class="ajustes-seccion">Accesibilidad</h2>
+
+    <div class="ajustes-card" aria-label="Tamaño de letra" (click)="irATamanoLetra()">
       <ion-icon name="text-outline"></ion-icon>
-      <span>Tamaño de letra</span>
+      <div class="ajustes-texto">
+        <span>Tamaño de letra</span>
+        <span class="ajustes-estado">{{ fontService.obtenerEtiqueta() }}</span>
+      </div>
       <ion-icon name="chevron-forward-outline" class="flecha"></ion-icon>
     </div>
 
-    <div class="ajustes-card deshabilitado">
-      <ion-icon name="person-outline"></ion-icon>
-      <span>Mi perfil</span>
+    <div class="ajustes-card" aria-label="Filtro para daltónicos" (click)="irAFiltroColor()">
+      <ion-icon name="color-filter-outline"></ion-icon>
+      <div class="ajustes-texto">
+        <span>Filtro para daltónicos</span>
+        <span class="ajustes-estado">{{ colorService.resumen() }}</span>
+      </div>
       <ion-icon name="chevron-forward-outline" class="flecha"></ion-icon>
     </div>
 
-    <div class="ajustes-card deshabilitado">
-      <ion-icon name="notifications-outline"></ion-icon>
-      <span>Notificaciones</span>
+    <div class="ajustes-card" aria-label="Leer en voz alta" (click)="irAVoz()">
+      <ion-icon name="volume-high-outline"></ion-icon>
+      <div class="ajustes-texto">
+        <span>Leer en voz alta</span>
+        <span class="ajustes-estado">{{ voz.resumen() }}</span>
+      </div>
       <ion-icon name="chevron-forward-outline" class="flecha"></ion-icon>
     </div>
 
-    <div class="ajustes-card deshabilitado">
-      <ion-icon name="map-outline"></ion-icon>
-      <span>Mapa y rutas</span>
+    <h2 class="ajustes-seccion">Seguridad</h2>
+
+    <div class="ajustes-card deshabilitado" aria-label="Sensor de caídas">
+      <ion-icon name="pulse-outline"></ion-icon>
+      <div class="ajustes-texto">
+        <span>Sensor de caídas</span>
+        <span class="ajustes-estado">Próximamente</span>
+      </div>
       <ion-icon name="chevron-forward-outline" class="flecha"></ion-icon>
     </div>
 

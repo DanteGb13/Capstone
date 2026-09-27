@@ -5,6 +5,7 @@ import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { AlarmasService } from './services/alarmas/alarmas';
 import { FontSizeService } from './services/font-size/font-size';
+import { ColorblindService } from './services/colorblind/colorblind.service';
 import { PresenciaService } from './services/Backend/presencia/presencia';
 import { PushNotificationService } from './services/Backend/push-notification/push-notification';
 import { PermisosService } from './services/permisos/permisos.service';
@@ -31,9 +32,13 @@ export class AppComponent {
     private router: Router,
     private alarmasService: AlarmasService,
     // Se inyecta para que aplique el tamaño de letra guardado al arrancar.
-    private fontSizeService: FontSizeService
+    private fontSizeService: FontSizeService,
+    // Igual que el tamaño de letra: el filtro de daltónicos guardado tiene que
+    // estar puesto antes del primer pintado de pantalla.
+    private colorblindService: ColorblindService
   ) {
     void this.fontSizeService;
+    void this.colorblindService;
 
     this.alarmasService.escucharTap(() => {
       this.router.navigate(['/recordatorios']);

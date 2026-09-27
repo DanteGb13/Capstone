@@ -13,6 +13,9 @@ import {
 import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
+import { FontSizeService } from '../../services/font-size/font-size';
+import { ColorblindService } from '../../services/colorblind/colorblind.service';
+import { VozService } from '../../services/voz/voz.service';
 
 @Component({
   selector: 'app-ajustes',
@@ -33,7 +36,10 @@ export class AjustesPage implements OnInit {
 
   constructor(
     private router: Router,
-    private navRol: NavegacionRolService
+    private navRol: NavegacionRolService,
+    public fontService: FontSizeService,
+    public colorService: ColorblindService,
+    public voz: VozService
   ) {
     addIcons(icons);
   }
@@ -46,6 +52,14 @@ export class AjustesPage implements OnInit {
 
   irATamanoLetra() {
     this.router.navigate(['/tamano-letra']);
+  }
+
+  irAFiltroColor() {
+    this.router.navigate(['/filtro-color']);
+  }
+
+  irAVoz() {
+    this.router.navigate(['/voz']);
   }
 
   async volver() {
