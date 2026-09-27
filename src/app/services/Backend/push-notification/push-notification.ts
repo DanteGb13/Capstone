@@ -162,6 +162,13 @@ export class PushNotificationService {
           await this.navRol.irAPanelPrincipal();
           return;
         }
+        // Un aviso de zona segura (salida o emergencia de viaje) también
+        // abre la ubicación en Google Maps al tocarlo.
+        if (datos.tipo === 'zona_segura' && (datos.latitud || datos.longitud)) {
+          this.abrirMapaSos(datos);
+          await this.navRol.irAPanelPrincipal();
+          return;
+        }
         await this.navRol.irAPanelPrincipal();
       });
     });
@@ -174,6 +181,11 @@ export class PushNotificationService {
         if (datos?.tipo === 'sos' && datos?.id_sos) {
           this.ngZone.run(async () => {
             await this.confirmarSos(datos.id_sos);
+            this.abrirMapaSos(datos);
+            await this.navRol.irAPanelPrincipal();
+          });
+        } else if (datos?.tipo === 'zona_segura') {
+          this.ngZone.run(async () => {
             this.abrirMapaSos(datos);
             await this.navRol.irAPanelPrincipal();
           });

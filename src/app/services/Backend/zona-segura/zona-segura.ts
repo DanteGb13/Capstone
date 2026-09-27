@@ -37,6 +37,8 @@ export interface EstadoZonaSegura {
   zonaCercana: ZonaSegura | null;
   distancia: number;
   alertaEnviada: boolean;
+  /** Modo viaje activo: seguimiento encendido pero sin avisos. */
+  viajeActivo?: boolean;
 }
 
 export interface DireccionSugerida {
@@ -58,8 +60,15 @@ const TABLA = 'zona_segura';
 const CLAVE_ALERTA = 'zs_alerta_';
 const CLAVE_ESTADO = 'zs_estado_';
 const CLAVE_REINTENTO = 'zs_reintento_';
+const CLAVE_VIAJE = 'zs_viaje_';
 const ESPERA_ALERTA_MS = 10 * 60 * 1000;
 const ESPERA_REINTENTO_MS = 60 * 1000;
+
+/** Pausa de avisos que activó el cuidador para un viaje. */
+export interface ViajeActivo {
+  /** null = hasta que el cuidador lo cancele. */
+  terminaEn: string | null;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -274,6 +283,135 @@ export class ZonaSeguraService {
     } catch (e: any) {
       this.ultimoError = e?.message || String(e);
       console.error('Error eliminando zona segura:', e);
+      return false;
+    }
+  }
+
+  // =====================================================
+  // MODO VIAJE (pausa los avisos, el seguimiento sigue)
+  // =====================================================
+
+  /** Pausa vigente del adulto, o null si no hay ninguna. */
+  async obtenerViaje(idAdulto: string): Promise<ViajeActivo | null> {
+    if (!idAdulto) return null;
+
+    try {
+      const { data, error } = await this.supabase
+        .from('zona_viaje')
+        .select('termina_en, creada_en')
+        .eq('id_usuario', idAdulto)
+        .order('creada_en', { ascending: false });
+
+      if (error) {
+        console.warn('Nota: consulta a tabla zona_viaje:', error.message);
+        return null;
+      }
+
+      const ahora = Date.now();
+      const fila = (data || []).find(
+        (f: any) => !f.termina_en || Date.parse(f.termina_en) > ahora
+      );
+      return fila ? { terminaEn: fila.termina_en || null } : null;
+    } catch (e) {
+      console.warn('No se pudo leer el modo viaje:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Activa (o reemplaza) la pausa de avisos de un adulto.
+   * Solo la puede hacer el cuidador vinculado: la tabla lo exige en RLS.
+   */
+  async activarViaje(idAdulto: string, terminaEn: string | null): Promise<boolean> {
+    this.ultimoError = '';
+    if (!idAdulto) return false;
+
+    try {
+      const cuidador = await this.usuarioActualId();
+      if (!cuidador) {
+        this.ultimoError = 'No se pudo identificar al cuidador';
+        return false;
+      }
+
+      // Se reemplaza cualquier pausa que ya existiera para ese adulto
+      await this.supabase.from('zona_viaje').delete().eq('id_usuario', idAdulto);
+
+      const { error } = await this.supabase.from('zona_viaje').insert({
+        id_usuario: idAdulto,
+        id_cuidador: cuidador,
+        termina_en: terminaEn
+      });
+
+      if (error) {
+        this.ultimoError = error.message;
+        console.error('Error activando el modo viaje:', error.message);
+        return false;
+      }
+
+      this.guardarViajeCache(idAdulto, terminaEn);
+      return true;
+    } catch (e: any) {
+      this.ultimoError = e?.message || String(e);
+      console.error('Error activando el modo viaje:', e);
+      return false;
+    }
+  }
+
+  /** Cancela la pausa: los avisos de zona segura vuelven de inmediato. */
+  async cancelarViaje(idAdulto: string): Promise<boolean> {
+    this.ultimoError = '';
+    if (!idAdulto) return false;
+
+    try {
+      const { error } = await this.supabase
+        .from('zona_viaje')
+        .delete()
+        .eq('id_usuario', idAdulto);
+
+      if (error) {
+        this.ultimoError = error.message;
+        console.error('Error cancelando el modo viaje:', error.message);
+        return false;
+      }
+
+      this.limpiarViajeCache(idAdulto);
+      return true;
+    } catch (e: any) {
+      this.ultimoError = e?.message || String(e);
+      console.error('Error cancelando el modo viaje:', e);
+      return false;
+    }
+  }
+
+  // -- Copia local de la pausa ---------------------------------------
+  // Sirve SOLO de respaldo: si no hay internet y el servidor no puede
+  // responder, con la copia se evita mandar el aviso local de salida
+  // de zona (mejor uno de menos que spamear a los cuidadores en un viaje).
+
+  private guardarViajeCache(idAdulto: string, terminaEn: string | null) {
+    try {
+      localStorage.setItem(CLAVE_VIAJE + idAdulto, JSON.stringify({ hasta: terminaEn }));
+    } catch { /* sin persistencia */ }
+  }
+
+  private limpiarViajeCache(idAdulto: string) {
+    try {
+      localStorage.removeItem(CLAVE_VIAJE + idAdulto);
+    } catch { /* sin persistencia */ }
+  }
+
+  viajeEnCache(idAdulto: string): boolean {
+    try {
+      const crudo = localStorage.getItem(CLAVE_VIAJE + idAdulto);
+      if (!crudo) return false;
+
+      const datos = JSON.parse(crudo);
+      if (datos?.hasta && Date.parse(datos.hasta) <= Date.now()) {
+        this.limpiarViajeCache(idAdulto);
+        return false;
+      }
+      return true;
+    } catch {
       return false;
     }
   }
@@ -784,11 +922,23 @@ export class ZonaSeguraService {
       this.registrarReintento(idAdulto);
       const r = await this.llamarEvaluarZona(latitud, longitud, idAdulto);
 
-      if (r === 'error') {
-        // Servicio no disponible: respaldo local (cooldown en este dispositivo)
-        const enviada = await this.enviarAlertaSalida(idAdulto, latitud, longitud, estado);
-        if (enviada) this.registrarAlerta(idAdulto);
-        estado.alertaEnviada = enviada;
+      if (r === 'pausado') {
+        // Modo viaje: la ubicación sigue reportándose pero no se avisa a nadie.
+        // No se marca la alerta, así el seguimiento sigue refrescándose.
+        estado.viajeActivo = true;
+        estado.alertaEnviada = false;
+      } else if (r === 'error') {
+        if (this.viajeEnCache(idAdulto)) {
+          // Sin internet pero el último estado conocido era "modo viaje":
+          // no se manda el respaldo local (mejor un aviso de menos).
+          estado.viajeActivo = true;
+          estado.alertaEnviada = false;
+        } else {
+          // Servicio no disponible: respaldo local (cooldown en este dispositivo)
+          const enviada = await this.enviarAlertaSalida(idAdulto, latitud, longitud, estado);
+          if (enviada) this.registrarAlerta(idAdulto);
+          estado.alertaEnviada = enviada;
+        }
       } else {
         estado.alertaEnviada = r === 'enviada';
         // Mientras siga fuera, esperamos 10 min antes de volver a consultar
@@ -800,26 +950,63 @@ export class ZonaSeguraService {
     return estado;
   }
 
+  /** Último nivel de batería que pudo leerse (0-100) o null si nunca. */
+  private bateriaLeida: number | null = null;
+
+  /**
+   * Batería del dispositivo para las alertas de emergencia en modo viaje.
+   * En el navegador lo da `navigator.getBattery()`; si no existe, se devuelve
+   * lo último conocido (o null y el servidor no toca el valor guardado).
+   */
+  private async leerBateria(): Promise<number | null> {
+    const nav: any = navigator as any;
+    if (typeof nav?.getBattery !== 'function') return this.bateriaLeida;
+
+    try {
+      const bateria = await nav.getBattery();
+      const nivel = Math.round(Number(bateria?.level) * 100);
+      if (Number.isFinite(nivel) && nivel >= 0 && nivel <= 100) {
+        this.bateriaLeida = nivel;
+      }
+      return this.bateriaLeida;
+    } catch {
+      return this.bateriaLeida;
+    }
+  }
+
   /**
    * Llama a la Edge Function evaluar-zona.
    *  - 'enviada'  -> correspondía avisar y se envió
    *  - 'sin_aviso'-> fuera de zona pero aún no toca actualizar (cooldown en BD)
+   *  - 'pausado'  -> modo viaje: seguimiento encendido, avisos apagados
    *  - 'error'    -> la función no respondió (usar respaldo local)
    */
   private async llamarEvaluarZona(
     latitud: number,
     longitud: number,
     idAdulto: string
-  ): Promise<'enviada' | 'sin_aviso' | 'error'> {
+  ): Promise<'enviada' | 'sin_aviso' | 'pausado' | 'error'> {
     try {
+      const cuerpo: any = { latitud, longitud, id_usuario: idAdulto };
+      const bateria = await this.leerBateria();
+      if (bateria != null) cuerpo.bateria = bateria;
+
       const { data, error } = await this.supabase.functions.invoke('evaluar-zona', {
-        body: { latitud, longitud, id_usuario: idAdulto }
+        body: cuerpo
       });
 
       if (error) {
         console.warn('evaluar-zona devolvió error:', error?.message || error);
         return 'error';
       }
+
+      if (data?.pausado) {
+        this.guardarViajeCache(idAdulto, data.termina_en ?? null);
+        return 'pausado';
+      }
+
+      // El servidor dice que no hay pausa: se olvida la copia local
+      this.limpiarViajeCache(idAdulto);
 
       const accion = data?.accion;
       return accion === 'primera' || accion === 'actualizacion' || accion === 'volvio'

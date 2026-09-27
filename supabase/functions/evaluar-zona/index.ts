@@ -1,5 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { enviarPushFirebase, DatosPush } from "../_shared/fcm.ts";
+import {
+  crearRest,
+  cuidadoresDe,
+  distanciaMetros,
+  nombreDe,
+  tokensDe,
+  viajeActivo,
+} from "../_shared/zona.ts";
 
 // Evalúa si el adulto está fuera de sus zonas seguras y, de ser así,
 // avisa a los cuidadores. Se llama:
@@ -38,36 +46,7 @@ function jsonResponse(status: number, body: unknown) {
   });
 }
 
-async function rest<T>(
-  metodo: string,
-  path: string,
-  cuerpo?: unknown,
-  extraHeaders: Record<string, string> = {},
-): Promise<{ data: T | null; error: string | null }> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
-    method: metodo,
-    headers: {
-      apikey: SERVICE_KEY,
-      Authorization: `Bearer ${SERVICE_KEY}`,
-      "Content-Type": "application/json",
-      ...extraHeaders,
-    },
-    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
-  });
-
-  const texto = await res.text();
-  let json: any = null;
-  try {
-    json = texto ? JSON.parse(texto) : null;
-  } catch {
-    /* respuesta sin JSON */
-  }
-
-  if (!res.ok) {
-    return { data: null, error: json?.message || texto || res.statusText };
-  }
-  return { data: json as T, error: null };
-}
+const rest = crearRest(SUPABASE_URL, SERVICE_KEY);
 
 function usuarioDelToken(req: Request): string | null {
   const auth = req.headers.get("Authorization") || "";
@@ -84,50 +63,57 @@ function usuarioDelToken(req: Request): string | null {
   }
 }
 
-function distanciaMetros(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000;
-  const toRad = (g: number) => (g * Math.PI) / 180;
+/**
+ * Guarda el último ping del adulto mientras dura el modo viaje.
+ * Base de las alertas de emergencia (sin señal, parada prolongada,
+ * batería baja) y de la detección de "está parado en el mismo punto".
+ */
+async function registrarPing(
+  idUsuario: string,
+  latitud: number,
+  longitud: number,
+  dentro: boolean,
+  bateria: unknown,
+): Promise<void> {
+  try {
+    const { data } = await rest<any>(
+      "GET",
+      `zona_viaje_estado?select=lat_fija,lng_fija,bateria&id_usuario=eq.${idUsuario}&limit=1`,
+    );
+    const previo = Array.isArray(data) ? data[0] : data;
 
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
+    // null/undefined/cadena vacía NO es batería 0: no se pisa el último valor
+    const nivel =
+      bateria === null || bateria === undefined || bateria === "" ? NaN : Number(bateria);
+    const bateriaValida = Number.isFinite(nivel) && nivel >= 0 && nivel <= 100;
+    const ahora = new Date().toISOString();
+    const enElMismoLugar =
+      previo?.lat_fija != null &&
+      previo?.lng_fija != null &&
+      distanciaMetros(latitud, longitud, previo.lat_fija, previo.lng_fija) <= 100;
 
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const cuerpo: Record<string, unknown> = {
+      id_usuario: idUsuario,
+      lat: latitud,
+      lng: longitud,
+      dentro,
+      bateria: bateriaValida ? Math.round(nivel) : (previo?.bateria ?? null),
+      fecha: ahora,
+    };
 
-  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
+    // Lugar nuevo: empieza a contar desde cero el tiempo de parada
+    if (!enElMismoLugar) {
+      cuerpo.lat_fija = latitud;
+      cuerpo.lng_fija = longitud;
+      cuerpo.desde_fija = ahora;
+    }
 
-async function nombreDe(idUsuario: string): Promise<string> {
-  const { data } = await rest<{ nombre: string; apellidopa: string; apellidoma: string }>(
-    "GET",
-    `usuario?select=nombre,apellidopa,apellidoma&id=eq.${idUsuario}&limit=1`,
-  );
-  const fila = Array.isArray(data) ? data[0] : data;
-  if (!fila) return "";
-  return `${fila.nombre || ""} ${fila.apellidopa || ""} ${fila.apellidoma || ""}`.trim();
-}
-
-async function cuidadoresDe(idAdulto: string): Promise<string[]> {
-  const { data } = await rest<any[]>(
-    "GET",
-    `cuidador_usuario?select=cuidador(id_usuario)&id_usuario=eq.${idAdulto}`,
-  );
-  if (!Array.isArray(data)) return [];
-  const ids = data
-    .map((f: any) => f?.cuidador?.id_usuario)
-    .filter((id: any) => typeof id === "string" && id.length > 0);
-  return [...new Set(ids)] as string[];
-}
-
-async function tokensDe(ids: string[]): Promise<string[]> {
-  if (!ids.length) return [];
-  const { data } = await rest<{ token: string }[]>(
-    "GET",
-    `push_tokens?select=token&id_usuario=in.(${ids.join(",")})`,
-  );
-  if (!Array.isArray(data)) return [];
-  return [...new Set(data.map((t) => t.token).filter((t) => typeof t === "string" && t))];
+    await rest("POST", "zona_viaje_estado?on_conflict=id_usuario", cuerpo, {
+      Prefer: "resolution=merge-duplicates,return=minimal",
+    });
+  } catch (e) {
+    console.warn("No se pudo registrar el ping del modo viaje:", e);
+  }
 }
 
 serve(async (req) => {
@@ -173,13 +159,28 @@ serve(async (req) => {
       }
     }
 
+    // MODO VIAJE: el cuidador pausó los avisos de zona segura.
+    // El seguimiento sigue: se registra el ping (base de las alertas de
+    // emergencia) y NO se toca el cooldown del RPC, así al vencer o
+    // cancelar la pausa vuelve a avisar como si nada.
+    const pausa = await viajeActivo(rest, objetivo);
+
     // Zonas del adulto
     const { data: zonas, error: errZonas } = await rest<Zona[]>(
       "GET",
       `zona_segura?select=nombre,direccion_texto,latitud_centro,longitud_centro,radio_metros&id_usuario=eq.${objetivo}&activa=eq.true`,
     );
     if (errZonas || !zonas || !zonas.length) {
-      return jsonResponse(200, { sin_zonas: true, dentro: false, accion: "ninguna" });
+      if (pausa) {
+        await registrarPing(objetivo, latitud, longitud, false, body?.bateria);
+      }
+      return jsonResponse(200, {
+        sin_zonas: true,
+        dentro: false,
+        accion: "ninguna",
+        pausado: !!pausa,
+        termina_en: pausa?.termina_en ?? null,
+      });
     }
 
     // Evaluación
@@ -200,6 +201,17 @@ serve(async (req) => {
 
     const distancia = isFinite(menor) ? menor : 0;
 
+    // Modo viaje activo: no se avisa a nadie y el RPC no se toca
+    if (pausa) {
+      await registrarPing(objetivo, latitud, longitud, dentro, body?.bateria);
+      return jsonResponse(200, {
+        dentro,
+        accion: "ninguna",
+        pausado: true,
+        termina_en: pausa.termina_en ?? null,
+      });
+    }
+
     // Decisión atómica en la BD (cooldown compartido con la app abierta)
     const { data: accion, error: errAccion } = await rest<string>(
       "POST",
@@ -217,7 +229,7 @@ serve(async (req) => {
     }
 
     // Aviso a los cuidadores
-    const nombre = (await nombreDe(objetivo)) || "El adulto mayor";
+    const nombre = (await nombreDe(rest, objetivo)) || "El adulto mayor";
     const nombreZona =
       (zonaCercana?.nombre || zonaCercana?.direccion_texto || "").trim() || "Zona segura";
     const mapa = `https://maps.google.com/?q=${latitud},${longitud}`;
@@ -245,8 +257,8 @@ serve(async (req) => {
       cuerpo = `${nombre} volvió a estar dentro de su zona segura "${nombreZona}".`;
     }
 
-    const idsCuidadores = await cuidadoresDe(objetivo);
-    const tokens = await tokensDe(idsCuidadores);
+    const idsCuidadores = await cuidadoresDe(rest, objetivo);
+    const tokens = await tokensDe(rest, idsCuidadores);
 
     const datos: DatosPush = {
       tipo: "zona_segura",

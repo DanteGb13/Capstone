@@ -15,7 +15,8 @@ import {
   IonSelect,
   IonSelectOption,
   AlertController,
-  ToastController
+  ToastController,
+  ActionSheetController
 } from '@ionic/angular';
 
 import { addIcons } from 'ionicons';
@@ -30,7 +31,8 @@ import {
   DireccionZona,
   DireccionSugerida,
   ZonaSeguraService,
-  RADIO_POR_DEFECTO
+  RADIO_POR_DEFECTO,
+  ViajeActivo
 } from '../../services/Backend/zona-segura/zona-segura';
 import { Gps, UbicacionInfo } from '../../services/Backend/gps/gps';
 import { Vinculacion } from '../../services/Backend/vinculacion/vinculacion';
@@ -83,6 +85,9 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   zonas: ZonaSegura[] = [];
 
   estado: EstadoZonaSegura | null = null;
+
+  /** Modo viaje activo para el adulto en pantalla (null = sin pausa). */
+  viaje: ViajeActivo | null = null;
 
   // =====================================================
   // UBICACIÓN
@@ -194,6 +199,8 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   private resolviendoDirecciones: boolean = false;
 
   private presenciaService = inject(PresenciaService);
+
+  private actionSheetCtrl = inject(ActionSheetController);
 
   constructor(
     private zonaService: ZonaSeguraService,
@@ -328,6 +335,7 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
 
     const zonas = await this.zonaService.obtenerZonas(this.idAdulto);
     this.zonas = zonas;
+    void this.refrescarViaje();
     this.pintarZonas();
 
     // Si los datos llegaron DESPUÉS de iniciar el mapa, la vista aterriza de una
@@ -702,7 +710,9 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     // El aviso en pantalla SÓLO lo muestra el dispositivo del adulto con su
     // GPS real: en la vista del cuidador (o con ubicaciones de respaldo) el
     // mapa se actualiza sin ventanas ni sonidos molestos.
-    if (notificar && estado && !estado.dentro && antesDentro !== false) {
+    // Con el modo viaje activo tampoco se avisa: la ubicación se muestra,
+    // pero los avisos están pausados a propósito por el cuidador.
+    if (notificar && estado && !estado.dentro && !estado.viajeActivo && antesDentro !== false) {
       if (this.zonaService.puedeAlertar(this.idAdulto)) {
         this.zonaService.registrarAlerta(this.idAdulto);
         this.mostrarAlertaFueraDeZona(estado);
@@ -1721,6 +1731,138 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.changeDetectorRef.detectChanges();
+  }
+
+  // =====================================================
+  // MODO VIAJE (el cuidador pausa los avisos del viaje)
+  // =====================================================
+
+  private async refrescarViaje() {
+    if (!this.idAdulto) {
+      this.viaje = null;
+      return;
+    }
+    this.viaje = await this.zonaService.obtenerViaje(this.idAdulto);
+    this.changeDetectorRef.detectChanges();
+  }
+
+  get horaViaje(): string {
+    if (!this.viaje?.terminaEn) return '';
+    const fin = new Date(this.viaje.terminaEn);
+    if (isNaN(fin.getTime())) return '';
+    return fin.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  get viajeActivo(): boolean {
+    return !!this.viaje;
+  }
+
+  async abrirModoViaje() {
+    if (!this.idAdulto || !this.esCuidador) return;
+
+    const hoja = await this.actionSheetCtrl.create({
+      header: 'Modo viaje',
+      subHeader:
+        'Durante el viaje no llegan avisos de zona segura. El mapa y la ubicación siguen funcionando.',
+      buttons: [
+        { text: '2 horas', handler: () => { void this.activarModoViaje(2); } },
+        { text: '4 horas', handler: () => { void this.activarModoViaje(4); } },
+        { text: '8 horas', handler: () => { void this.activarModoViaje(8); } },
+        { text: '24 horas', handler: () => { void this.activarModoViaje(24); } },
+        { text: 'Personalizado…', handler: () => { void this.elegirHoraFin(); } },
+        {
+          text: 'Hasta que yo lo cancele',
+          handler: () => { void this.activarModoViaje(null); }
+        },
+        { text: 'Cancelar', role: 'cancel' }
+      ]
+    });
+    await hoja.present();
+  }
+
+  private async activarModoViaje(horas: number | null) {
+    if (!this.idAdulto) return;
+
+    const terminaEn =
+      horas == null ? null : new Date(Date.now() + horas * 3600000).toISOString();
+
+    const ok = await this.zonaService.activarViaje(this.idAdulto, terminaEn);
+    if (ok) {
+      await this.toast('Modo viaje activado. Hasta entonces no llegan avisos de zona segura.');
+    } else {
+      await this.toast(this.zonaService.ultimoError || 'No se pudo activar el modo viaje.');
+    }
+    await this.refrescarViaje();
+  }
+
+  private async elegirHoraFin() {
+    const alert = await this.alertCtrl.create({
+      header: '¿Hasta qué hora?',
+      inputs: [{ name: 'hora', type: 'time', value: this.horaSugerida() }],
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Aceptar',
+          handler: (datos: any) => { void this.activarConHora(datos?.hora); }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  private horaSugerida(): string {
+    const sugerida = new Date(Date.now() + 4 * 3600000);
+    return `${String(sugerida.getHours()).padStart(2, '0')}:${String(
+      sugerida.getMinutes()
+    ).padStart(2, '0')}`;
+  }
+
+  private async activarConHora(hora: string | undefined) {
+    const m = /^(\d{1,2}):(\d{2})/.exec((hora || '').trim());
+    if (!m || !this.idAdulto) return;
+
+    const fin = new Date();
+    fin.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    if (fin.getTime() <= Date.now()) {
+      fin.setDate(fin.getDate() + 1); // la hora ya pasó: se asume mañana
+    }
+
+    const ok = await this.zonaService.activarViaje(this.idAdulto, fin.toISOString());
+    if (ok) {
+      await this.toast('Modo viaje activado. Hasta entonces no llegan avisos de zona segura.');
+    } else {
+      await this.toast(this.zonaService.ultimoError || 'No se pudo activar el modo viaje.');
+    }
+    await this.refrescarViaje();
+  }
+
+  async cancelarModoViaje() {
+    if (!this.idAdulto || !this.esCuidador) return;
+
+    const alert = await this.alertCtrl.create({
+      header: 'Cancelar modo viaje',
+      message: 'Los avisos de zona segura vuelven de inmediato.',
+      buttons: [
+        { text: 'Seguir en viaje', role: 'cancel' },
+        {
+          text: 'Cancelar modo viaje',
+          handler: () => { void this.apagarModoViaje(); }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  private async apagarModoViaje() {
+    if (!this.idAdulto) return;
+
+    const ok = await this.zonaService.cancelarViaje(this.idAdulto);
+    if (ok) {
+      await this.toast('Modo viaje cancelado. Los avisos vuelven en este momento.');
+    } else {
+      await this.toast(this.zonaService.ultimoError || 'No se pudo cancelar el modo viaje.');
+    }
+    await this.refrescarViaje();
   }
 
   private async toast(mensaje: string) {

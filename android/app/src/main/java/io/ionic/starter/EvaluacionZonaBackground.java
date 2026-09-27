@@ -1,7 +1,10 @@
 package io.ionic.starter;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.os.BatteryManager;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -46,7 +49,7 @@ public class EvaluacionZonaBackground {
             @Override
             public void run() {
                 try {
-                    ejecutar(prefs, latitud, longitud);
+                    ejecutar(prefs, latitud, longitud, contexto);
                 } catch (Exception e) {
                     Log.w(TAG, "No se pudo evaluar zona: " + e.getMessage());
                 }
@@ -54,7 +57,12 @@ public class EvaluacionZonaBackground {
         }).start();
     }
 
-    private static void ejecutar(SharedPreferences prefs, double latitud, double longitud) throws Exception {
+    private static void ejecutar(
+        SharedPreferences prefs,
+        double latitud,
+        double longitud,
+        Context contexto
+    ) throws Exception {
         String url = prefs.getString("sb_url", "");
         String anon = prefs.getString("sb_anon", "");
         String access = prefs.getString("sb_access", "");
@@ -78,6 +86,12 @@ public class EvaluacionZonaBackground {
         cuerpo.put("latitud", latitud);
         cuerpo.put("longitud", longitud);
 
+        // Nivel de batería: alimenta las alertas de emergencia en modo viaje
+        Integer bateria = nivelBateria(contexto);
+        if (bateria != null) {
+            cuerpo.put("bateria", bateria);
+        }
+
         int estado = llamar(url, access, anon, cuerpo.toString());
 
         // 401 -> el token ya estaba vencido: refrescar y reintentar una vez
@@ -92,6 +106,23 @@ public class EvaluacionZonaBackground {
                     .apply();
                 llamar(url, access, anon, cuerpo.toString());
             }
+        }
+    }
+
+    /** Nivel de batería 0-100, o null si el sistema no lo reporta. */
+    private static Integer nivelBateria(Context contexto) {
+        try {
+            Intent bateria = contexto.registerReceiver(
+                null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            if (bateria == null) return null;
+
+            int nivel = bateria.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+            int escala = bateria.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+            if (nivel < 0 || escala <= 0) return null;
+
+            return Math.round(nivel * 100f / escala);
+        } catch (Exception e) {
+            return null;
         }
     }
 

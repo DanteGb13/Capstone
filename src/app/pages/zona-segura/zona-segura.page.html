@@ -80,6 +80,44 @@
     }
 
     <!-- ================================================= -->
+    <!-- MODO VIAJE (PAUSA DE AVISOS) -->
+    <!-- ================================================= -->
+
+    @if (!modoFormulario && (esCuidador || viaje)) {
+      <div class="viaje-fila" [class.activo]="viajeActivo">
+        @if (viaje) {
+          <div class="viaje-chip">
+            <ion-icon name="airplane"></ion-icon>
+            <span>
+              Modo viaje activo
+              @if (viaje.terminaEn && horaViaje) {
+                · hasta las {{ horaViaje }}
+              } @else if (viaje.terminaEn) {
+                · hasta hoy
+              } @else {
+                · sin hora, se cancela solo
+              }
+            </span>
+          </div>
+          @if (esCuidador) {
+            <button
+              type="button"
+              class="viaje-cancelar"
+              aria-label="Cancelar modo viaje"
+              (click)="cancelarModoViaje()">
+              <ion-icon name="close"></ion-icon>
+            </button>
+          }
+        } @else {
+          <button type="button" class="viaje-boton" (click)="abrirModoViaje()">
+            <ion-icon name="airplane-outline"></ion-icon>
+            <span>Modo viaje</span>
+          </button>
+        }
+      </div>
+    }
+
+    <!-- ================================================= -->
     <!-- MAPA -->
     <!-- ================================================= -->
 
