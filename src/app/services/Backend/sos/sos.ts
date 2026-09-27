@@ -28,17 +28,14 @@ export class SOSService {
 
   private isNative = Capacitor.isNativePlatform();
 
-  // Reintentos: el SOS se reenvía hasta que un cuidador contesta
-  // (tocando la notificación) o pasan ~30 minutos.
+  // Seguimiento: el reenvío lo hace el servidor (pg_cron) mientras el celular
+  // vigila la tabla para avisarle al adulto en cuanto un cuidador contesta.
   private timerReintentosSOS: any = null;
   private intentosSOS = 0;
   private idSosActivo: string = '';
 
   private static readonly INTERVALO_REINTENTO_MS = 45000;
   private static readonly MAXIMO_REINTENTOS = 40;
-
-  /** Ciclos seguidos sin entregar el aviso a ningún cuidador. */
-  private static readonly FALLOS_ENTREGA_MAXIMOS = 6;
 
   constructor(
     private supabaseService: SupabaseService,
@@ -183,11 +180,11 @@ export class SOSService {
     console.log('SOS: Ubicación:', JSON.stringify(ubicacion));
     console.log('SOS: Nombre:', nombreAdulto);
 
-    const ubicacionTexto = ubicacion
-      ? `https://maps.google.com/?q=${ubicacion.lat},${ubicacion.lng}`
-      : 'Ubicación no disponible';
-
-    const cuerpoSOS = `${nombreAdulto} necesita ayuda. Ubicación: ${ubicacionTexto}`;
+    // La dirección NO va en el texto: al tocar el aviso se abre Google Maps
+    // con las coordenadas que viajan en `data`.
+    const cuerpoSOS = ubicacion
+      ? `${nombreAdulto} necesita ayuda. Toca para ver su ubicación en Google Maps.`
+      : `${nombreAdulto} necesita ayuda. Ubicación no disponible.`;
 
     const datosSOS: { [clave: string]: string } = {
       tipo: 'sos',
@@ -222,7 +219,7 @@ export class SOSService {
       }
     }
 
-    this.iniciarReintentosSOS(datosSOS['id_sos'], cuidadores, cuerpoSOS);
+    this.iniciarReintentosSOS(datosSOS['id_sos']);
 
     // Sin ningún push entregado no hay ciclo que reintentar
     if (!resultado.pushEnviado) {
@@ -243,11 +240,15 @@ export class SOSService {
       console.warn('SOS: No hay cuidador con teléfono válido');
     }
 
+    if (!resultado.pushEnviado && !resultado.llamadaIniciada) {
+      await this.avisarSinEntrega();
+    }
+
     return resultado;
   }
 
   // =====================================================
-  // REINTENTOS: EL AVISO NO PARA HASTA QUE ALGUIEN CONTESTE
+  // SEGUIMIENTO: SE AVISA EN CUANTO UN CUIDADOR CONTESTA
   // =====================================================
 
   private async crearSesionSOS(): Promise<string> {
@@ -273,25 +274,17 @@ export class SOSService {
     }
   }
 
-  private iniciarReintentosSOS(
-    idSos: string,
-    cuidadores: CuidadorVinculado[],
-    cuerpo: string
-  ): void {
+  private iniciarReintentosSOS(idSos: string): void {
     this.detenerReintentosSOS();
-    if (!idSos || !cuidadores.length) return;
+    if (!idSos) return;
 
     this.idSosActivo = idSos;
     this.intentosSOS = 0;
-
-    // Ciclos seguidos en los que no se pudo entregar el aviso a nadie
-    let fallosSeguidos = 0;
 
     this.timerReintentosSOS = setInterval(async () => {
       this.intentosSOS++;
 
       if (this.intentosSOS > SOSService.MAXIMO_REINTENTOS) {
-        console.warn('SOS: se llegó al máximo de reintentos');
         this.detenerReintentosSOS();
         return;
       }
@@ -300,33 +293,8 @@ export class SOSService {
         if (await this.sosConfirmado(idSos)) {
           this.detenerReintentosSOS();
           await this.avisarConfirmacionSOS();
-          return;
         }
       } catch { /* se vuelve a intentar en el próximo ciclo */ }
-
-      let entregados = 0;
-
-      for (const cuidador of cuidadores) {
-        try {
-          const ok = await this.pushService.enviarPushAUsuario(
-            cuidador.id,
-            `SOS - Alerta de Emergencia (aviso ${this.intentosSOS + 1})`,
-            cuerpo,
-            { ...this.datosDe(idSos) }
-          );
-          if (ok) entregados++;
-        } catch { /* se reintenta en el próximo ciclo */ }
-      }
-
-      // Si el aviso no llega a nadie (sin internet, sin tokens o token
-      // caducado) se corta: reintentar para siempre sería un bucle inútil.
-      fallosSeguidos = entregados > 0 ? 0 : fallosSeguidos + 1;
-
-      if (fallosSeguidos >= SOSService.FALLOS_ENTREGA_MAXIMOS) {
-        console.warn('SOS: el aviso no se pudo entregar, se detienen los reintentos');
-        this.detenerReintentosSOS();
-        await this.avisarSinEntrega();
-      }
     }, SOSService.INTERVALO_REINTENTO_MS);
   }
 
@@ -344,10 +312,6 @@ export class SOSService {
       });
       await alert.present();
     } catch { /* sin UI disponible */ }
-  }
-
-  private datosDe(idSos: string): { [clave: string]: string } {
-    return { tipo: 'sos', canal: 'sos-alertas', id_sos: idSos };
   }
 
   private detenerReintentosSOS(): void {

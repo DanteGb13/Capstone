@@ -11,6 +11,13 @@ export function canalDe(datos: DatosPush | undefined, porDefecto = "sos-alertas"
   return typeof canal === "string" && canal.trim() ? canal.trim() : porDefecto;
 }
 
+/** FCM ya no conoce ese token (app desinstalada o token rotado). */
+export function esTokenNoRegistrado(error: string | undefined): boolean {
+  if (!error) return false;
+  const e = error.toLowerCase();
+  return e.includes("unregistered") || e.includes("notregistered");
+}
+
 export async function enviarPushFirebase(
   token: string,
   titulo: string,

@@ -19,7 +19,13 @@ export class PushNotificationService {
   /** Clave local para recuperar el token aunque la app se haya reiniciado. */
   private static readonly CLAVE_TOKEN_LOCAL = 'push_token_fcm';
 
+  /** Grupo de acciones de la notificación SOS en la barra. */
+  private static readonly ACCION_SOS = 'sos-confirmar';
+
   private listenersRegistrados = false;
+
+  /** Ya se registró el botón "Confirmar" de las notificaciones locales. */
+  private accionSosRegistrada = false;
 
   /** Sesiones SOS que este cuidador YA|attendance: no se vuelven a avisar. */
   private sosAtendidos = new Set<string>();
@@ -47,10 +53,6 @@ export class PushNotificationService {
   async inicializar(): Promise<void> {
     if (!this.isNative || !this.pushHabilitado) return;
 
-    // La app entra a los paneles varias veces: sin esta guarda se acumulan
-    // listeners y una sola alerta abre N diálogos y N notificaciones.
-    if (this.listenersRegistrados) return;
-
     // Canales de alerta listos (SOS / zona segura) antes de registrar el token
     SiempreCerca.crearCanalSOS().catch(() => {});
 
@@ -76,6 +78,9 @@ export class PushNotificationService {
       return;
     }
 
+    // registrarListeners() se resguarda solo: sin esto, entrar al panel
+    // después de cerrar sesión volvía a saltar el registro del token y la
+    // cuenta nueva nunca quedaba en push_tokens.
     this.registrarListeners();
 
     try {
@@ -88,12 +93,29 @@ export class PushNotificationService {
       return;
     }
 
-    // Al cambiar de cuenta el token del dispositivo es el mismo: si ya lo
-    // teníamos guardado hay que volver a asociarlo a la sesión actual para que
-    // la cuenta anterior deje de recibir alertas aquí.
+    // Al cambiar de cuenta el token del dispositivo es el mismo: hay que
+    // volver a asociarlo a la sesión actual para que la cuenta anterior
+    // deje de recibir alertas aquí.
     const tokenPrevio = this.tokenGuardado();
-    if (!this.tokenFCM && tokenPrevio) {
+    if (tokenPrevio) {
       this.guardarToken(tokenPrevio);
+    }
+  }
+
+  /**
+   * Escucha las notificaciones desde el arranque de la app.
+   * Si el SOS se toca con la app cerrada, el gestor de notificaciones se
+   * registra aquí: sin esto el toque no confirmaba y el aviso seguía sonando.
+   * No pide permisos ni registra el token, eso sigue en inicializar().
+   */
+  escucharDesdeArranque(): void {
+    if (!this.isNative || !this.pushHabilitado) return;
+    if (!Capacitor.isPluginAvailable('PushNotifications')) return;
+
+    try {
+      this.registrarListeners();
+    } catch (e) {
+      console.warn('No se pudo escuchar las notificaciones al arrancar:', e);
     }
   }
 
@@ -135,6 +157,10 @@ export class PushNotificationService {
         // Tocar la alerta SOS cuenta como "contesté": se deja de reenviar
         if (datos.tipo === 'sos' && datos.id_sos) {
           await this.confirmarSos(datos.id_sos);
+          // La ubicación se abre en Google Maps en vez de quedar como texto
+          this.abrirMapaSos(datos);
+          await this.navRol.irAPanelPrincipal();
+          return;
         }
         await this.navRol.irAPanelPrincipal();
       });
@@ -146,9 +172,10 @@ export class PushNotificationService {
       LocalNotifications.addListener('localNotificationActionPerformed', (accion: any) => {
         const datos = accion?.notification?.extra || {};
         if (datos?.tipo === 'sos' && datos?.id_sos) {
-          this.ngZone.run(() => {
-            void this.confirmarSos(datos.id_sos);
-            void this.navRol.irAPanelPrincipal();
+          this.ngZone.run(async () => {
+            await this.confirmarSos(datos.id_sos);
+            this.abrirMapaSos(datos);
+            await this.navRol.irAPanelPrincipal();
           });
         }
       });
@@ -204,10 +231,21 @@ export class PushNotificationService {
 
     try {
       const client = this.supabaseService.getClient();
-      const { data: { user } } = await client.auth.getUser();
-      if (!user) return;
 
       for (let intento = 1; intento <= intentos; intento++) {
+        const { data: { user } } = await client.auth.getUser();
+
+        // Al abrir desde la notificación con la app cerrada la sesión tarda
+        // un instante en restaurarse: sin este reintento el SOS seguía sonando.
+        if (!user) {
+          if (intento < intentos) {
+            await new Promise((resolver) => setTimeout(resolver, 1500));
+            continue;
+          }
+          console.warn('No se pudo confirmar la alerta SOS: no hay sesión iniciada');
+          return;
+        }
+
         const { error, data } = await client
           .from('sos_alerta')
           .update({
@@ -441,11 +479,36 @@ export class PushNotificationService {
   }
 
   private esTokenInvalido(mensaje: string): boolean {
+    const m = (mensaje || '').toLowerCase();
     return (
-      mensaje.toLowerCase().includes('unregistered') ||
-      mensaje.toLowerCase().includes('invalid argument') ||
-      mensaje.toLowerCase().includes('not a valid')
+      m.includes('unregistered') ||
+      m.includes('notregistered') ||
+      m.includes('invalid argument') ||
+      m.includes('invalid_argument') ||
+      m.includes('not a valid')
     );
+  }
+
+  /**
+   * El motivo real de FCM viene en el cuerpo de la respuesta; el mensaje de
+   * supabase-js es siempre "Edge Function returned a non-2xx status code".
+   */
+  private async detallesDeError(error: any, respuesta: any): Promise<string> {
+    const fuente = error?.context || respuesta;
+    try {
+      if (fuente && typeof fuente.text === 'function') {
+        const texto = await fuente.text();
+        if (texto) {
+          try {
+            const json = JSON.parse(texto);
+            if (json?.details) return String(json.details);
+          } catch { /* cuerpo sin JSON */ }
+          return texto;
+        }
+      }
+    } catch { /* cuerpo ya leído o inaccesible */ }
+
+    return `Edge Function: ${error?.message || 'sin detalle'}`;
   }
 
   private async enviarPushFirebase(
@@ -455,22 +518,46 @@ export class PushNotificationService {
     data?: any
   ): Promise<{ ok: boolean; error?: string; tokenInvalido?: boolean }> {
     const client = this.supabaseService.getClient();
-    const { error } = await client.functions.invoke('enviar-push', {
-      body: {
-        token,
-        titulo,
-        cuerpo,
-        data: data || {}
+
+    try {
+      const { error, response } = await client.functions.invoke('enviar-push', {
+        body: {
+          token,
+          titulo,
+          cuerpo,
+          data: data || {}
+        }
+      });
+
+      if (error) {
+        const detalles = await this.detallesDeError(error, response);
+        console.error('Error en Edge Function push:', detalles);
+        return { ok: false, error: detalles, tokenInvalido: this.esTokenInvalido(detalles) };
       }
-    });
 
-    if (error) {
-      const mensaje = `Edge Function: ${error.message}`;
-      console.error('Error en Edge Function push:', error);
-      return { ok: false, error: mensaje, tokenInvalido: this.esTokenInvalido(error.message || '') };
+      return { ok: true };
+    } catch (e: any) {
+      const detalles = e?.message || 'Error desconocido enviando push';
+      console.error('Error enviando push:', e);
+      return { ok: false, error: detalles, tokenInvalido: this.esTokenInvalido(detalles) };
     }
+  }
 
-    return { ok: true };
+  /**
+   * Abre la ubicación del adulto en Google Maps (app o navegador).
+   * El aviso sólo trae las coordenadas: así no queda pegado como texto.
+   */
+  private abrirMapaSos(datos: any): void {
+    const lat = parseFloat(datos?.latitud);
+    const lng = parseFloat(datos?.longitud);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    try {
+      window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_system');
+    } catch (e) {
+      console.warn('No se pudo abrir la ubicación en Google Maps:', e);
+    }
   }
 
   private async mostrarAlerta(notification: PushNotification): Promise<void> {
@@ -487,16 +574,16 @@ export class PushNotificationService {
             header: notification.title || 'Alerta SOS',
             message:
               `${notification.body || ''}\n\n` +
-              'Si ya lo escuchaste, confirma aquí para que la alerta deje de sonar.',
+              'Confirma para dejar de sonar y abrir la ubicación en Google Maps.',
             buttons: [
               {
-                text: 'Ya lo escuché',
+                text: 'Confirmar',
                 handler: () => {
                   void this.confirmarSos(idSos);
+                  this.abrirMapaSos(datos);
                   void this.navRol.irAPanelPrincipal();
                 }
-              },
-              { text: 'Después', role: 'cancel' }
+              }
             ]
           })
         : await this.alertCtrl.create({
@@ -528,20 +615,44 @@ export class PushNotificationService {
       // Sesión ya confirmada: no se vuelve a publicar nada
       if (idSos && this.sosAtendidos.has(idSos)) return;
 
-      await LN.schedule({
-        notifications: [{
-          title: notification.title || 'Alerta SOS',
-          body: notification.body || 'Emergencia detectada',
-          // ID estable por sesión: el aviso repetido del adulto REEMPLAZA al
-          // anterior en vez de apilarse (y sonar así una y otra vez).
-          id: idSos
-            ? this.idNotificacionSos(idSos)
-            : Math.floor(Date.now() % 2000000000),
-          channelId: canal,
-          autoCancel: true,
-          extra: { ...datos }
-        }]
-      });
+      // En la barra sólo aparece el botón de confirmar
+      if (idSos && !this.accionSosRegistrada) {
+        try {
+          await LN.registerActionTypes({
+            types: [{
+              id: PushNotificationService.ACCION_SOS,
+              actions: [{ id: 'confirmar', title: 'Confirmar' }]
+            }]
+          });
+          this.accionSosRegistrada = true;
+        } catch (e) {
+          console.warn('No se pudo registrar el botón Confirmar:', e);
+        }
+      }
+
+      const aviso = {
+        title: notification.title || 'Alerta SOS',
+        body: notification.body || 'Emergencia detectada',
+        // ID estable por sesión: el aviso repetido del adulto REEMPLAZA al
+        // anterior en vez de apilarse (y sonar así una y otra vez).
+        id: idSos
+          ? this.idNotificacionSos(idSos)
+          : Math.floor(Date.now() % 2000000000),
+        channelId: canal,
+        autoCancel: true,
+        extra: { ...datos },
+        actionTypeId: idSos && this.accionSosRegistrada
+          ? PushNotificationService.ACCION_SOS
+          : undefined
+      };
+
+      try {
+        await LN.schedule({ notifications: [aviso] });
+      } catch (e) {
+        // Equipos que no aceptan la acción: se publica igual, sin el botón
+        await LN.schedule({ notifications: [{ ...aviso, actionTypeId: undefined }] });
+        console.warn('Notificación SOS publicada sin botón de acción:', e);
+      }
       console.log('Notificación publicada en barra');
     } catch (e) {
       console.warn('Error publicando en barra:', e);

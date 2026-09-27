@@ -1,5 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { enviarPushFirebase, canalDe, DatosPush } from "../_shared/fcm.ts";
+import { enviarPushFirebase, canalDe, esTokenNoRegistrado, DatosPush } from "../_shared/fcm.ts";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
+const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
 interface PushRequest {
   token: string;
@@ -19,6 +22,33 @@ function jsonResponse(status: number, body: unknown) {
     status,
     headers: { "Content-Type": "application/json", ...CORS_HEADERS },
   });
+}
+
+// La RLS no permite que el adulto mayor borre filas de push_tokens ajenas,
+// así que el token caducado se limpia aquí, con la service role.
+async function descartarTokenCaducado(token: string): Promise<void> {
+  if (!SUPABASE_URL || !SERVICE_KEY) return;
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/push_tokens?token=eq.${encodeURIComponent(token)}`,
+      {
+        method: "DELETE",
+        headers: {
+          apikey: SERVICE_KEY,
+          Authorization: `Bearer ${SERVICE_KEY}`,
+        },
+      },
+    );
+
+    if (!res.ok) {
+      console.error("No se pudo descartar el token caducado:", res.status, await res.text());
+    } else {
+      console.log("Token caducado descartado de push_tokens");
+    }
+  } catch (e) {
+    console.error("No se pudo descartar el token caducado:", e?.message || e);
+  }
 }
 
 serve(async (req) => {
@@ -45,6 +75,9 @@ serve(async (req) => {
 
     const r = await enviarPushFirebase(token, titulo, cuerpo, data);
     if (!r.ok) {
+      if (esTokenNoRegistrado(r.error)) {
+        await descartarTokenCaducado(token);
+      }
       return jsonResponse(500, { error: "Error enviando push", details: r.error });
     }
 
