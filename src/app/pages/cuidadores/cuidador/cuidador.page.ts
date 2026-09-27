@@ -24,6 +24,11 @@ import { Capacitor } from '@capacitor/core';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
 import { FooterComponent } from '../../../components/footer/footer.component';
+import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
+import {
+  PresenciaService,
+  estaEnLinea
+} from '../../../services/Backend/presencia/presencia';
 import { SupabaseService } from '../../../services/supabase/supabase';
 import { BarcodeScanner, BarcodeFormat } from '@capacitor-mlkit/barcode-scanning';
 
@@ -44,7 +49,8 @@ import { BarcodeScanner, BarcodeFormat } from '@capacitor-mlkit/barcode-scanning
     IonIcon,
     CommonModule,
     FormsModule,
-    FooterComponent
+    FooterComponent,
+    EstadoConexionComponent
   ]
 })
 export class CuidadorPage implements OnInit, OnDestroy {
@@ -64,9 +70,16 @@ export class CuidadorPage implements OnInit, OnDestroy {
 
   adultosACargo: any[] = [];
 
+  /** Cuántos de los adultos a cargo están en línea (con internet). */
+  enLineaCount: number = 0;
+
+  cargandoConexion: boolean = false;
+
   cargandoAdultos: boolean = false;
 
   private refreshInterval: any = null;
+
+  private inicializado = false;
 
 
   // =====================================================
@@ -94,7 +107,8 @@ export class CuidadorPage implements OnInit, OnDestroy {
     private changeDetectorRef: ChangeDetectorRef,
     private router: Router,
     private pushService: PushNotificationService,
-    private supabaseService: SupabaseService
+    private supabaseService: SupabaseService,
+    private presenciaService: PresenciaService
   ) {
     addIcons(icons);
   }
@@ -125,6 +139,8 @@ export class CuidadorPage implements OnInit, OnDestroy {
         this.pushService.inicializar().catch(() => {});
       }
     }, 2000);
+
+    this.inicializado = true;
   }
 
   async cargarFotoPerfil() {
@@ -158,7 +174,12 @@ export class CuidadorPage implements OnInit, OnDestroy {
   // =====================================================
 
   async ionViewWillEnter() {
+    if (!this.inicializado) {
+      return;
+    }
+
     await this.cargarFotoPerfil();
+    await this.cargarAdultos();
     this.changeDetectorRef.detectChanges();
   }
 
@@ -178,12 +199,59 @@ export class CuidadorPage implements OnInit, OnDestroy {
 
     try {
       this.adultosACargo = await this.vinculacionService.obtenerAdultosACargo();
+      void this.actualizarResumenConexion();
     } catch (error: any) {
       console.error('Error cargando adultos a cargo:', error);
     } finally {
       this.cargandoAdultos = false;
       this.changeDetectorRef.detectChanges();
     }
+  }
+
+
+  // =====================================================
+  // RESUMEN DE CONEXIÓN (¿CUÁNTOS ESTÁN EN LÍNEA?)
+  // =====================================================
+
+  /**
+   * Cuenta cuántos adultos tienen la app activa con internet.
+   * Si alguno vuelve a estar en línea al poco de cargar, se vuelve a mirar.
+   */
+  private async actualizarResumenConexion() {
+    if (!this.adultosACargo.length) {
+      this.enLineaCount = 0;
+      this.cargandoConexion = false;
+      return;
+    }
+
+    this.cargandoConexion = true;
+
+    const vistos: Record<string, string | null> = {};
+
+    for (const adulto of this.adultosACargo) {
+      const id = adulto?.id_usuario || adulto?.adulto_mayor?.id;
+      if (!id) continue;
+      vistos[id] = await this.presenciaService.obtenerUltimoVisto(id);
+    }
+
+    this.enLineaCount = Object.values(vistos).filter((v) => estaEnLinea(v) === true).length;
+    this.cargandoConexion = false;
+    this.changeDetectorRef.detectChanges();
+  }
+
+  get textoResumenConexion(): string {
+    const total = this.adultosACargo.length;
+
+    if (this.cargandoConexion) {
+      return 'Comprobando conexión con internet…';
+    }
+
+    if (this.enLineaCount === total) {
+      return total === 1 ? 'Está en línea ahora.' : `Los ${total} están en línea ahora.`;
+    }
+
+    const sinConexion = total - this.enLineaCount;
+    return `${this.enLineaCount} en línea · ${sinConexion} sin conexión.`;
   }
 
 

@@ -121,8 +121,9 @@ export const authGuard: CanActivateFn = async () => {
     return false;
   }
 
-  // Verificar que el rol coincida con la ruta que intenta acceder
-  const rutaIncorrecta = await navRol.verificarAcceso(router.url);
+  // El rol ya vino con el usuario que se pidió arriba: usarlo directamente
+  // evita otra consulta a la base en cada navegación.
+  const rutaIncorrecta = navRol.verificarAccesoConRol(estado.rol, router.url);
   if (rutaIncorrecta) {
     router.navigate([rutaIncorrecta], { replaceUrl: true });
     return false;

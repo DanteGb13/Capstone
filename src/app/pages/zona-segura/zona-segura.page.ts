@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ChangeDetectorRef, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -36,6 +36,8 @@ import { Gps, UbicacionInfo } from '../../services/Backend/gps/gps';
 import { Vinculacion } from '../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../services/Backend/cuidadores/cuidadores';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
+import { PresenciaService, estaEnLinea } from '../../services/Backend/presencia/presencia';
+import { EstadoConexionComponent } from '../../components/estado-conexion/estado-conexion.component';
 
 declare const L: any; // Leaflet (cargado globalmente en index.html)
 
@@ -58,7 +60,8 @@ const INTERVALO_CUIDADOR_MS = 30000;
     IonSelect,
     IonSelectOption,
     CommonModule,
-    FormsModule
+    FormsModule,
+    EstadoConexionComponent
   ]
 })
 export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
@@ -102,6 +105,12 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   adultoSeleccionado: any = null;
 
   cargandoAdultos: boolean = false;
+
+  /** Último "latido" conocido del adulto (app activa con internet). */
+  adultoUltimoVisto: string = '';
+
+  /** true = en línea, false = sin conexión, null = sin datos. */
+  adultoEnLinea: boolean | null = null;
 
   // =====================================================
   // FORMULARIO DE ZONA (HOJA INFERIOR)
@@ -175,12 +184,16 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
 
   private destruido: boolean = false;
 
+  private inicializado: boolean = false;
+
   private estadoPrevioDentro: boolean | null = null;
 
   /** Direcciones calculadas para zonas guardadas sin dirección de texto. */
   private direccionesCalculadas = new Map<string, string>();
 
   private resolviendoDirecciones: boolean = false;
+
+  private presenciaService = inject(PresenciaService);
 
   constructor(
     private zonaService: ZonaSeguraService,
@@ -228,6 +241,18 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     } else {
       this.iniciarWatch();
     }
+
+    this.inicializado = true;
+  }
+
+  async ionViewWillEnter() {
+    // Refresca el menú de personas a cargo: alguien puede haber sido
+    // desvinculado mientras la página permanecía en el historial de navegación.
+    if (!this.inicializado || !this.esCuidador || this.cargandoAdultos) {
+      return;
+    }
+
+    await this.cargarAdultos();
   }
 
   ngAfterViewInit() {
@@ -350,7 +375,7 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
         );
         if (this.destruido) return;
 
-        if (dir.texto) this.direccionesCalculadas.set(zona.id, dir.texto);
+        if (dir.calle || dir.comuna) this.direccionesCalculadas.set(zona.id, dir.texto);
 
         this.pintarZonas();
         this.changeDetectorRef.detectChanges();
@@ -378,7 +403,14 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
 
         this.adultoSeleccionado = encontrado || this.adultosACargo[0];
         this.aplicarAdultoSeleccionado();
+        this.sembrarEstadoConexion();
+        void this.refrescarEstadoConexion();
         await this.prepararZonaCasa();
+      } else {
+        // Ya no hay nadie a cargo: limpiar la selección para no conservar
+        // restos de una persona desvinculada.
+        this.adultoSeleccionado = null;
+        this.aplicarAdultoSeleccionado();
       }
     } catch (e) {
       console.error('Error cargando adultos a cargo:', e);
@@ -409,10 +441,64 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     this.estado = null;
     this.ubicacion = null;
     this.estadoPrevioDentro = null;
+    this.sembrarEstadoConexion();
+    void this.refrescarEstadoConexion();
     await this.prepararZonaCasa();
     this.cargarZonas();
     this.actualizarUbicacionAdulto(true);
     this.changeDetectorRef.detectChanges();
+  }
+
+  // =====================================================
+  // ESTADO EN LÍNEA / SIN CONEXIÓN DEL ADULTO
+  // =====================================================
+
+  /** Toma el último visto que trajo la lista de adultos. */
+  private sembrarEstadoConexion() {
+    const visto = this.adultoSeleccionado?.adulto_mayor?.ultimo_visto || '';
+    if (visto) this.adultoUltimoVisto = visto;
+    this.calcularConexion();
+  }
+
+  /** Pide el último "latido" fresco de la persona (se repite con la vigilancia). */
+  private async refrescarEstadoConexion() {
+    if (!this.esCuidador || !this.idAdulto || this.destruido) return;
+
+    const visto = await this.presenciaService.obtenerUltimoVisto(this.idAdulto);
+    if (visto) this.adultoUltimoVisto = visto;
+    this.calcularConexion();
+    this.changeDetectorRef.detectChanges();
+  }
+
+  private calcularConexion() {
+    // Evidencia 1: latido de la app (usuario.ultimo_visto).
+    const porLatido = estaEnLinea(this.adultoUltimoVisto);
+
+    // Evidencia 2: una ubicación enviada hace poco también sólo es posible
+    // con internet (cubre a la app en segundo plano sin latido reciente).
+    const origen = this.ubicacion?.origen;
+    const reporteReciente =
+      (origen === 'bd' || origen === 'cache') && estaEnLinea(this.ubicacion?.fecha);
+
+    this.adultoEnLinea = reporteReciente === true ? true : porLatido;
+  }
+
+  get textoConexion(): string {
+    if (this.adultoEnLinea === true) return 'En línea';
+
+    const visto = this.adultoUltimoVisto;
+    if (!visto) return 'Sin conexión';
+
+    const fecha = new Date(visto);
+    const edad = Date.now() - fecha.getTime();
+
+    if (!isNaN(edad) && edad >= 0 && edad < 60 * 60 * 1000) {
+      const minutos = Math.max(1, Math.round(edad / 60000));
+      return `Sin conexión · hace ${minutos} min`;
+    }
+
+    const hora = fecha.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' });
+    return `Sin conexión · última vez ${hora}`;
   }
 
   get nombreParaMostrar(): string {
@@ -445,27 +531,40 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   async actualizarUbicacionAdulto(centrar: boolean) {
     if (!this.idAdulto || this.destruido) return;
 
+    void this.refrescarEstadoConexion();
+
     this.cargandoUbicacion = true;
     this.changeDetectorRef.detectChanges();
 
     try {
       const direccionFallback = await this.zonaService.obtenerDireccionUsuario(this.idAdulto);
       const info = await this.gpsService.obtenerUbicacionAdulto(this.idAdulto, direccionFallback);
-      this.ubicacion = info;
-      this.ultimaActualizacion = new Date(info.fecha || Date.now()).toLocaleTimeString('es-CL', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit'
-      });
-      this.precisionTexto = `${Math.round(info.precision || 0)} m`;
 
-      await this.evaluarPosicion(false);
-      this.pintarPersona();
+      // Sólo la ubicación real del adulto (BD o su último dato guardado) mueve
+      // el puntero y evalúa las zonas. La dirección de casa o el GPS de ESTE
+      // dispositivo no dicen dónde está él: se ignoran y se conserva la última
+      // ubicación real conocida (también cuando no hay internet).
+      const esReal = !info.origen || info.origen === 'bd' || info.origen === 'cache';
 
-      if (centrar && this.map) {
-        this.map.setView([info.latitud, info.longitud], 17);
+      if (esReal) {
+        this.ubicacion = info;
+        this.calcularConexion();
+        this.ultimaActualizacion = new Date(info.fecha || Date.now()).toLocaleTimeString('es-CL', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+        this.precisionTexto = `${Math.round(info.precision || 0)} m`;
+
+        await this.evaluarPosicion(false);
+        this.pintarPersona();
+
+        if (centrar && this.map) {
+          this.map.setView([info.latitud, info.longitud], 17);
+        }
       }
     } catch (e) {
+      // Sin internet o sin datos: queda la última ubicación que se tenía
       console.error('Error actualizando ubicación del adulto:', e);
     } finally {
       this.cargandoUbicacion = false;
@@ -600,7 +699,10 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     this.pintarZonas();
     this.changeDetectorRef.detectChanges();
 
-    if (estado && !estado.dentro && antesDentro !== false) {
+    // El aviso en pantalla SÓLO lo muestra el dispositivo del adulto con su
+    // GPS real: en la vista del cuidador (o con ubicaciones de respaldo) el
+    // mapa se actualiza sin ventanas ni sonidos molestos.
+    if (notificar && estado && !estado.dentro && antesDentro !== false) {
       if (this.zonaService.puedeAlertar(this.idAdulto)) {
         this.zonaService.registrarAlerta(this.idAdulto);
         this.mostrarAlertaFueraDeZona(estado);
@@ -650,6 +752,17 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
 
   get subtituloEstado(): string {
     if (!this.ubicacion) return 'Esperando ubicación...';
+
+    // Si el dato es viejo (p. ej. sin internet), se dice con claridad en vez
+    // de mostrarlo como si estuviera fresco.
+    const edad = Date.now() - new Date(this.ubicacion.fecha).getTime();
+    if (!isNaN(edad) && edad > 5 * 60 * 1000) {
+      const texto = edad < 60 * 60 * 1000
+        ? `hace ${Math.floor(edad / 60000)} min`
+        : 'hace más de 1 h';
+      return `Última ubicación a las ${this.ultimaActualizacion} (${texto})`;
+    }
+
     return `Ubicación actualizada a las ${this.ultimaActualizacion} · precisión ${this.precisionTexto}`;
   }
 

@@ -40,4 +40,15 @@ describe('NavegacionRolService', () => {
     expect(RUTAS_CUIDADOR).toContain('/cuidador');
     expect(RUTAS_ADULTO_MAYOR).toContain('/adulto-mayor');
   });
+
+  it('verificarAccesoConRol deja pasar al rol correcto y redirige al otro', () => {
+    // authGuard usa esta versión con el rol que ya pidió: no consulta la base,
+    // así que cada navegación se ahorra un viaje a la red.
+    expect(service.verificarAccesoConRol('Usuario', '/contacto-emergencia')).toBeNull();
+    expect(service.verificarAccesoConRol('Familiar', '/cuidador')).toBeNull();
+
+    expect(service.verificarAccesoConRol('Familiar', '/contacto-emergencia')).toBe('/cuidador');
+    expect(service.verificarAccesoConRol('Usuario', '/cuidador')).toBe('/adulto-mayor');
+    expect(service.verificarAccesoConRol(null, '/cuidador')).toBeNull();
+  });
 });

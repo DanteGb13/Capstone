@@ -342,38 +342,28 @@ export class Vinculacion {
         }
     
         const cuidadoresMap = new Map<string, any>();
-    
-        // 1. Consultar solicitudes aceptadas
+
+        // Igual que en el lado del cuidador: manda cuidador_usuario. Una
+        // solicitud aceptada sin fila en cuidador_usuario es residuo de una
+        // desvinculación y no debe seguir apareciendo en la lista.
         const { data: solicitudes } = await this.supabase
           .from('solicitud_vinculacion')
           .select('id, id_cuidador, id_usuario, estado, fecha_respuesta')
           .eq('id_usuario', user.id)
           .eq('estado', 'aceptada');
-    
-        if (solicitudes && solicitudes.length > 0) {
-          for (const s of solicitudes) {
-            if (s.id_cuidador) {
-              cuidadoresMap.set(s.id_cuidador, {
-                id: s.id,
-                id_cuidador: s.id_cuidador,
-                id_usuario: s.id_usuario,
-                estado: s.estado,
-                fecha_respuesta: s.fecha_respuesta
-              });
-            }
-          }
-        }
-    
-        // 2. Consultar tabla cuidador_usuario
+
+        let filasVinculo: any[] = [];
         try {
           const { data: cuData } = await this.supabase
             .from('cuidador_usuario')
             .select('id, id_cuidador, id_usuario')
             .eq('id_usuario', user.id);
-    
-          if (cuData && cuData.length > 0) {
-            for (const cu of cuData) {
-              if (cu.id_cuidador && !cuidadoresMap.has(cu.id_cuidador)) {
+
+          filasVinculo = cuData || [];
+
+          if (filasVinculo.length > 0) {
+            for (const cu of filasVinculo) {
+              if (cu.id_cuidador) {
                 cuidadoresMap.set(cu.id_cuidador, {
                   id: cu.id,
                   id_cuidador: cu.id_cuidador,
@@ -386,6 +376,18 @@ export class Vinculacion {
         } catch (e) {
           // ignore
         }
+
+        const solicitudesHuerfanas = (solicitudes || []).filter(
+          s => !s.id_cuidador || !filasVinculo.some(cu => cu.id_cuidador === s.id_cuidador)
+        );
+
+        if (solicitudesHuerfanas.length > 0) {
+          console.warn(
+            'Cuidadores con solicitud aceptada pero sin vínculo (omitidos):',
+            solicitudesHuerfanas.length
+          );
+        }
+
     
         const lista = Array.from(cuidadoresMap.values());
     
@@ -448,26 +450,27 @@ async obtenerAdultosACargo() {
             .eq('id_cuidador', idCuidador)
         ]);
 
+        // La fuente de verdad del vínculo es cuidador_usuario: es la tabla que
+        // usan las políticas de acceso del resto de la app (zonas seguras,
+        // contactos de emergencia, etc.). Las solicitudes aceptadas que no
+        // tienen fila en cuidador_usuario son residuo de una desvinculación
+        // (el caregiver no tiene permiso para actualizarlas) y no se listan.
         const solicitudes = solRes.data;
-        if (solicitudes && solicitudes.length > 0) {
-          for (const s of solicitudes) {
-            if (s.id_usuario) {
-              adultosMap.set(s.id_usuario, {
-                id: s.id,
-                id_usuario: s.id_usuario,
-                id_cuidador: s.id_cuidador,
-                estado: s.estado,
-                fecha_solicitud: s.fecha_solicitud,
-                fecha_respuesta: s.fecha_respuesta
-              });
-            }
-          }
+        const solicitudesHuerfanas = (solicitudes || []).filter(
+          s => !s.id_usuario || !(cuRes.data || []).some(cu => cu.id_usuario === s.id_usuario)
+        );
+
+        if (solicitudesHuerfanas.length > 0) {
+          console.warn(
+            'Solicitudes aceptadas sin vínculo en cuidador_usuario (omitidas):',
+            solicitudesHuerfanas.length
+          );
         }
 
         const cuData = cuRes.data;
         if (cuData && cuData.length > 0) {
           for (const cu of cuData) {
-            if (cu.id_usuario && !adultosMap.has(cu.id_usuario)) {
+            if (cu.id_usuario) {
               adultosMap.set(cu.id_usuario, {
                 id: cu.id,
                 id_usuario: cu.id_usuario,
@@ -498,6 +501,7 @@ async obtenerAdultosACargo() {
             correo,
             rut,
             fecha_nacimiento,
+            ultimo_visto,
             direccion:id_direccion (
               id,
               region,
@@ -516,13 +520,30 @@ async obtenerAdultosACargo() {
           }
         }
 
+        const completa: any[] = [];
+
         for (const item of lista) {
           const u = usuariosMap.get(item.id_usuario);
           if (u) {
             item.adulto_mayor = u;
+            completa.push(item);
           }
         }
 
+        // Si el vínculo quedó huérfano (la persona ya no se cuida o su fila de
+        // usuario ya no es visible) la tarjeta se renderizaría sin nombre ni datos:
+        // un "fragmento" de alguien que ya fue eliminado. Se descarta de la lista.
+        if (Array.isArray(usuariosData)) {
+          if (completa.length !== lista.length) {
+            console.warn(
+              'Vínculos ignorados por no tener datos de usuario:',
+              lista.length - completa.length
+            );
+          }
+          return completa;
+        }
+
+        // La consulta falló: se devuelve la lista sin filtrar para no vaciar el menú.
         return lista;
       }
     
@@ -618,46 +639,81 @@ async obtenerAdultosACargo() {
         idUsuario: string
       ): Promise<boolean> {
 
-        console.log('Desvinculando:', { idCuidador, idUsuario });
+        if (!idCuidador || !idUsuario) {
+          throw new Error('Faltan datos para desvincular.');
+        }
 
-        // 1. Eliminar TODOS los registros de cuidador_usuario
-        const { data: cuEliminados, error: errorCU } = await this.supabase
+        let ultimoError = '';
+
+        // El vínculo real es la fila de cuidador_usuario (es la tabla que usan
+        // las políticas de acceso del resto de la app). Se borra y se verifica.
+        // El estado de la solicitud es solo informativo: hoy el cuidador no
+        // tiene permiso de UPDATE sobre solicitud_vinculacion, así que su
+        // fallo no debe impedimento desvincular.
+        for (let intento = 0; intento < 2; intento++) {
+
+          const { error: errorCU } = await this.supabase
+            .from('cuidador_usuario')
+            .delete()
+            .eq('id_cuidador', idCuidador)
+            .eq('id_usuario', idUsuario);
+
+          if (errorCU) {
+            ultimoError = errorCU.message;
+            continue;
+          }
+
+          await this.supabase
+            .from('solicitud_vinculacion')
+            .update({
+              estado: 'rechazada',
+              fecha_respuesta: new Date().toISOString()
+            })
+            .eq('id_cuidador', idCuidador)
+            .eq('id_usuario', idUsuario)
+            .eq('estado', 'aceptada');
+
+          // La confirmación se consulta justo después de escribir, por lo que
+          // puede todavía devolver datos antiguos. Se reintenta antes de asumir
+          // que el borrado falló.
+          for (const espera of [0, 500, 1500]) {
+
+            if (espera > 0) {
+              await new Promise(resolver => setTimeout(resolver, espera));
+            }
+
+            const restantes = await this.contarVinculosRestantes(idCuidador, idUsuario);
+
+            if (restantes === 0) {
+              return true;
+            }
+          }
+
+          ultimoError = 'Quedó un registro del vínculo sin eliminar.';
+        }
+
+        throw new Error(
+          'No se pudo completar la desvinculación. ' +
+          (ultimoError || 'Verifica tu conexión y permisos.')
+        );
+      }
+
+      private async contarVinculosRestantes(
+        idCuidador: string,
+        idUsuario: string
+      ): Promise<number> {
+
+        const cuRes = await this.supabase
           .from('cuidador_usuario')
-          .delete()
+          .select('id')
           .eq('id_cuidador', idCuidador)
-          .eq('id_usuario', idUsuario)
-          .select();
+          .eq('id_usuario', idUsuario);
 
-        console.log('Eliminados de cuidador_usuario:', cuEliminados?.length || 0, cuEliminados);
-
-        if (errorCU) {
-          console.error('Error eliminando de cuidador_usuario:', errorCU.message);
-          throw new Error('Error al eliminar vínculo: ' + errorCU.message);
+        if (cuRes.error) {
+          throw new Error(cuRes.error.message);
         }
 
-        if (!cuEliminados || cuEliminados.length === 0) {
-          console.warn('No se eliminó ningún registro de cuidador_usuario — posible bloqueo RLS');
-        }
-
-        // 2. Actualizar TODAS las solicitudes aceptadas a rechazada
-        const { data: svActualizadas, error: errorSV } = await this.supabase
-          .from('solicitud_vinculacion')
-          .update({
-            estado: 'rechazada',
-            fecha_respuesta: new Date().toISOString()
-          })
-          .eq('id_cuidador', idCuidador)
-          .eq('id_usuario', idUsuario)
-          .eq('estado', 'aceptada')
-          .select();
-
-        console.log('Solicitudes actualizadas:', svActualizadas?.length || 0, svActualizadas);
-
-        if (errorSV) {
-          console.error('Error actualizando solicitud_vinculacion:', errorSV.message);
-        }
-
-        return true;
+        return cuRes.data?.length ?? 0;
       }
 
     }

@@ -96,13 +96,11 @@ export class NavegacionRolService {
   }
 
   /**
-   * Verifica si una ruta corresponde al rol del usuario.
-   * - null si el usuario puede acceder a la ruta.
-   * - La ruta del panel correcto si el usuario NO puede acceder.
+   * Verifica si una ruta corresponde al rol, usando un rol que ya se conoce.
+   * Síncrona a propósito: authGuard ya pidió el usuario con su rol y repetir
+   * la consulta aquí agregaba una espera más antes de abrir cada pantalla.
    */
-  async verificarAcceso(url: string): Promise<string | null> {
-    const rol = await this.obtenerRol();
-
+  verificarAccesoConRol(rol: string | null, url: string): string | null {
     if (rol === 'Familiar' && RUTAS_ADULTO_MAYOR.includes(url)) {
       return this.rutaPrincipal(rol);
     }
@@ -112,6 +110,15 @@ export class NavegacionRolService {
     }
 
     return null;
+  }
+
+  /**
+   * Verifica si una ruta corresponde al rol del usuario.
+   * - null si el usuario puede acceder a la ruta.
+   * - La ruta del panel correcto si el usuario NO puede acceder.
+   */
+  async verificarAcceso(url: string): Promise<string | null> {
+    return this.verificarAccesoConRol(await this.obtenerRol(), url);
   }
 
   /**

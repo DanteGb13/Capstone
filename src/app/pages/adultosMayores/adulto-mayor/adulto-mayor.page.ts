@@ -603,6 +603,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.router.navigate(['/recordatorios']);
   }
 
+  abrirContactos() {
+    (document.activeElement as HTMLElement)?.blur();
+    this.router.navigate(['/contacto-emergencia']);
+  }
+
   abrirMiUbicacion() {
     (document.activeElement as HTMLElement)?.blur();
     this.router.navigate(['/mi-ubicacion']);

@@ -10,6 +10,13 @@ export interface UbicacionInfo {
   fecha: string;
   direccionTexto?: string;
   enLinea: boolean;
+  /**
+   * De dónde salió la coordenada:
+   *  'bd'/'cache'  -> datos reales reportados por el adulto,
+   *  'casa'        -> dirección de casa del perfil (respaldo),
+   *  'dispositivo' -> GPS de ESTE teléfono (no indica dónde está el adulto).
+   */
+  origen?: 'bd' | 'cache' | 'casa' | 'dispositivo';
 }
 
 @Injectable({
@@ -28,7 +35,7 @@ export class Gps {
   // OBTENER UBICACIÓN ACTUAL DEL DISPOSITIVO
   // =====================================================
 
-  async obtenerUbicacionActualDispositivo(): Promise<{ latitud: number; longitud: number; precision: number }> {
+  async obtenerUbicacionActualDispositivo(): Promise<{ latitud: number; longitud: number; precision: number } | null> {
     try {
       const position = await Geolocation.getCurrentPosition({
         enableHighAccuracy: true,
@@ -42,33 +49,25 @@ export class Gps {
       };
     } catch (error) {
       // Fallback a API de navegador
-      return new Promise((resolve) => {
+      return new Promise((resolver) => {
         if ('geolocation' in navigator) {
           navigator.geolocation.getCurrentPosition(
             (pos) => {
-              resolve({
+              resolver({
                 latitud: pos.coords.latitude,
                 longitud: pos.coords.longitude,
                 precision: pos.coords.accuracy || 10
               });
             },
-            (err) => {
-              console.warn('Geolocation error fallback:', err);
-              // Fallback por defecto (Santiago, Chile)
-              resolve({
-                latitud: -33.4489,
-                longitud: -70.6693,
-                precision: 25
-              });
+            () => {
+              // Sin GPS no se inventa una ubicación: antes se devolvía
+              // Santiago por defecto y eso provocaba avisos falsos desde lejos.
+              resolver(null);
             },
             { enableHighAccuracy: true, timeout: 10000 }
           );
         } else {
-          resolve({
-            latitud: -33.4489,
-            longitud: -70.6693,
-            precision: 25
-          });
+          resolver(null);
         }
       });
     }
@@ -81,6 +80,13 @@ export class Gps {
 
   async reportarUbicacionAdulto(idUsuario: string): Promise<UbicacionInfo> {
     const coords = await this.obtenerUbicacionActualDispositivo();
+
+    // Sin lectura de GPS no se reporta nada: se conserva la última ubicación
+    // real en vez de grabar una coordenada falsa.
+    if (!coords) {
+      throw new Error('Sin lectura de GPS');
+    }
+
     const ahora = new Date().toISOString();
 
     const info: UbicacionInfo = {
@@ -162,9 +168,11 @@ export class Gps {
             precision: 15,
             fecha: ubicacionBD.fecha || new Date().toISOString(),
             direccionTexto: dirTexto,
-            enLinea: true
+            enLinea: true,
+            origen: 'bd'
           };
 
+          // Sólo la ubicación real del adulto se guarda como última conocida
           localStorage.setItem(`gps_ubicacion_${idUsuario}`, JSON.stringify(info));
           return info;
         }
@@ -175,7 +183,8 @@ export class Gps {
       console.warn('Error consultando tabla ubicacion en Supabase:', err);
     }
 
-    // 2. Si no hay registro en BD, verificar cache en localStorage
+    // 2. Sin registro en BD (p. ej. sin internet): se usa la última ubicación
+    //    real conocida de este dispositivo.
     const cached = localStorage.getItem(`gps_ubicacion_${idUsuario}`);
     if (cached) {
       try {
@@ -184,7 +193,7 @@ export class Gps {
           if (!parsed.direccionTexto) {
             parsed.direccionTexto = await this.obtenerDireccionTexto(parsed.latitud, parsed.longitud);
           }
-          return parsed;
+          return { ...parsed, origen: parsed.origen || 'cache' } as UbicacionInfo;
         }
       } catch (e) {
         console.error(e);
@@ -196,28 +205,33 @@ export class Gps {
       const dirQuery = `${direccionFallback.calle || ''} ${direccionFallback.numero || ''}, ${direccionFallback.comuna || ''}, ${direccionFallback.region || ''}, Chile`.trim();
       const geocoded = await this.geocodificarDireccion(dirQuery);
       if (geocoded) {
-        const info: UbicacionInfo = {
+        // No es donde está el adulto: sólo la dirección del perfil (respaldo)
+        return {
           latitud: geocoded.latitud,
           longitud: geocoded.longitud,
           precision: 20,
           fecha: new Date().toISOString(),
           direccionTexto: dirQuery,
-          enLinea: true
+          enLinea: false,
+          origen: 'casa'
         };
-        localStorage.setItem(`gps_ubicacion_${idUsuario}`, JSON.stringify(info));
-        return info;
       }
     }
 
-    // 4. Fallback del dispositivo
+    // 4. GPS de ESTE dispositivo: último recurso y tampoco es el adulto
     const devicePos = await this.obtenerUbicacionActualDispositivo();
+    if (!devicePos) {
+      throw new Error('Sin ubicación disponible del adulto mayor');
+    }
+
     const info: UbicacionInfo = {
       latitud: devicePos.latitud,
       longitud: devicePos.longitud,
       precision: devicePos.precision,
       fecha: new Date().toISOString(),
       direccionTexto: 'Ubicación reportada por GPS',
-      enLinea: true
+      enLinea: false,
+      origen: 'dispositivo'
     };
 
     try {
@@ -226,7 +240,6 @@ export class Gps {
       // ignore
     }
 
-    localStorage.setItem(`gps_ubicacion_${idUsuario}`, JSON.stringify(info));
     return info;
   }
 

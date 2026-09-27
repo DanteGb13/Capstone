@@ -1,11 +1,16 @@
 <nav class="bottom-menu">
 
-  <button class="menu-item" type="button" (click)="irContactos()">
-    <div class="icon-wrapper">
-      <ion-icon name="people"></ion-icon>
-    </div>
-    <span>Contactos</span>
-  </button>
+  @if (esAdultoMayor) {
+    <button class="menu-item" type="button" (click)="irContactos()">
+      <div class="icon-wrapper">
+        <ion-icon name="people"></ion-icon>
+      </div>
+      <span>Contactos</span>
+    </button>
+  } @else {
+    <!-- El botón de inicio queda al centro también sin la pestaña Contactos -->
+    <div class="menu-item menu-vacio" aria-hidden="true"></div>
+  }
 
   <button class="menu-item menu-center" type="button" (click)="irInicio()">
     <ion-icon name="home"></ion-icon>

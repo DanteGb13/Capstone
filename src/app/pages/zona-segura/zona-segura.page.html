@@ -49,6 +49,18 @@
     }
 
     <!-- ================================================= -->
+    <!-- ESTADO EN LÍNEA / SIN CONEXIÓN (VISTA DEL CUIDADOR) -->
+    <!-- ================================================= -->
+
+    @if (esCuidador && !modoFormulario && adultoEnLinea !== null) {
+      <app-estado-conexion
+        [idUsuario]="idAdulto"
+        [ultimoVisto]="adultoUltimoVisto || null"
+        [refrescar]="false"
+        [compacto]="false" />
+    }
+
+    <!-- ================================================= -->
     <!-- ESTADO -->
     <!-- ================================================= -->
 

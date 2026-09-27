@@ -22,6 +22,7 @@ import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
 
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
+import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
 import { SupabaseService } from '../../../services/supabase/supabase';
 
 @Component({
@@ -40,7 +41,8 @@ import { SupabaseService } from '../../../services/supabase/supabase';
     IonRefresher,
     IonRefresherContent,
     CommonModule,
-    FormsModule
+    FormsModule,
+    EstadoConexionComponent
   ]
 })
 export class AdultoCargoPage implements OnInit {

@@ -57,7 +57,9 @@ export const RADIO_POR_DEFECTO = 500;
 const TABLA = 'zona_segura';
 const CLAVE_ALERTA = 'zs_alerta_';
 const CLAVE_ESTADO = 'zs_estado_';
+const CLAVE_REINTENTO = 'zs_reintento_';
 const ESPERA_ALERTA_MS = 10 * 60 * 1000;
+const ESPERA_REINTENTO_MS = 60 * 1000;
 
 @Injectable({
   providedIn: 'root'
@@ -68,6 +70,9 @@ export class ZonaSeguraService {
 
   /** Último error de escritura (para mostrarlo en pantalla). */
   ultimoError: string = '';
+
+  /** Última lista exitosa por usuario: si se queda sin internet, se conserva. */
+  private zonasCache = new Map<string, ZonaSegura[]>();
 
   constructor(
     private supabaseService: SupabaseService,
@@ -123,13 +128,16 @@ export class ZonaSeguraService {
 
       if (error) {
         console.warn('Nota: consulta a tabla zona_segura:', error.message);
-        return [];
+        // Sin conexión: se conservan las últimas zonas conocidas del usuario
+        return this.zonasCache.get(idUsuario) || [];
       }
 
-      return (data || []).map((fila: any) => this.aModelo(fila));
+      const zonas = (data || []).map((fila: any) => this.aModelo(fila));
+      this.zonasCache.set(idUsuario, zonas);
+      return zonas;
     } catch (e) {
       console.error('Error obteniendo zonas seguras:', e);
-      return [];
+      return this.zonasCache.get(idUsuario) || [];
     }
   }
 
@@ -770,7 +778,10 @@ export class ZonaSeguraService {
     }
 
     const transicion = antes !== 'fuera';
-    if (transicion || this.puedeAlertar(idAdulto)) {
+    // Sin internet la llamada al servidor falla: se reintenta como máximo una
+    // vez por minuto para no martillar la red con cada lectura del GPS.
+    if ((transicion || this.puedeAlertar(idAdulto)) && this.puedeReintentar(idAdulto)) {
+      this.registrarReintento(idAdulto);
       const r = await this.llamarEvaluarZona(latitud, longitud, idAdulto);
 
       if (r === 'error') {
@@ -906,6 +917,23 @@ export class ZonaSeguraService {
   limpiarAlerta(idAdulto: string) {
     try {
       localStorage.removeItem(CLAVE_ALERTA + idAdulto);
+    } catch { /* sin persistencia */ }
+  }
+
+  /** Espera corta entre intentos de aviso al servidor (para modo sin internet). */
+  private puedeReintentar(idAdulto: string): boolean {
+    try {
+      const ultima = localStorage.getItem(CLAVE_REINTENTO + idAdulto);
+      if (!ultima) return true;
+      return Date.now() - new Date(ultima).getTime() > ESPERA_REINTENTO_MS;
+    } catch {
+      return true;
+    }
+  }
+
+  private registrarReintento(idAdulto: string) {
+    try {
+      localStorage.setItem(CLAVE_REINTENTO + idAdulto, new Date().toISOString());
     } catch { /* sin persistencia */ }
   }
 }

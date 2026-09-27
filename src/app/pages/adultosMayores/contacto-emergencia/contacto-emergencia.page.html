@@ -1,13 +1,295 @@
-<ion-header [translucent]="true">
+<ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-title>contactoEmergencia</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/adulto-mayor" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Contactos</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">contactoEmergencia</ion-title>
-    </ion-toolbar>
-  </ion-header>
+
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content pullingText="Desliza para actualizar" refreshingText="Actualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="contactos-container">
+
+    <!-- ================================================= -->
+    <!-- EMERGENCIAS PÚBLICAS (siempre disponibles) -->
+    <!-- ================================================= -->
+
+    <section class="seccion">
+
+      <div class="encabezado">
+        <div class="encabezado-icono">
+          <ion-icon name="warning"></ion-icon>
+        </div>
+        <div>
+          <h2 class="titulo">Emergencias públicas</h2>
+          <p class="subtitulo">Llama de inmediato si algo pasa</p>
+        </div>
+      </div>
+
+      <div class="grid-publicos">
+        @for (pub of contactosPublicos; track pub.telefono) {
+          <div class="card-publico" (click)="llamar(pub.telefono)">
+            <div class="card-icono" [style.background]="pub.color">
+              <ion-icon [name]="pub.icono"></ion-icon>
+            </div>
+            <strong class="card-nombre">{{ pub.nombre }}</strong>
+            <span class="card-numero" [style.color]="pub.color">{{ pub.telefono }}</span>
+            <span class="card-desc">{{ pub.descripcion }}</span>
+            <span class="card-llamar" [style.background]="pub.color">
+              <ion-icon name="call"></ion-icon>
+              Llamar
+            </span>
+          </div>
+        }
+      </div>
+
+    </section>
+
+    <!-- ================================================= -->
+    <!-- MIS CONTACTOS DE EMERGENCIA -->
+    <!-- ================================================= -->
+
+    <section class="seccion">
+
+      <div class="encabezado">
+        <div class="encabezado-icono morado">
+          <ion-icon name="people"></ion-icon>
+        </div>
+        <div>
+          <h2 class="titulo">Mis contactos</h2>
+          <p class="subtitulo">Personas de confianza para avisar en emergencias</p>
+        </div>
+      </div>
+
+      <!-- El fallo se queda en pantalla con su botón: un toast desaparece
+           antes de que se pueda leer y no deja saber qué salió mal. -->
+      @if (errorLista && !cargando) {
+        <div class="estado aviso-error">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>{{ errorLista }}</span>
+          <button type="button" class="btn-reintentar" (click)="reintentar()">
+            <ion-icon name="refresh-outline"></ion-icon>
+            Reintentar
+          </button>
+        </div>
+      }
+
+      @if (cargando) {
+        <div class="lista esqueleto" aria-hidden="true">
+          @for (pista of [1, 2, 3]; track pista) {
+            <div class="item item-fantasma">
+              <div class="avatar fantasma"></div>
+              <div class="dato">
+                <span class="linea ancha"></span>
+                <span class="linea corta"></span>
+              </div>
+            </div>
+          }
+        </div>
+      } @else if (!idUsuario) {
+        <div class="estado vacio">
+          <ion-icon name="people-outline"></ion-icon>
+          <span>Inicia sesión para ver tus contactos de emergencia.</span>
+        </div>
+      } @else if (contactos.length === 0 && !errorLista) {
+        <div class="estado vacio">
+          <ion-icon name="people-outline"></ion-icon>
+          <span>Aún no tienes contactos guardados. Añade a personas de confianza.</span>
+        </div>
+      } @else if (contactos.length > 0) {
+        <div class="lista">
+          @for (contacto of contactos; track contacto.id) {
+            <div class="item">
+              <div class="avatar">{{ iniciales(nombreContacto(contacto)) }}</div>
+
+              <div class="dato">
+                <strong>{{ nombreContacto(contacto) }}</strong>
+                <span>
+                  {{ contacto.telefono }}
+                  @if (relacionDe(contacto)) {
+                    <span class="parentesco">· {{ relacionDe(contacto) }}</span>
+                  }
+                </span>
+              </div>
+
+              <button
+                type="button"
+                class="btn-accion btn-llamar"
+                [attr.aria-label]="'Llamar a ' + nombreContacto(contacto)"
+                (click)="llamar(contacto.telefono)">
+                <ion-icon name="call"></ion-icon>
+              </button>
+
+              <button
+                type="button"
+                class="btn-accion btn-eliminar"
+                aria-label="Eliminar contacto"
+                (click)="confirmarEliminar(contacto)">
+                <ion-icon name="trash-outline"></ion-icon>
+              </button>
+            </div>
+          }
+        </div>
+      }
+
+      <button
+        type="button"
+        class="btn-grande btn-agregar"
+        [disabled]="guardando"
+        (click)="agregarDeTelefono()">
+        <ion-icon name="person-add-outline"></ion-icon>
+        <span>{{ guardando ? 'Guardando…' : 'Añadir de mi teléfono' }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn-grande btn-manual"
+        [disabled]="guardando"
+        (click)="abrirFormularioManual()">
+        <ion-icon name="add"></ion-icon>
+        <span>Añadir manualmente</span>
+      </button>
+
+    </section>
+
+  </div>
+
+  <!-- ================================================= -->
+  <!-- AVISO MIENTRAS SE ABRE LA AGENDA DEL TELÉFONO -->
+  <!-- ================================================= -->
+
+  @if (esperandoPicker) {
+    <div class="overlay-picker">
+      <div class="overlay-card">
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>Elige un contacto de tu teléfono…</span>
+        <button type="button" (click)="cancelarPicker()">Cancelar</button>
+      </div>
+    </div>
+  }
+
+  <!-- ================================================= -->
+  <!-- FORMULARIO: AÑADIR CONTACTO (IGUAL QUE EL TELÉFONO) -->
+  <!-- ================================================= -->
+
+  <ion-modal [isOpen]="mostrarFormulario" (didDismiss)="cerrarFormulario()">
+
+    <ng-template>
+
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <div class="encabezado-formulario">
+            <span class="titulo-modal">Nuevo contacto</span>
+            <span class="subtitulo-modal">{{ formSubtitulo }}</span>
+          </div>
+          <ion-buttons slot="end">
+            <ion-button (click)="cerrarFormulario()">
+              <ion-icon name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content>
+
+        <div class="formulario">
+
+          <label class="campo" [class.invalido]="formErrorNombre">
+            <span>Nombre *</span>
+            <ion-input
+              type="text"
+              placeholder="Ej. María"
+              [(ngModel)]="form.nombre"
+              (ionInput)="formErrorNombre = false">
+            </ion-input>
+          </label>
+
+          @if (formErrorNombre) {
+            <p class="campo-error">Escribe el nombre del contacto.</p>
+          }
+
+        <div class="fila-campos">
+
+          <label class="campo">
+            <span>Apellido paterno</span>
+            <ion-input
+              type="text"
+              placeholder="González"
+              [(ngModel)]="form.apellidopa">
+            </ion-input>
+          </label>
+
+          <label class="campo">
+            <span>Apellido materno</span>
+            <ion-input
+              type="text"
+              placeholder="Rojas"
+              [(ngModel)]="form.apellidoma">
+            </ion-input>
+          </label>
+
+        </div>
+
+          <label class="campo" [class.invalido]="formErrorTelefono">
+            <span>Teléfono *</span>
+            <ion-input
+              type="tel"
+              placeholder="Ej. +56 9 1234 5678"
+              [(ngModel)]="form.telefono"
+              (ionInput)="formErrorTelefono = false">
+            </ion-input>
+          </label>
+
+          @if (formErrorTelefono) {
+            <p class="campo-error">Escribe un teléfono válido.</p>
+          }
+
+          <label class="campo">
+            <span>Correo</span>
+            <ion-input
+              type="email"
+              placeholder="Ej. maria@correo.cl"
+              [(ngModel)]="form.correo">
+            </ion-input>
+          </label>
+
+          <label class="campo">
+            <span>Parentesco</span>
+            <ion-input
+              type="text"
+              placeholder="Ej. Madre, hija, vecina…"
+              [(ngModel)]="form.parentesco">
+            </ion-input>
+          </label>
+
+          <ion-button
+            expand="block"
+            class="btn-primario"
+            [disabled]="guardando"
+            (click)="guardarFormulario()">
+            {{ guardando ? 'Guardando…' : 'Guardar contacto' }}
+          </ion-button>
+
+          <ion-button
+            expand="block"
+            fill="outline"
+            class="btn-cancelar"
+            (click)="cerrarFormulario()">
+            Cancelar
+          </ion-button>
+
+        </div>
+
+      </ion-content>
+
+    </ng-template>
+
+  </ion-modal>
+
 </ion-content>

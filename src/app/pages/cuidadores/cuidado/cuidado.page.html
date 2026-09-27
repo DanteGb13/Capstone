@@ -48,10 +48,10 @@
             <div class="adulto-datos">
               <h3>{{ item.adulto_mayor?.nombre }} {{ item.adulto_mayor?.apellidopa }}</h3>
               <div class="adulto-meta">
-                <span class="badge-activo">
-                  <span class="badge-dot"></span>
-                  Activo
-                </span>
+                <app-estado-conexion
+                  [idUsuario]="item.id_usuario"
+                  [ultimoVisto]="item.adulto_mayor?.ultimo_visto || null"
+                  [refrescar]="true" />
                 @if (item.adulto_mayor?.direccion?.comuna) {
                   <span class="meta-text">
                     <ion-icon name="location-outline"></ion-icon>

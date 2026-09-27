@@ -20,6 +20,7 @@ import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
 
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
+import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
 import { Gps, UbicacionInfo } from '../../../services/Backend/gps/gps';
 
 declare const L: any; // Leaflet
@@ -41,7 +42,8 @@ declare const L: any; // Leaflet
     IonSelectOption,
     IonSpinner,
     CommonModule,
-    FormsModule
+    FormsModule,
+    EstadoConexionComponent
   ]
 })
 export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
@@ -57,6 +59,8 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
   adultoSeleccionado: any = null;
 
   cargandoLista: boolean = false;
+
+  private inicializado = false;
 
 
   // =====================================================
@@ -129,6 +133,8 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     });
 
     this.iniciarTemporizadorAutoRefresh();
+
+    this.inicializado = true;
   }
 
   ngAfterViewInit() {
@@ -138,6 +144,47 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
         this.actualizarUbicacion(false);
       }
     }, 400);
+  }
+
+  async ionViewWillEnter() {
+    if (!this.inicializado || this.cargandoLista) {
+      return;
+    }
+
+    await this.recargarListaAdultos();
+  }
+
+  // Mantiene el menú de personas a cargo sincronizado: si alguien fue
+  // desvinculado, desaparece de la lista y de la selección actual.
+  private async recargarListaAdultos() {
+    const idPrevio =
+      this.adultoSeleccionado?.adulto_mayor?.id ||
+      this.adultoSeleccionado?.id_usuario ||
+      null;
+
+    try {
+      const lista = await this.vinculacionService.obtenerAdultosACargo();
+      this.adultosACargo = lista;
+
+      if (idPrevio) {
+        const sigue = lista.find(
+          (item) =>
+            item.adulto_mayor?.id === idPrevio || item.id_usuario === idPrevio
+        );
+        this.adultoSeleccionado = sigue || lista[0] || null;
+      } else if (!this.adultoSeleccionado && lista.length > 0) {
+        this.adultoSeleccionado = lista[0];
+      }
+
+      if (!this.adultoSeleccionado) {
+        this.ubicacionActual = null;
+        this.ultimaActualizacionTexto = 'Nunca';
+      }
+
+      this.changeDetectorRef.detectChanges();
+    } catch (error: any) {
+      console.error('Error recargando adultos a cargo:', error);
+    }
   }
 
   ngOnDestroy() {
@@ -431,6 +478,11 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     const minutos = Math.floor(this.tiempoRestanteSegundos / 60);
     const segundos = this.tiempoRestanteSegundos % 60;
     this.contadorTexto = `${minutos}:${segundos < 10 ? '0' : ''}${segundos}`;
+  }
+
+  /** Último "latido" conocido del adulto seleccionado (estado en línea). */
+  get ultimoVistoSeleccionado(): string | null {
+    return this.adultoSeleccionado?.adulto_mayor?.ultimo_visto || null;
   }
 
   get nombreAdultoActual(): string {

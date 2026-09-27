@@ -24,8 +24,16 @@ export class FooterComponent {
     addIcons(icons);
   }
 
+  /** Los contactos de emergencia son solo del adulto mayor. */
+  get esAdultoMayor(): boolean {
+    return this.tipo === 'adulto-mayor';
+  }
+
   irContactos() {
-    // Placeholder: Contactos no tiene ruta aún
+    if (!this.esAdultoMayor) return;
+
+    (document.activeElement as HTMLElement)?.blur();
+    this.router.navigate(['/contacto-emergencia']);
   }
 
   async irInicio() {

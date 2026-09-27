@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
 import { NavegacionRolService } from '../../navegacion-rol/navegacion-rol';
+import { PushNotificationService } from '../../Backend/push-notification/push-notification';
 
 @Injectable({
   providedIn: 'root'
@@ -9,7 +10,8 @@ export class Login {
 
   constructor(
     private supabaseService: SupabaseService,
-    private navRol: NavegacionRolService
+    private navRol: NavegacionRolService,
+    private pushService: PushNotificationService
   ) {}
 
 
@@ -259,6 +261,10 @@ export class Login {
 
     const supabase =
       this.supabaseService.getClient();
+
+    // El token del dispositivo se suelta antes de cerrar sesión: si no, la
+    // cuenta queda suscrita a las alertas en este celular
+    await this.pushService.eliminarToken();
 
     const { error } =
       await supabase.auth.signOut();

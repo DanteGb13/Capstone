@@ -11,6 +11,7 @@ import { personOutline, peopleOutline } from 'ionicons/icons';
 import { Login } from '../../services/guards/login/login';
 import { SupabaseService } from '../../services/supabase/supabase';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
+import { PushNotificationService } from '../../services/Backend/push-notification/push-notification';
 
 @Component({
   selector: 'app-elegir-tipo',
@@ -31,7 +32,8 @@ export class ElegirTipoPage implements OnInit {
     private loginService: Login,
     private router: Router,
     private supabaseService: SupabaseService,
-    private navRol: NavegacionRolService
+    private navRol: NavegacionRolService,
+    private pushService: PushNotificationService
   ) {
     addIcons({ personOutline, peopleOutline });
   }
@@ -58,6 +60,8 @@ export class ElegirTipoPage implements OnInit {
 
   async irLogin() {
     try {
+      // Este celular deja de estar atado a la cuenta actual antes de salir
+      await this.pushService.eliminarToken();
       await this.supabaseService.getClient().auth.signOut();
     } catch {
     }

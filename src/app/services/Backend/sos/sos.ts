@@ -37,6 +37,9 @@ export class SOSService {
   private static readonly INTERVALO_REINTENTO_MS = 45000;
   private static readonly MAXIMO_REINTENTOS = 40;
 
+  /** Ciclos seguidos sin entregar el aviso a ningún cuidador. */
+  private static readonly FALLOS_ENTREGA_MAXIMOS = 6;
+
   constructor(
     private supabaseService: SupabaseService,
     private pushService: PushNotificationService,
@@ -194,8 +197,14 @@ export class SOSService {
       longitud: ubicacion?.lng?.toString() || ''
     };
 
-    // Sesión SOS: el aviso se reenvía hasta que un cuidador conteste
-    datosSOS['id_sos'] = await this.crearSesionSOS();
+    // Sesión SOS: el aviso se reenvía hasta que un cuidador conteste.
+    // Si ya había una alerta sin confirmar se sigue esa misma sesión: crear
+    // otra abriría un segundo ciclo de avisos en todos los cuidadores.
+    let idSos = this.idSosActivo;
+    if (!idSos || (await this.sosConfirmado(idSos))) {
+      idSos = await this.crearSesionSOS();
+    }
+    datosSOS['id_sos'] = idSos;
 
     for (const cuidador of cuidadores) {
       console.log('SOS: Enviando push a:', cuidador.id, cuidador.nombre);
@@ -214,6 +223,12 @@ export class SOSService {
     }
 
     this.iniciarReintentosSOS(datosSOS['id_sos'], cuidadores, cuerpoSOS);
+
+    // Sin ningún push entregado no hay ciclo que reintentar
+    if (!resultado.pushEnviado) {
+      this.detenerReintentosSOS();
+      this.idSosActivo = '';
+    }
 
     const cuidadorConTelefono = cuidadores.find(c => c.telefono && c.telefono.length >= 9);
     if (cuidadorConTelefono) {
@@ -269,6 +284,9 @@ export class SOSService {
     this.idSosActivo = idSos;
     this.intentosSOS = 0;
 
+    // Ciclos seguidos en los que no se pudo entregar el aviso a nadie
+    let fallosSeguidos = 0;
+
     this.timerReintentosSOS = setInterval(async () => {
       this.intentosSOS++;
 
@@ -286,17 +304,46 @@ export class SOSService {
         }
       } catch { /* se vuelve a intentar en el próximo ciclo */ }
 
+      let entregados = 0;
+
       for (const cuidador of cuidadores) {
         try {
-          await this.pushService.enviarPushAUsuario(
+          const ok = await this.pushService.enviarPushAUsuario(
             cuidador.id,
             `SOS - Alerta de Emergencia (aviso ${this.intentosSOS + 1})`,
             cuerpo,
             { ...this.datosDe(idSos) }
           );
+          if (ok) entregados++;
         } catch { /* se reintenta en el próximo ciclo */ }
       }
+
+      // Si el aviso no llega a nadie (sin internet, sin tokens o token
+      // caducado) se corta: reintentar para siempre sería un bucle inútil.
+      fallosSeguidos = entregados > 0 ? 0 : fallosSeguidos + 1;
+
+      if (fallosSeguidos >= SOSService.FALLOS_ENTREGA_MAXIMOS) {
+        console.warn('SOS: el aviso no se pudo entregar, se detienen los reintentos');
+        this.detenerReintentosSOS();
+        await this.avisarSinEntrega();
+      }
     }, SOSService.INTERVALO_REINTENTO_MS);
+  }
+
+  /** Avisa al adulto mayor que el SOS no se pudo entregar. */
+  private async avisarSinEntrega(): Promise<void> {
+    this.idSosActivo = '';
+
+    try {
+      const alert = await this.alertCtrl.create({
+        header: 'No se pudo enviar el SOS',
+        message:
+          'No hay conexión a internet o el aviso no pudo entregarse. ' +
+          'Intenta de nuevo cuando tengas señal.',
+        buttons: ['Entendido']
+      });
+      await alert.present();
+    } catch { /* sin UI disponible */ }
   }
 
   private datosDe(idSos: string): { [clave: string]: string } {
@@ -311,14 +358,16 @@ export class SOSService {
   }
 
   private async sosConfirmado(idSos: string): Promise<boolean> {
+    if (!idSos) return true;
+
     try {
       const client = this.supabaseService.getClient();
       const { data } = await client
         .from('sos_alerta')
-        .select('confirmada_por')
+        .select('confirmada_por, confirmada_en')
         .eq('id', idSos)
         .maybeSingle();
-      return !!data?.confirmada_por;
+      return !!data?.confirmada_por || !!data?.confirmada_en;
     } catch {
       return false;
     }

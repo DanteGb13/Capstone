@@ -38,6 +38,7 @@ import {
 } from 'ionicons/icons';
 import { SupabaseService } from '../../services/supabase/supabase';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
+import { PushNotificationService } from '../../services/Backend/push-notification/push-notification';
 import { environment } from '../../../environments/environment';
 import {
   validarNombreOApellido,
@@ -78,7 +79,8 @@ export class PerfilPage implements OnInit {
     private alertController: AlertController,
     private toastController: ToastController,
     private actionSheetController: ActionSheetController,
-    private navRol: NavegacionRolService
+    private navRol: NavegacionRolService,
+    private pushService: PushNotificationService
   ) {
     addIcons({
       arrowBackOutline, person, personOutline, cardOutline, mailOutline,
@@ -731,6 +733,9 @@ export class PerfilPage implements OnInit {
             try {
               this.navRol.limpiarCache();
               this.alarmasService.limpiarDatosLocal();
+              // Antes de cerrar sesión: este celular deja de estar atado a esta
+              // cuenta, para que la siguiente no siga recibiendo sus alertas
+              await this.pushService.eliminarToken();
               await this.supabaseService.getClient().auth.signOut();
             } catch (err) {
               console.error('Error al cerrar sesión:', err);

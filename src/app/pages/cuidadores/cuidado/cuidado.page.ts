@@ -22,6 +22,7 @@ import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
 import { SupabaseService } from '../../../services/supabase/supabase';
 import { PermisosExtra } from '../../../services/Backend/permisos-extra/permisos-extra';
+import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
 import { Capacitor } from '@capacitor/core';
 
 @Component({
@@ -39,7 +40,8 @@ import { Capacitor } from '@capacitor/core';
     IonBackButton,
     IonRefresher,
     IonRefresherContent,
-    CommonModule
+    CommonModule,
+    EstadoConexionComponent
   ]
 })
 export class CuidadoPage implements OnInit {

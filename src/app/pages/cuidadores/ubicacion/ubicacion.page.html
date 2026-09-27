@@ -77,10 +77,11 @@
 
           <div class="user-meta">
             <h3>{{ nombreAdultoActual }}</h3>
-            <div class="status-indicator">
-              <span class="dot-green"></span>
-              <span>Protección activa</span>
-            </div>
+            <app-estado-conexion
+              [idUsuario]="adultoSeleccionado?.id_usuario || adultoSeleccionado?.adulto_mayor?.id || ''"
+              [ultimoVisto]="ultimoVistoSeleccionado"
+              [refrescar]="true"
+              textoEnLinea="Rastreando en vivo" />
           </div>
 
         </div>

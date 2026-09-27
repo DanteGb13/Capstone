@@ -33,7 +33,10 @@
               </div>
               <div class="info">
                 <h3>{{ item.adulto_mayor?.nombre }} {{ item.adulto_mayor?.apellidopa }} {{ item.adulto_mayor?.apellidoma || '' }}</h3>
-                <span class="badge-online">🟢 Activo</span>
+                <app-estado-conexion
+                  [idUsuario]="item.id_usuario"
+                  [ultimoVisto]="item.adulto_mayor?.ultimo_visto || null"
+                  [refrescar]="true" />
               </div>
             </div>
 
