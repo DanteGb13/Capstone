@@ -322,3 +322,13 @@ ion-toolbar {
     }
   }
 }
+
+/* Boton deshabilitado: se ve claro que todavia no se puede usar.
+   Con letra grande es importante que se note antes de tocarlo. */
+.btn-control:disabled {
+    opacity: 0.5;
+    filter: grayscale(0.6);
+    box-shadow: none;
+    cursor: default;
+    pointer-events: none;
+}

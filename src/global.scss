@@ -108,6 +108,54 @@ ion-app {
 }
 
 /* =====================================================
+   Alerta de "Ir a mi casa" - elegir aplicación de mapas
+   (Estilos globales porque el alert es un overlay)
+   ===================================================== */
+.alerta-elegir-mapa {
+
+  --ion-color-primary: #7715c7;
+
+  .alert-wrapper {
+    max-width: 420px;
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(119, 21, 199, 0.18);
+  }
+
+  .alert-head {
+    padding-top: 22px;
+  }
+
+  .alert-title {
+    color: #7715c7;
+    font-weight: 700;
+    font-size: 21px;
+    white-space: normal;
+  }
+
+  .alert-message {
+    color: #555;
+    font-size: 16px;
+  }
+
+  .alert-button-group {
+    padding: 8px 12px 14px;
+  }
+
+  .alert-button {
+    height: 54px;
+    color: #7715c7;
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: none;
+  }
+
+  .alert-button-role-cancel {
+    color: #777;
+    font-weight: 500;
+  }
+}
+
+/* =====================================================
    Modal SOS - Selección de tipo de emergencia
    ===================================================== */
 .sos-modal {

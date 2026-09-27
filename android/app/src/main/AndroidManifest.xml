@@ -1,5 +1,31 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--
+      Android 11+ (API 30) oculta los paquetes instalados. Sin esto la app no
+      ve ni comprueba Waze ni Google Maps, y el selector de "Ir a mi casa" no
+      los muestra con su logo.
+    -->
+    <queries>
+        <!-- Apps de mapas que abren destinos con geo: -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <!-- Deep link oficial de Waze: -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" android:host="waze.com" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="waze" />
+        </intent>
+        <package android:name="com.waze" />
+        <package android:name="com.google.android.apps.maps" />
+    </queries>
+
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -7,6 +33,29 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <!-- Alarma de los recordatorios: la publica el sistema para que siga
+             sonando con la app cerrada, y se rearma sola tras un reinicio. -->
+        <receiver
+            android:name="io.ionic.starter.AlarmaNativaReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="io.ionic.starter.ALARMA_REFUERZO" />
+                <action android:name="io.ionic.starter.ALARMA_APAGAR" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name="io.ionic.starter.AlarmaReinicioReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
@@ -80,6 +129,4 @@
     <!-- WRITE_CONTACTS es obligatorio: el plugin de contactos agrupa lectura y
          escritura en un solo permiso y, si falta, el selector nunca se
          autoriza aunque el usuario active "Contactos" en los ajustes. -->
-    <uses-permission android:name="android.permission.READ_CONTACTS" />
-    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
 </manifest>

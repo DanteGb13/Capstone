@@ -18,11 +18,16 @@ import android.provider.Settings;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
+
+import org.json.JSONObject;
+
+import java.util.HashSet;
 
 @CapacitorPlugin(name = "SiempreCerca")
 public class SiempreCercaPlugin extends Plugin {
@@ -32,7 +37,13 @@ public class SiempreCercaPlugin extends Plugin {
     public static final String CANAL_ZONA_ALERTA_ID = "zona-alertas";
     public static final String CANAL_ZONA_ESTADO_ID = "zona-estado";
 
-    private static final String PREFS = "sc_prefs";
+    // Acción de la notificación que abrió la app cuando ya estaba viva.
+    private String accionPendiente = null;
+    private String notificacionPendiente = null;
+
+    // Se comparte con AlarmaNativaReceiver, que guarda ahi las alarmas apagadas
+    // desde la barra de notificaciones.
+    static final String PREFS = "sc_prefs";
     // Cambiar este valor obliga a recrear los canales con los nuevos ajustes
     // (sin él, Android conserva la versión vieja del canal y no cambia nada).
     private static final String VERSION_CANALES = "v5";
@@ -452,6 +463,157 @@ public class SiempreCercaPlugin extends Plugin {
             pm.isIgnoringBatteryOptimizations(contexto.getPackageName());
         JSObject ret = new JSObject();
         ret.put("si", si);
+        call.resolve(ret);
+    }
+
+    // =====================================================
+    // ACCIÓN DE LA NOTIFICACIÓN (botón "Apagar alarma")
+    // =====================================================
+
+    /**
+     * Entrega la acción con la que se abrió la app, por si vino del botón
+     * "Apagar alarma" de la notificación.
+     *
+     * El plugin de notificaciones solo publica su evento desde onNewIntent, o
+     * sea únicamente si la app ya estaba viva. Si Android la había cerrado, el
+     * botón no hacía nada y la alarma seguía sonando. Este método lee el intent
+     * de arranque, que en ese caso es el único lugar donde quedó la acción.
+     *
+     * El intent se limpia antes de responder para que la misma acción no se
+     * procese otra vez en los siguientes arranques de la app.
+     */
+    @PluginMethod
+    public void accionNotificacion(PluginCall call) {
+        String accion = null;
+        String notificacion = null;
+
+        // Camino 1: la app ya estaba viva y la notificación la abrió con un
+        // intent nuevo. getIntent() no se actualiza solo en ese caso, así que el
+        // intent se guarda al recibirlo.
+        if (accionPendiente != null) {
+            accion = accionPendiente;
+            notificacion = notificacionPendiente;
+            accionPendiente = null;
+            notificacionPendiente = null;
+        }
+
+        // Camino 2: la app se abrió en frío con esa notificación. Entonces sí
+        // queda en el intent de arranque, que se limpia para no repetirla.
+        if (accion == null && getActivity() != null) {
+            Intent intent = getActivity().getIntent();
+            if (intent != null) {
+                String pendiente = intent.getStringExtra("LocalNotificationUserAction");
+                // "tap" es el toque normal sobre la notificación, no el botón.
+                if (pendiente != null && !"tap".equals(pendiente)) {
+                    accion = pendiente;
+                    notificacion = intent.getStringExtra("LocalNotficationObject");
+                    intent.removeExtra("LocalNotificationUserAction");
+                    intent.removeExtra("LocalNotficationObject");
+                    intent.removeExtra("LocalNotificationId");
+                }
+            }
+        }
+
+        JSObject ret = new JSObject();
+        ret.put("accion", accion);
+        ret.put("notificacion", notificacion);
+        call.resolve(ret);
+    }
+
+    @Override
+    public void handleOnNewIntent(Intent data) {
+        super.handleOnNewIntent(data);
+        if (data == null) {
+            return;
+        }
+        String accion = data.getStringExtra("LocalNotificationUserAction");
+        if (accion == null) {
+            return;
+        }
+        this.accionPendiente = accion;
+        this.notificacionPendiente = data.getStringExtra("LocalNotficationObject");
+    }
+
+    // =====================================================
+    // ALARMAS PUBLICADAS POR EL SISTEMA
+    // =====================================================
+
+    /**
+     * Programa las ocurrencias de una alarma con AlarmManager, para que suenen
+     * aunque la app este cerrada. El que las publica es AlarmaNativaReceiver.
+     */
+    @PluginMethod
+    public void programarAlarmas(PluginCall call) {
+        JSArray lista = call.getArray("alarmas", new JSArray());
+        boolean exacta = Boolean.TRUE.equals(call.getBoolean("exacta", false));
+        int programadas = 0;
+        HashSet<String> yaLimpias = new HashSet<>();
+
+        for (int i = 0; i < lista.length(); i++) {
+            // JSArray entrega JSONObject plano, no el wrapper de Capacitor.
+            JSONObject item = lista.optJSONObject(i);
+            if (item == null) {
+                continue;
+            }
+            String idAlarma = item.optString("idAlarma", null);
+            String clave = item.optString("clave", null);
+            if (idAlarma == null || clave == null || !item.has("fecha")) {
+                continue;
+            }
+            long fecha = item.optLong("fecha", 0L);
+            int idNotificacion = item.optInt("idNotificacion", 0);
+            if (idNotificacion == 0) {
+                continue;
+            }
+            // Programar es reemplazar: si la ventana cambio, lo que quedo antes
+            // en AlarmManager seguia armed y podia sonar de mas.
+            if (yaLimpias.add(idAlarma)) {
+                AlarmaNativaReceiver.limpiarProgramadasDe(getContext(), idAlarma);
+            }
+
+            AlarmaNativaReceiver.programarAlarma(
+                getContext(), idAlarma, clave,
+                item.optString("titulo", ""), item.optString("cuerpo", ""),
+                fecha, idNotificacion, exacta
+            );
+            programadas++;
+        }
+
+        JSObject ret = new JSObject();
+        ret.put("programadas", programadas);
+        call.resolve(ret);
+    }
+
+    /** Corta una ocurrencia ya publicada por AlarmaNativaReceiver. */
+    @PluginMethod
+    public void detenerAlarma(PluginCall call) {
+        AlarmaNativaReceiver.detenerAlarma(
+            getContext(),
+            call.getString("idAlarma"),
+            call.getString("clave"),
+            call.getLong("fecha", 0L),
+            call.getInt("idNotificacion", 0),
+            call.getBoolean("marcar", true)
+        );
+        call.resolve();
+    }
+
+    /**
+     * Alarmas apagadas desde la barra que la app todavia no tiene anotadas. Se
+     * devuelve el arreglo como texto porque JSObject solo acepta tipos simples.
+     */
+    @PluginMethod
+    public void leerAlarmasApagadas(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("apagadas", AlarmaNativaReceiver.leerApagadas(getContext()).toString());
+        call.resolve(ret);
+    }
+
+    /** Que alarmas tiene sonando el sistema ahora mismo. */
+    @PluginMethod
+    public void leerAlarmasSonando(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("sonando", AlarmaNativaReceiver.leerSonando(getContext()).toString());
         call.resolve(ret);
     }
 }

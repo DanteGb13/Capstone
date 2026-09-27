@@ -327,17 +327,20 @@ ion-content {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
 }
 
+/* Columna: el texto arriba y el botón abajo a todo el ancho. Antes iban en
+   fila y con letra grande el botón se pegaba al mensaje del cuidador. */
 .alarma-sonando-card {
     display: flex;
-    align-items: center;
-    gap: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
     background: #dc2626;
     color: #ffffff;
-    border-radius: 18px;
-    padding: 16px;
+    border-radius: 20px;
+    padding: 18px;
     box-shadow: 0 10px 25px rgba(220, 38, 38, 0.35);
     animation: parpadeo 1.2s infinite;
 }
@@ -347,19 +350,44 @@ ion-content {
     50% { opacity: 0.85; }
 }
 
-.alarma-sonando-icon {
-    font-size: 38px;
-    flex: 0 0 42px;
+.alarma-sonando-cabecera {
     display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+}
+
+.alarma-sonando-icon {
+    font-size: 40px;
+    flex: 0 0 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.2);
 }
 
 .alarma-sonando-info {
-    flex: 1;
+    // min-width:0 permite que el texto encoja y envuelva en vez de empujar
+    // al botón fuera de la tarjeta.
+    flex: 1 1 auto;
+    min-width: 0;
+
+    small {
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        opacity: 0.9;
+    }
 
     strong {
         display: block;
         font-size: 19px;
         font-weight: 800;
+        margin-top: 2px;
+        overflow-wrap: break-word;
     }
 
     span {
@@ -367,18 +395,34 @@ ion-content {
         font-size: 14px;
         opacity: 0.95;
         margin-top: 2px;
+        overflow-wrap: break-word;
     }
 }
 
 .btn-apagar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
     background: #ffffff;
     color: #b91c1c;
     border: none;
-    border-radius: 14px;
-    padding: 14px 16px;
-    font-size: 15px;
+    border-radius: 16px;
+    padding: 18px 16px;
+    font-size: 19px;
     font-weight: 800;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+    ion-icon {
+        font-size: 26px;
+        flex: 0 0 auto;
+    }
+
+    &:active {
+        transform: scale(0.98);
+        background: #fee2e2;
+    }
 }
 
 /* MENÚ INFERIOR FLOTANTE */
