@@ -1,0 +1,69 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Políticas, Privacidad y Seguridad</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="pagina">
+
+    <p class="intro">
+      Aquí está todo lo que SiempreCerca hace con tu información: qué guarda, para
+      qué la usa, quién puede verla y qué puedes hacer tú al respecto. Está
+      repartido en seis documentos. Toca el que necesites y usa el botón del
+      final para volver aquí.
+    </p>
+
+    <p class="intro">
+      La responsable de esta aplicación es <strong>SiempreCerca</strong>, el equipo
+      que la desarrolla y la mantiene.
+    </p>
+
+    <nav aria-label="Documentos de privacidad y seguridad">
+      @for (doc of documentos; track doc.ruta) {
+        <div
+          class="doc"
+          role="button"
+          tabindex="0"
+          [attr.aria-label]="'Documento ' + doc.numero + ' de ' + total + ': ' + doc.titulo"
+          (click)="abrir(doc.ruta)"
+          (keydown.enter)="abrir(doc.ruta)"
+        >
+          <span class="doc-numero" aria-hidden="true">{{ doc.numero }}</span>
+          <span class="doc-texto">
+            <span class="doc-titulo">{{ doc.titulo }}</span>
+            <span class="doc-resumen">{{ doc.resumen }}</span>
+          </span>
+          <ion-icon name="chevron-forward-outline" class="flecha" aria-hidden="true"></ion-icon>
+        </div>
+      }
+    </nav>
+
+    <div class="aviso">
+      <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+      <p>
+        SiempreCerca <strong>no es un dispositivo médico</strong> ni sustituye a
+        un sistema de emergencias. No detecta infartos, desmayos ni caídas
+        lentas, y una alerta puede fallar si el teléfono se queda sin batería,
+        sin datos o sin conexión.
+      </p>
+    </div>
+
+    <p class="texto">
+      Los números de emergencia que trae la app son los de Chile: ambulancia
+      (SAMU) 131, bomberos 132, carabineros 133 y policía de investigaciones 134.
+      Si estás en peligro ahora, llama al número de emergencias de tu país. Esta
+      app es un apoyo, no el canal principal.
+    </p>
+
+    <p class="pie">
+       © Todos los derecjos reservados. SiempreCerca 2024. 
+    </p>
+
+  </div>
+</ion-content>

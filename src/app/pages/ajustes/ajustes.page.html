@@ -56,6 +56,34 @@
       <ion-icon name="chevron-forward-outline" class="flecha"></ion-icon>
     </div>
 
+    <h2 class="ajustes-seccion">Seguridad y privacidad</h2>
+
+    <div class="ajustes-card" aria-label="Políticas, Privacidad y Seguridad" (click)="irAPrivacidad()">
+      <ion-icon name="shield-checkmark-outline"></ion-icon>
+      <div class="ajustes-texto">
+        <span>Políticas, Privacidad y Seguridad</span>
+      </div>
+      <ion-icon name="chevron-forward-outline" class="flecha"></ion-icon>
+    </div>
+
+    <!--
+      SEGURIDAD / SENSOR DE CAÍDAS - OCULTO A PROPÓSITO.
+
+      Decidido no implementarlo todavía. Se deja el bloque entero comentado (y no
+      borrado) para que no se pierda y para poder volver en una línea.
+
+      Para volver a mostrarlo: descomentar este bloque tal cual. La tarjeta
+      vuelve a salir en su estado "Próximamente" y no lleva manejador de click,
+      así que no hace falta tocar nada más.
+
+      Ojo con lo que falta cuando se retome: no es sólo esta tarjeta. El
+      detector necesita acelerómetro Y un contador de pasos, correr dentro de
+      `UbicacionForegroundService` (no en un servicio nuevo, para no tener dos
+      notificaciones permanentes), y enganchar con `sos.ts` por medio de una
+      cuenta atrás de 30 s. Un umbral simple de aceleración NO sirve: dispararía
+      cada vez que al adulto mayor se le cayera el teléfono de la mano.
+    -->
+    <!--
     <h2 class="ajustes-seccion">Seguridad</h2>
 
     <div class="ajustes-card deshabilitado" aria-label="Sensor de caídas">
@@ -66,6 +94,7 @@
       </div>
       <ion-icon name="chevron-forward-outline" class="flecha"></ion-icon>
     </div>
+    -->
 
   </div>
 

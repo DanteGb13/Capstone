@@ -1,0 +1,88 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver al índice">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>6 · Contacto y actualización</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="pagina">
+
+    <span class="contador">Documento 6 de {{ total }}</span>
+
+    <p class="resumen">
+      A quién escribir, qué datos poner en el mensaje y cuándo se actualizó esta
+      sección.
+    </p>
+
+    <h2 class="seccion">Quién responde</h2>
+
+    <p class="texto">
+      La responsable de esta aplicación es <strong>SiempreCerca</strong>, el equipo
+      que la desarrolla y la mantiene. Para cualquier consulta sobre estos textos,
+      sobre tus datos o sobre el funcionamiento de la app, escribe
+      <strong>desde el correo con el que registraste tu cuenta</strong>.
+    </p>
+
+    <h2 class="seccion">Qué poner en el mensaje</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">Tu nombre completo.</span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">El correo de la cuenta.</span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Tu RUT, que es lo que permite identificar la cuenta.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Qué necesitas: una copia de tus datos, corregir un dato, eliminar la
+          cuenta, quitar a un cuidador o reportar un fallo de seguridad.
+        </span>
+      </li>
+    </ul>
+
+    <p class="texto">
+      Escribir desde el correo de la cuenta es lo que permite comprobar que la
+      solicitud viene de quien dice ser: por eso los códigos de verificación y el
+      aviso de cuenta eliminada se envían siempre a esa dirección y no a otra.
+    </p>
+
+    <h2 class="seccion">Resumen de los documentos</h2>
+
+    <ul class="lista">
+      @for (doc of documentos; track doc.ruta) {
+        <li class="item">
+          <span class="item-nombre">{{ doc.numero }}. {{ doc.titulo }}</span>
+          <span class="item-detalle">{{ doc.resumen }}</span>
+        </li>
+      }
+    </ul>
+
+    <h2 class="seccion">Última actualización</h2>
+
+    <p class="texto">
+      Estos textos se escribieron el <strong>{{ actualizacion }}</strong> para la
+      versión de la app que estás usando ahora ({{ version }}). Cuando cambie lo
+      que hace la app o la forma en que trata los datos, se actualizan en el
+      índice de esta misma sección.
+    </p>
+
+    <p class="pie">
+      Última actualización: {{ actualizacion }}
+    </p>
+
+    <button type="button" class="boton boton-secundario" (click)="volver()">
+      Volver al índice
+    </button>
+
+  </div>
+</ion-content>

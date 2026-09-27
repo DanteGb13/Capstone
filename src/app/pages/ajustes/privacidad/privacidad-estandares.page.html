@@ -1,0 +1,190 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver al índice">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>4 · Estándares y buenas prácticas</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="pagina">
+
+    <span class="contador">Documento 4 de {{ total }}</span>
+
+    <p class="resumen">
+      Las normas ISO que se usan como lista de control al revisar el trabajo, y en
+      qué se relaciona cada una con la app.
+    </p>
+
+    <div class="aviso">
+      <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+      <p>
+        <strong>SiempreCerca no está certificada en ninguna norma ISO.</strong> Las
+        normas ISO son guías de seguridad de la información que se usan en todo el
+        mundo: no obligan a nadie y no se aprueban dentro de una aplicación. Aquí se
+        usan como <strong>referencia de buenas prácticas</strong>: son la lista
+        contra la que se revisa el trabajo y también la lista contra la que se
+        puede decir con claridad &laquo;esto no lo hacemos&raquo;.
+      </p>
+    </div>
+
+    <h2 class="seccion">ISO/IEC 27001 — Seguridad de la información</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          <strong>Qué es.</strong> La norma que organiza de forma ordenada cómo una
+          organización protege su información: qué se protege, quién puede verla y
+          cómo se demuestra que se está haciendo.
+        </span>
+        <span class="item-detalle">
+          <strong>Dónde aparece en la app.</strong> En la separación entre los dos
+          tipos de cuenta, en que las claves de administración vivan fuera del
+          teléfono y en que esta sección exista: los textos de privacidad y
+          seguridad son parte del sistema, no un adorno.
+        </span>
+        <span class="item-detalle">
+          <strong>Buenas prácticas que aplicamos.</strong> Clasificar la
+          información según lo sensible que es, dar a cada cuenta sólo el acceso
+          que necesita y revisar los cambios antes de publicar una versión nueva.
+        </span>
+        <span class="item-nota">Referencia de trabajo. No estamos certificados.</span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">ISO/IEC 27002 — Controles de seguridad</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          <strong>Qué es.</strong> El catálogo de controles de seguridad que se
+          pueden aplicar: control de acceso, cifrado, gestión de sesiones,
+          novedades y demás.
+        </span>
+        <span class="item-detalle">
+          <strong>Dónde aparece en la app.</strong> En casi todas las medidas
+          concretas del documento 3: el acceso por usuario de cada tabla, el
+          cifrado de las comunicaciones, la sesión que se revoca al cerrar, los
+          enlaces temporales de las fotos y los permisos que se piden uno a uno.
+        </span>
+        <span class="item-detalle">
+          <strong>Buenas prácticas que aplicamos.</strong> Pedir sólo el
+          permiso justo para cada función, mostrar siempre el estado real de cada
+          permiso, y no guardar en el dispositivo nada que la app no necesite.
+        </span>
+        <span class="item-nota">Referencia de trabajo. No estamos certificados.</span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">ISO/IEC 27701 — Gestión de la privacidad</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          <strong>Qué es.</strong> La norma que extiende la 27001 al tratamiento de
+          datos personales: para qué se recogen, cómo se informa a la persona y
+          cómo se atienden sus peticiones.
+        </span>
+        <span class="item-detalle">
+          <strong>Dónde aparece en la app.</strong> En el documento 1 y en el
+          documento 5: la lista de datos, la lista de finalidades, la lista de
+          servicios externos y los derechos que se pueden ejercer.
+        </span>
+        <span class="item-detalle">
+          <strong>Buenas prácticas que aplicamos.</strong> Recoger sólo los datos
+          que la función necesita, explicar cada finalidad junto al dato, no
+          reutilizar la información con fines que la persona no espera y tener
+          escrita una respuesta para cada derecho.
+        </span>
+        <span class="item-nota">Referencia de trabajo. No estamos certificados.</span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">ISO/IEC 27017 — Seguridad en servicios en la nube</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          <strong>Qué es.</strong> Un complemento de la 27001 con los controles
+          propios de los servicios en la nube, donde la información no está en el
+          equipo de la persona sino en servidores de un proveedor.
+        </span>
+        <span class="item-detalle">
+          <strong>Dónde aparece en la app.</strong> En que la app no guarda los
+          datos en el teléfono, sino en servidores de Supabase, y en que hay
+          funciones del servidor que trabajan con permisos más amplios para poder
+          evaluar las zonas seguras con el teléfono cerrado.
+        </span>
+        <span class="item-detalle">
+          <strong>Buenas prácticas que aplicamos.</strong> No dejar credenciales
+          en el cliente: la app lleva una clave pública sin permisos de
+          administrador, y las claves de administración están en el servidor. A
+          cada servicio externo se le entrega sólo lo que necesita.
+        </span>
+        <span class="item-nota">Referencia de trabajo. No estamos certificados.</span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">ISO/IEC 27018 — Protección de datos personales en la nube</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          <strong>Qué es.</strong> Un complemento de la 27701 para proteger los
+          datos personales cuando se guardan en la nube: el cifrado, la gestión de
+          las claves y el control de quién accede a ellos.
+        </span>
+        <span class="item-detalle">
+          <strong>Dónde aparece en la app.</strong> En las fotos de perfil, que son
+          el archivo personal de cada cuenta y se entregan con enlaces que duran
+          una hora, y en la separación entre la clave pública de la app y las
+          claves de administración del servidor.
+        </span>
+        <span class="item-detalle">
+          <strong>Buenas prácticas que aplicamos.</strong> Que los archivos
+          personales no sean públicos ni con enlaces permanentes, y que el acceso
+          del lado del servidor quede acotado a las funciones que lo necesitan.
+        </span>
+        <span class="item-nota">Referencia de trabajo. No estamos certificados.</span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">ISO/IEC 27005 — Gestión de riesgos</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          <strong>Qué es.</strong> La norma que enseña a identificar los riesgos,
+          medirlos, decidir cuáles tratar y revisar la decisión. Es la que impide
+          decir &laquo;está todo bien&raquo; sin mirar.
+        </span>
+        <span class="item-detalle">
+          <strong>Dónde aparece en la app.</strong> En los riesgos que la propia
+          app reconoce y trata: que el teléfono se quede sin señal, sin batería o
+          sin moverse, que la persona salga de su zona, que se equivoque de
+          persona al vincular, o que conceda un permiso sin entenderlo.
+        </span>
+        <span class="item-detalle">
+          <strong>Buenas prácticas que aplicamos.</strong> El modo viaje existe
+          para que salir de la zona no sea una falsa alarma; el servidor revisa
+          también los viajes y avisa al cuidador si pasan horas sin señal, si la
+          batería está muy baja o si la persona lleva mucho tiempo detenida lejos
+          de sus zonas; y el botón SOS se insiste hasta que alguien lo confirma.
+        </span>
+        <span class="item-nota">Referencia de trabajo. No estamos certificados.</span>
+      </li>
+    </ul>
+
+    <p class="pie">
+      Última actualización: {{ actualizacion }}
+    </p>
+
+    <button type="button" class="boton boton-secundario" (click)="volver()">
+      Volver al índice
+    </button>
+
+  </div>
+</ion-content>

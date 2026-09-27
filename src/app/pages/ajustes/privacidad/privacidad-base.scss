@@ -1,0 +1,279 @@
+/*
+ * Estilos compartidos de la sección de privacidad.
+ *
+ * Las siete páginas (índice + seis documentos) usan esta misma hoja: el índice
+ * y los documentos tienen que leerse igual, y copiar 200 líneas de estilos en
+ * cada archivo es la forma más rápida de que un día dejen de coincidir.
+ *
+ * Se apoya en los tokens de src/theme/variables.scss y en el mismo ancho
+ * máximo que Permisos.
+ *
+ * Jerarquía de los títulos, de menos a más:
+ *   .seccion     → el bloque grande dentro de un documento
+ *   .subtitulo   → las preguntas de cada bloque
+ *
+ * Los documentos van en páginas separadas, no en un scroll infinito: el índice
+ * es el que decide a dónde se va, y el botón "Volver al índice" del pie es la
+ * red de seguridad para quien llegó hasta el final.
+ */
+
+ion-content {
+  --background: var(--sc-bg);
+}
+
+.pagina {
+  padding: 16px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.intro {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sc-ink-2);
+  margin: 8px 4px 20px;
+}
+
+.seccion {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin: 26px 0 10px;
+  padding-left: 4px;
+}
+
+.resumen {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--sc-ink);
+  margin: 0 4px 4px;
+}
+
+.subtitulo {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--sc-ink);
+  margin: 22px 4px 10px;
+  line-height: 1.35;
+}
+
+.texto {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sc-ink-2);
+  margin: 0 4px 12px;
+}
+
+.lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  background: var(--sc-surface);
+  border-radius: var(--sc-radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: var(--sc-shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-nombre {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sc-ink);
+}
+
+/*
+ * `.item-detalle` sin nombre no necesita el salto de línea del `gap`: un solo
+ * hijo no genera separación, así que el padding lo define la tarjeta.
+ *
+ * Con más de un hijo (los estándares ISO) sí se separan los párrafos: por eso
+ * el `gap` está en la tarjeta y no en el detalle.
+ */
+.item-detalle {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--sc-ink-2);
+}
+
+/* Etiqueta de estado al final de cada estándar ("no estamos certificados"). */
+.item-nota {
+  align-self: flex-start;
+  margin-top: 4px;
+  background: var(--sc-primary-soft);
+  color: var(--sc-primary-dark);
+  border-radius: var(--sc-radius-pill);
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* ------------------------------------------------------------------ índice */
+
+/*
+ * Tarjeta del índice. El número va en un círculo y no como texto suelto porque
+ * quien lee en voz alta necesita que se anuncie como el número del documento.
+ */
+.doc {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--sc-surface);
+  border-radius: var(--sc-radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: var(--sc-shadow-sm);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.doc:active {
+  transform: scale(0.985);
+  box-shadow: var(--sc-shadow-sm);
+}
+
+.doc-numero {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--sc-primary-soft);
+  color: var(--sc-primary-dark);
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-texto {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.doc-titulo {
+  font-size: 15.5px;
+  font-weight: 600;
+  color: var(--sc-ink);
+  line-height: 1.35;
+}
+
+.doc-resumen {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--sc-ink-2);
+}
+
+.doc .flecha {
+  flex-shrink: 0;
+  font-size: 18px;
+  color: var(--sc-ink-muted);
+}
+
+/* Chip "Documento 1 de 6" arriba de cada página. */
+.contador {
+  display: inline-block;
+  background: var(--sc-primary-soft);
+  color: var(--sc-primary-dark);
+  border-radius: var(--sc-radius-pill);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 4px 4px 0;
+}
+
+/* ------------------------------------------------------------------ botones */
+
+.boton {
+  margin-top: 4px;
+  background: var(--sc-primary);
+  color: var(--sc-ink-invert);
+  border: none;
+  border-radius: var(--sc-radius-pill);
+  padding: 12px 20px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 48px;
+  width: 100%;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+/* Variante clara: "Volver al índice" y "Ver mis permisos". */
+.boton-secundario {
+  background: var(--sc-surface);
+  color: var(--sc-primary);
+  border: 1.5px solid var(--sc-border-strong);
+  margin-top: 20px;
+}
+
+/* ------------------------------------------------------------------ avisos */
+
+.aviso {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--sc-warn-soft);
+  border: 1px solid color-mix(in srgb, var(--sc-warn) 30%, transparent);
+  border-radius: var(--sc-radius);
+  padding: 16px;
+  margin-bottom: 12px;
+
+  ion-icon {
+    font-size: 22px;
+    color: var(--sc-warn-dark);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--sc-ink-2);
+  }
+}
+
+/* Pasos numerados (qué hacer ante un incidente). El `padding-left` propio
+   deja el número fuera de la tarjeta y el texto alineado con el resto. */
+.pasos {
+  list-style: decimal;
+  margin: 0 4px 12px;
+  padding-left: 22px;
+}
+
+.pasos li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sc-ink-2);
+  margin-bottom: 8px;
+}
+
+.pasos li::marker {
+  color: var(--sc-primary);
+  font-weight: 700;
+}
+
+/* Cierre de cada documento: fecha de actualización. */
+.pie {
+  margin: 24px 4px 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--sc-border);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--sc-ink-muted);
+}

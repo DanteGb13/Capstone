@@ -1,0 +1,307 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver al índice">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>2 · Términos y condiciones</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="pagina">
+
+    <span class="contador">Documento 2 de {{ total }}</span>
+
+    <p class="resumen">
+      Las reglas de uso de la app: qué es, para qué sirve, qué se espera de cada
+      persona que la usa y qué no se puede hacer con ella.
+    </p>
+
+    <h2 class="seccion">Objetivo de la aplicación</h2>
+
+    <p class="texto">
+      <strong>SiempreCerca</strong> es una aplicación móvil de cuidado y protección
+      para adultos mayores y sus cuidadores: &laquo;Tu familia te cuida, estés
+      donde estés&raquo;. Permite que la persona mayor lleve en su teléfono sus
+      alertas, sus zonas seguras, sus contactos de emergencia y sus recordatorios,
+      y que un familiar o cuidador vinculado vea su ubicación y reciba las
+      alertas.
+    </p>
+
+    <p class="texto">
+      La app está pensada para usarse en Chile: los números de emergencia que trae,
+      el formato de teléfono y la división regional son los del país. Funciona con
+      dos tipos de cuenta, &laquo;Usuario&laquo; y &laquo;Familiar&laquo;, y cada
+      uno ve un panel distinto.
+    </p>
+
+    <h2 class="seccion">Condiciones de uso</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Necesitas un teléfono Android con la app instalada y una cuenta creada
+          con tus datos.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          La app necesita poder enviarte notificaciones para que funcionen los
+          recordatorios y las alertas.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Algunas funciones necesitan conexión a internet: las alertas al
+          cuidador, el mapa, la vinculación entre cuentas y el envío de códigos
+          por correo. Los recordatorios, en cambio, también se guardan en el
+          teléfono y suenan aunque no tengas datos.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Las alertas dependen de que el teléfono tenga batería, tenga datos y
+          tenga los permisos concedidos. Si algo de eso falla, la alerta no se
+          genera o no llega.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Responsabilidades de quien usa la app</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Mantener el teléfono con batería y con los permisos que la app necesita.
+          Un teléfono apagado no puede avisar a nadie.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Revisar que los datos estén correctos. Si tu número de teléfono está mal
+          escrito, tu cuidador no te puede llamar.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Vincularse sólo con personas de confianza: quien use tu código de
+          vinculación podrá ver tu ubicación.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          No usar el botón SOS ni las alertas de zona segura para comprobar que
+          funcionan, para molestar o para jugar. Una alerta real que se toma a la
+          ligera hace que la próxima no se crea.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Tener un plan para las emergencias: la app es un apoyo, no el canal
+          principal.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Uso permitido</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Usar la app para cuidar de ti mismo o de una persona con la que exista un
+          vínculo real y el consentimiento de esa persona.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Cargar sólo tus propios datos o los de la persona que tienes permiso de
+          cuidar.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Usar la sección Bienestar, los recordatorios y las ayudas de
+          accesibilidad como quieras.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Uso prohibido</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Vincularse a una persona sin su consentimiento, o usar su código de
+          vinculación.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Usar la app para acosar, vigilar o presionar a otra persona.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Intentar entrar a la cuenta de otra persona, adivinar contraseñas o
+          modificar datos que no le pertenecen.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Usar la app para enviar publicidad, mensajes masivos o comunicaciones que
+          la persona no pidió.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Usar la app como único sistema de emergencias, como dispositivo médico o
+          como reemplazo de los servicios de rescate.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Seguridad de las cuentas</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          La contraseña la eliges tú. La app no puede mostrártela ni recuperarla;
+          sólo se puede cambiar. Si la olvidas, usas &laquo;Olvidé mi
+          contraseña&raquo; y el servicio envía un código de seis dígitos a tu
+          correo.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          El cambio de contraseña y el cambio de correo se hacen desde
+          &laquo;Mi perfil&raquo;, y el cambio de correo pide un código enviado a
+          la dirección nueva.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          No compartas tu contraseña, tu código de vinculación ni los códigos que
+          recibes por correo, y no los escribas fuera de la app.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Si usas un teléfono compartido, cierra sesión al terminar.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Propiedad intelectual</h2>
+
+    <p class="texto">
+      El nombre <strong>SiempreCerca</strong>, el logotipo, los colores, los
+      íconos, los textos de la app, los juegos y el código de la aplicación
+      pertenecen al equipo de SiempreCerca. Se concede el permiso de uso sólo para
+      operar la app y para el uso personal de sus funciones. No está permitido
+      desensamblarla, copiarla ni redistribuirla sin autorización.
+    </p>
+
+    <p class="texto">
+      La app usa componentes y datos de terceros, como las imágenes de los mapas
+      de OpenStreetMap, el servicio de envío de alertas de Google y las librerías
+      de mapas. Esos componentes conservan sus propias licencias y atribuciones.
+    </p>
+
+    <h2 class="seccion">Contenido que aportas tú</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-nombre">Tu foto de perfil</span>
+        <span class="item-detalle">
+          Se guarda en la carpeta de fotos de tu cuenta, que se abre con tu sesión.
+          La ven tú y la persona que te cuida, y nadie más dentro de la app. Puedes
+          cambiarla cuando quieras desde &laquo;Mi perfil&raquo;.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">La foto del rompecabezas</span>
+        <span class="item-detalle">
+          Se elige con la cámara y se procesa en el teléfono. No se sube a ningún
+          servidor.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tus contactos, recordatorios y zonas</span>
+        <span class="item-detalle">
+          Son datos guardados en tu cuenta. Puedes editarlos y borrarlos desde la
+          pantalla donde los creaste.
+        </span>
+      </li>
+    </ul>
+
+    <p class="texto">
+      Tu contenido no se publica en internet, no se muestra en la pantalla de otras
+      personas más que al cuidador que vinculaste y no se usa con fines comerciales.
+    </p>
+
+    <h2 class="seccion">Disponibilidad del servicio</h2>
+
+    <p class="texto">
+      SiempreCerca es un proyecto en desarrollo. La app puede tener interrupciones,
+      puede cambiar sus funciones y puede dejar de estar disponible. No se
+      garantiza disponibilidad continua, ni que todas las funciones funcionen en
+      todos los teléfonos o con todas las operadoras. Las alertas dependen del
+      teléfono, de la batería, de los datos y de los permisos: si algo de eso
+      falla, la alerta no llega.
+    </p>
+
+    <h2 class="seccion">Suspensión o terminación del acceso</h2>
+
+    <p class="texto">
+      Puedes cerrar sesión y dejar de usar la app cuando quieras, sin dar
+      explicaciones. Si rompes el vínculo con un cuidador, esa persona deja de ver
+      tus datos desde ese momento.
+    </p>
+
+    <p class="texto">
+      El equipo de SiempreCerca puede desactivar una cuenta si se está usando para
+      acosar, engañar o poner en riesgo a alguien, o si su dueño nos lo pide.
+    </p>
+
+    <h2 class="seccion">Modificaciones del servicio y de estos términos</h2>
+
+    <p class="texto">
+      La app puede mejorar sus funciones o quitar alguna. Si un cambio modifica de
+      forma importante el uso de la app o los datos que se guardan, se actualizan
+      los textos de esta misma pantalla.
+    </p>
+
+    <p class="texto">
+      Estos términos también pueden actualizarse. Al abrir la app se entiende que
+      aceptas la versión vigente, que es la que está en esta pantalla con su fecha
+      de actualización.
+    </p>
+
+    <p class="texto">
+      Estos textos no reemplazan la legislación aplicable en tu país, ni los
+      derechos que puedas tener como consumidor. Son la explicación de cómo
+      funciona la app y de qué se espera de quien la usa.
+    </p>
+
+    <h2 class="seccion">Contacto</h2>
+
+    <p class="texto">
+      Para cualquier consulta sobre estos términos, escribe desde el correo con el
+      que registraste tu cuenta en SiempreCerca e indica tu nombre y tu RUT. El
+      documento 6 explica qué datos poner en el mensaje.
+    </p>
+
+    <p class="pie">
+      Última actualización: {{ actualizacion }}
+    </p>
+
+    <button type="button" class="boton boton-secundario" (click)="volver()">
+      Volver al índice
+    </button>
+
+  </div>
+</ion-content>

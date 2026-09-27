@@ -1,0 +1,256 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver al índice">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>3 · Política de seguridad</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="pagina">
+
+    <span class="contador">Documento 3 de {{ total }}</span>
+
+    <p class="resumen">
+      Qué hace la app para proteger tu cuenta y tus datos, y qué se puede hacer si
+      algo sale mal.
+    </p>
+
+    <h2 class="seccion">Protección de tu cuenta</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          La contraseña no se guarda en la app ni se puede leer desde ella: la crea
+          y la verifica el servicio de autenticación, que la almacena
+          transformada y no permite recuperarla.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          La contraseña viaja cifrada y nunca se escribe en un archivo del
+          teléfono.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Para recuperar la contraseña se envía un código de seis dígitos al
+          correo registrado. Quien tenga ese código puede cambiar la contraseña,
+          así que es tan importante como la contraseña misma.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          El cambio de contraseña y el de correo se hacen sólo desde
+          &laquo;Mi perfil&raquo;, y el cambio de correo exige un código enviado a
+          la dirección nueva.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Control de acceso</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Cada cuenta tiene un tipo, &laquo;Usuario&laquo; o &laquo;Familiar&laquo;,
+          y la app muestra un panel distinto según el tipo. Las pantallas de
+          cuidados no están disponibles para la cuenta de un adulto mayor.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Las tablas de datos están protegidas con políticas de acceso por usuario:
+          una consulta hecha desde la app sólo puede leer o escribir datos de la
+          cuenta que inició sesión.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Para que un cuidador vea tus datos hace falta que compartas tu código de
+          vinculación. Nadie puede vincularse solo.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          La clave que viaja en la app es pública y no tiene permisos de
+          administrador. Las claves con permisos de administración están sólo en el
+          servidor, en las funciones que evalúan zonas seguras y envían alertas.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Cada acceso a la base de datos se hace con la sesión iniciada. Si la
+          sesión se cierra, el acceso se revoca en el servidor.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Gestión de sesiones</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          La app guarda la sesión abierta en el teléfono con un acceso de un solo
+          uso, no con tu contraseña, y guarda también una copia mínima de los datos
+          de la cuenta para que el servicio de ubicación en segundo plano pueda
+          evaluar tus zonas seguras.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Al cerrar sesión, el teléfono suelta el identificador de notificaciones
+          de esa cuenta antes de salir: si otra persona entra después en el mismo
+          teléfono, no le llegan tus alertas ni ve la copia de tu perfil.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Si el acceso a la cuenta se revoca, la app vuelve a la pantalla de
+          entrada de sesión.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Protección de la información personal</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Toda la comunicación con el servidor va cifrada.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Las fotos de perfil se entregan con enlaces que duran una hora, así que
+          el enlace deja de servir pasado ese tiempo.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Los datos que se escriben en el teléfono durante el registro se borran
+          en cuanto la cuenta queda creada.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          La agenda del teléfono se abre sólo cuando eliges un contacto, y trae
+          únicamente el contacto que seleccionaste.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Los permisos se piden uno a uno, con una explicación de para qué sirve
+          cada uno, y se pueden desactivar en cualquier momento.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Protección contra accesos no autorizados</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          El identificador de notificaciones pertenece a una sola cuenta a la vez.
+          Si esa cuenta inicia sesión en otro teléfono, el identificador se
+          libera del teléfono anterior para que las alertas no sigan llegando
+          donde no corresponde.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Tu cuidador no puede entrar a tu cuenta: ve los datos que necesita para
+          cuidarte, ni más ni menos. En su pantalla no aparece tu correo, tu
+          contraseña, tu RUT, tu fecha de nacimiento, tus recordatorios ni tus
+          contactos de emergencia.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Tu cuenta está protegida contra accesos desde otros equipos: cada
+          solicitud al servidor va con la sesión de la cuenta que la hace.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Gestión de incidentes</h2>
+
+    <p class="texto">
+      Si crees que alguien entró a tu cuenta o que una persona no autorizada está
+      viendo tus datos, hazlo en este orden, con el teléfono a la mano:
+    </p>
+
+    <ol class="pasos">
+      <li>
+        En &laquo;Mi perfil&raquo;, cambia la contraseña.
+      </li>
+      <li>
+        En &laquo;Mi perfil&raquo;, cierra sesión: así el teléfono suelta las
+        alertas de esa cuenta.
+      </li>
+      <li>
+        Si no reconoces a la persona que te cuida, pide que se rompa el vínculo
+        como se explica en el documento 5. Mientras tanto, puedes desactivar la
+        ubicación desde &laquo;Ver mis permisos&raquo; para que deje de ver dónde
+        estás.
+      </li>
+      <li>
+        Escribe al equipo de SiempreCerca desde el correo de la cuenta,
+        contando qué viste y desde cuándo.
+      </li>
+    </ol>
+
+    <p class="texto">
+      SiempreCerca no tiene un servicio de atención de incidentes disponible las
+      24 horas. Si estás en peligro ahora, llama al número de emergencias de tu
+      país: la app no es el canal para eso.
+    </p>
+
+    <h2 class="seccion">Actualización del software</h2>
+
+    <p class="texto">
+      La versión instalada se muestra en la parte de abajo de la pantalla de
+      permisos, junto con la marca de compilación: sirve para saber con qué versión
+      de la app se está trabajando. Las correcciones, incluidas las de seguridad,
+      se entregan con una versión nueva de la app, así que conviene mantenerla
+      actualizada.
+    </p>
+
+    <h2 class="seccion">Gestión de vulnerabilidades</h2>
+
+    <p class="texto">
+      Si encuentras un fallo de seguridad, escríbenos desde el correo de tu cuenta
+      antes de publicarlo y explica cómo se reproduce. SiempreCerca no publica un
+      canal público de reporte de vulnerabilidades ni un programa de recompensas:
+      por ahora, el canal es el correo de la cuenta.
+    </p>
+
+    <h2 class="seccion">Seguridad de los servicios externos</h2>
+
+    <p class="texto">
+      La app depende de servicios que no son nuestros: Supabase para los datos,
+      Google para las notificaciones y el acceso con cuenta de Google,
+      OpenStreetMap, Photon y OSRM para los mapas. Cada uno procesa la información
+      con sus propias medidas de seguridad y sus propias políticas de privacidad.
+    </p>
+
+    <p class="texto">
+      La app no les da acceso a la base de datos ni a las claves de
+      administración: a cada servicio se le entrega sólo lo que necesita para la
+      función que cumple. Si uno de ellos no responde, la parte de la app que
+      depende de él puede dejar de funcionar.
+    </p>
+
+    <p class="pie">
+      Última actualización: {{ actualizacion }}
+    </p>
+
+    <button type="button" class="boton boton-secundario" (click)="volver()">
+      Volver al índice
+    </button>
+
+  </div>
+</ion-content>

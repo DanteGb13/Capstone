@@ -1,0 +1,163 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver al índice">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>5 · Tus derechos sobre tus datos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="pagina">
+
+    <span class="contador">Documento 5 de {{ total }}</span>
+
+    <p class="resumen">
+      Qué puedes hacer tú, dentro de la app o escribiendo al equipo, y por qué
+      importa.
+    </p>
+
+    <p class="texto">
+      La idea es sencilla: los datos son tuyos. Esta lista sigue una guía común de
+      lo que toda persona puede pedir sobre su información. Las reglas legales
+      exactas dependen del país donde estés, y esta app está pensada para Chile; si
+      necesitas una respuesta legal formal, consúltala con un profesional.
+    </p>
+
+    <h2 class="seccion">Acceso: ver y saber qué hay de ti</h2>
+
+    <p class="texto">
+      En la app ya puedes ver tu información: está en &laquo;Mi perfil&raquo; (tus
+      datos), en &laquo;Mi ubicación&raquo; (tu posición y tu recorrido), en
+      &laquo;Contactos&raquo; (tus contactos de emergencia), en
+      &laquo;Recordatorios&raquo;, en &laquo;Zona segura&raquo; y, si eres
+      cuidador, en &laquo;Personas a tu cuidado&raquo;.
+    </p>
+
+    <p class="texto">
+      Si quieres una copia de la información que tenemos guardada en el servidor,
+      escribe desde el correo de tu cuenta al equipo de SiempreCerca indicando tu
+      nombre, tu correo y tu RUT. El equipo revisa la base de datos y responde con
+      los datos de la cuenta y la información de contacto que hay almacenados.
+    </p>
+
+    <h2 class="seccion">Rectificación: corregir lo que está mal</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          En &laquo;Mi perfil&raquo; puedes cambiar nombre, apellidos, teléfono,
+          fecha de nacimiento y dirección.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Tu correo y tu contraseña también se cambian desde ahí; el cambio de
+          correo pide un código enviado a la dirección nueva.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          El RUT no se puede cambiar desde la app porque identifica la cuenta. Si
+          está mal escrito, escríbenos desde el correo de la cuenta para
+          corregirlo.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Tus contactos de emergencia, recordatorios y zonas seguras se editan y se
+          borran en la pantalla donde los creaste.
+        </span>
+      </li>
+    </ul>
+
+    <p class="texto">
+      Corregir a tiempo importa: si tu número de teléfono está mal escrito, tu
+      cuidador no te puede llamar cuando sea de verdad.
+    </p>
+
+    <h2 class="seccion">Eliminación: borrar y dejar de guardar</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-nombre">Quitar a un cuidador</span>
+        <span class="item-detalle">
+          Desde la cuenta de cuidador, en &laquo;Personas a tu cuidado&raquo; o en
+          &laquo;Adultos a tu cargo&raquo;, hay un botón para desvincular a una
+          persona: desde ese momento deja de ver tus datos y de recibir tus
+          alertas.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-nombre">Si eres el adulto mayor</span>
+        <span class="item-detalle">
+          La app no tiene un botón para quitar a un cuidador desde la cuenta del
+          adulto mayor, porque el que hizo la vinculación es el cuidador. Escribe
+          desde el correo de tu cuenta al equipo de SiempreCerca indicando el
+          nombre de la persona, y el equipo rompe el vínculo. Mientras se resuelve,
+          puedes desactivar la ubicación desde &laquo;Ver mis permisos&raquo;: tu
+          cuidador deja de ver dónde estás.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-nombre">Borrar tu cuenta</span>
+        <span class="item-detalle">
+          La app no tiene una pantalla para borrar la cuenta, así que se pide por
+          correo: escribe desde el correo de tu cuenta al equipo de SiempreCerca,
+          con la palabra &laquo;eliminar&raquo; en el asunto, tu nombre, tu correo
+          y tu RUT. Con la solicitud se eliminan la cuenta y sus datos
+          asociados: perfil, ubicación e historial, zonas seguras, alertas SOS,
+          recordatorios, contactos de emergencia y foto de perfil.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Información sobre el tratamiento</h2>
+
+    <p class="texto">
+      Tienes derecho a saber para qué se usa tu información. Está en el documento 1
+      de esta sección, y en la pantalla &laquo;Permisos&raquo; está el detalle de
+      cada permiso: para qué lo pide la app y en qué estado está en tu teléfono.
+    </p>
+
+    <h2 class="seccion">Oposición y retiro del consentimiento</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Puedes dejar de conceder un permiso en cualquier momento desde
+          &laquo;Ver mis permisos&raquo;: mientras está desactivado, la app no lo
+          usa y no guarda el dato que dependía de él.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Puedes desactivar el aviso de zona segura o el modo viaje desde
+          &laquo;Zona segura&raquo;.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Puedes romper el vínculo con un cuidador, como se explica más arriba.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Y si decides no seguir usando la app, cierras sesión y, si quieres que se
+          borren los datos, pides la eliminación de la cuenta.
+        </span>
+      </li>
+    </ul>
+
+    <p class="pie">
+      Última actualización: {{ actualizacion }}
+    </p>
+
+    <button type="button" class="boton boton-secundario" (click)="volver()">
+      Volver al índice
+    </button>
+
+  </div>
+</ion-content>

@@ -1,0 +1,497 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()" aria-label="Volver al índice">
+        <ion-icon name="chevron-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>1 · Política de privacidad</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="pagina">
+
+    <span class="contador">Documento 1 de {{ total }}</span>
+
+    <p class="resumen">
+      Qué datos guarda SiempreCerca, para qué los usa, con quién los comparte y
+      hasta cuándo los conserva.
+    </p>
+
+    <h2 class="seccion">Qué datos recogemos</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-nombre">Tu cuenta</span>
+        <span class="item-detalle">
+          Correo electrónico, contraseña y tipo de cuenta, que puede ser
+          &laquo;Usuario&laquo; (la persona que necesita el cuidado) o
+          &laquo;Familiar&laquo; (quien lo cuida). La contraseña la crea y la
+          verifica el servicio de autenticación: la app nunca la ve, no la
+          muestra y no puede recuperarla.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tu identidad</span>
+        <span class="item-detalle">
+          Nombre, apellidos, RUT, fecha de nacimiento y teléfono. Los pides al
+          crear la cuenta y puedes cambiarlos en &laquo;Mi perfil&laquo;, salvo el
+          RUT, que identifica la cuenta y no se modifica desde la app.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tu dirección</span>
+        <span class="item-detalle">
+          Región, comuna, calle y número. Sirven para situarte en el mapa, dibujar
+          tu zona segura y resolver direcciones.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tu ubicación</span>
+        <span class="item-detalle">
+          La última posición conocida, las posiciones que se toman en segundo
+          plano (cada 30 segundos o al moverte 20 metros) aunque la app esté
+          cerrada, y el historial de desplazamiento, con el trazo, la distancia y
+          la duración de cada recorrido.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tus zonas seguras y tus viajes</span>
+        <span class="item-detalle">
+          El nombre de cada zona, su centro, su radio, su dirección, si es tu casa
+          y si está activa. También los avisos de viaje (el modo viaje) que dejas
+          activados por un tiempo determinado, para que no suene la alerta de
+          zona segura mientras estás fuera.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tus alertas</span>
+        <span class="item-detalle">
+          Las salidas de zona segura y las alertas del botón SOS: cuándo
+          ocurrieron, a quién se avisó, quién las confirmó y cuándo.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tu foto de perfil</span>
+        <span class="item-detalle">
+          Sólo si tú eliges una. Se guarda en el archivo de fotos de tu cuenta y
+          se muestra en tu perfil y en la lista de la persona que te cuida, para
+          que sepa a quién está cuidando. Si no pones ninguna, la app funciona
+          igual.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tus contactos de emergencia</span>
+        <span class="item-detalle">
+          Nombre, apellidos, teléfono, correo y parentesco de las personas que
+          agregas tú. Puedes tomarlos de tu teléfono (eliges uno a la vez) o
+          escribirlos a mano. La app no copia tu agenda completa: sólo guarda lo
+          que decides guardar.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tus recordatorios</span>
+        <span class="item-detalle">
+          El nombre, la hora, la descripción y los días de la semana de cada aviso
+          que programas, por ejemplo un medicamento. Se guardan también en tu
+          teléfono para que la alarma suene aunque no tengas datos.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">El identificador de tu teléfono</span>
+        <span class="item-detalle">
+          El identificador que registra Android para enviarte las notificaciones,
+          y a qué cuenta pertenece. Sirve para que las alertas lleguen a tu
+          celular y no al de otra persona. Además guardamos si tu app está
+          conectada y la última vez que la abriste.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tus preferencias de accesibilidad</span>
+        <span class="item-detalle">
+          Tamaño de letra, filtro para daltónicos (modo e intensidad) y lectura
+          en voz alta (si está activada y a qué velocidad). Se guardan sólo en tu
+          teléfono.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Tus marcas en los juegos</span>
+        <span class="item-detalle">
+          Tu mejor resultado en los juegos de la sección Bienestar. Se guarda sólo
+          en tu teléfono y no se envía a ningún servidor.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Para qué usamos esos datos</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">Crear tu cuenta y dejarte entrar a la app.</span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Mostrarte tu posición, tu mapa, tus zonas seguras y tu recorrido.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Avisar a la persona que te cuida si sales de una zona segura o si pulsas
+          el botón SOS.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Enviarte a ti recordatorios y alertas en tu teléfono.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Llamar al contacto de emergencia que elegiste, o llamar a la persona
+          que tienes a tu cargo si eres cuidador.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Vincular tu cuenta con la de tu cuidador y mostrarle lo que necesita
+          para acompañarte.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Enviarte por correo los códigos de verificación, para recuperar tu
+          contraseña o cambiar tu correo.
+        </span>
+      </li>
+    </ul>
+
+    <div class="aviso">
+      <ion-icon name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+      <p>
+        No usamos tus datos para publicidad, no los vendemos y no hacemos perfiles
+        de consumo. La app <strong>no usa servicios de analítica ni de reporte de
+        errores</strong>: no registra cómo usas la app en ningún servidor.
+      </p>
+    </div>
+
+    <h2 class="seccion">Sobre tu consentimiento</h2>
+
+    <p class="texto">
+      La app sólo funciona con una cuenta creada por ti y con los permisos que
+      concedes en el teléfono. La primera vez que la abres, la app te pide los
+      permisos uno a uno y te explica para qué sirve cada uno. Puedes saltarlos
+      con &laquo;Saltar y usar la app igual&raquo;: la app se abre de todos modos y
+      las funciones que dependen de un permiso te avisan que falta.
+    </p>
+
+    <p class="texto">
+      Conceder un permiso es algo que puedes deshacer cuando quieras. Puedes ver
+      cuáles tienes activados y cuáles no, y activarlos o desactivarlos uno a uno.
+    </p>
+
+    <button type="button" class="boton boton-secundario" (click)="irAPermisos()">
+      Ver mis permisos
+    </button>
+
+    <h2 class="seccion">Con quién se comparten tus datos</h2>
+
+    <p class="texto">
+      <strong>Con la persona que tú vinculas como cuidador.</strong> Para
+      vincularse contigo hace falta que alguien use el código que tú compartes, así
+      que la vinculación no se puede hacer a escondidas.
+    </p>
+
+    <p class="texto">
+      En su pantalla, tu cuidador ve tu nombre, tus apellidos, tu foto de perfil,
+      tu número de teléfono (para llamarte), si tu app está conectada, tu
+      ubicación en el mapa y las alertas que le llegan. <strong>No ve</strong>: tu
+      correo, tu contraseña, tu RUT, tu fecha de nacimiento, tus recordatorios ni
+      tus contactos de emergencia.
+    </p>
+
+    <p class="texto">
+      Aun así, la lista de &laquo;Personas a tu cuidado&laquo; pide al servidor
+      también tu correo, tu RUT, tu fecha de nacimiento y tu dirección para armarla,
+      aunque no los muestra en pantalla. Si te preocupa, puedes desactivar la
+      ubicación desde &laquo;Ver mis permisos&raquo; en cualquier momento, y pedir
+      que se rompa el vínculo, como se explica en el documento 5.
+    </p>
+
+    <p class="texto">
+      Las alertas que recibe tu cuidador llevan tu nombre, el nombre de la zona
+      desde la que saliste, la distancia a la que estás y un enlace para abrir el
+      mapa en esa posición.
+    </p>
+
+    <p class="texto">
+      <strong>Con los servicios que hacen funcionar la app.</strong> Cada uno
+      recibe sólo lo que necesita para hacer su parte, y cada uno tiene sus propias
+      políticas de privacidad:
+    </p>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-nombre">Supabase</span>
+        <span class="item-detalle">
+          Es el servicio donde están alojados tus datos: base de datos, archivos y
+          autenticación. Es el lugar donde queda guardada tu información.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Firebase Cloud Messaging (Google)</span>
+        <span class="item-detalle">
+          Recibe el identificador de tu teléfono para poder entregarte las
+          alertas.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Google</span>
+        <span class="item-detalle">
+          Si entras con &laquo;Continuar con Google&raquo;, Google comparte con la
+          app el correo y el nombre de esa cuenta. Si abres Google Maps desde la
+          app, sales de la app y la posición que mandas va a Google. El código
+          para escanear el vínculo se lee en el teléfono, sin enviarse.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">OpenStreetMap</span>
+        <span class="item-detalle">
+          Entrega las imágenes de los mapas que ves y, a través de su servicio
+          Nominatim, convierte tus coordenadas en una dirección.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">Photon (Komoot)</span>
+        <span class="item-detalle">
+          Recibe el texto de la dirección que escribes al buscar direcciones,
+          para sugerirte resultados.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">OSRM</span>
+        <span class="item-detalle">
+          Recibe tus coordenadas cuando la app calcula una ruta a pie.
+        </span>
+      </li>
+
+      <li class="item">
+        <span class="item-nombre">jsDelivr</span>
+        <span class="item-detalle">
+          Servidor del que se descarga la librería de los mapas sólo si el
+          teléfono no trae la copia incluida en la app.
+        </span>
+      </li>
+    </ul>
+
+    <p class="texto">
+      <strong>Con el equipo de SiempreCerca.</strong> El equipo administra la base
+      de datos y las funciones del servidor, y para que la app funcione con el
+      teléfono cerrado necesita permisos más amplios que los de una cuenta normal.
+      Ese acceso se usa para mantener el servicio: revisar por qué una alerta no
+      llegó, corregir errores y responder las solicitudes de los usuarios. No se
+      usa para otros fines. Si quieres saber qué datos hay de ti, puedes pedirlo
+      como se explica en el documento 5.
+    </p>
+
+    <h2 class="seccion">Información técnica</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          El identificador del teléfono con el que Android registra las
+          notificaciones y la cuenta a la que pertenece.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Si la app está conectada o no, y la última vez que se abrió, para
+          mostrarle a tu cuidador si estás en línea.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          La versión de la app instalada en el teléfono, que se puede ver en la
+          pantalla de permisos.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Los fallos técnicos se escriben en el registro interno del sistema del
+          teléfono. No se envían a ningún servicio externo.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Cookies y tecnologías similares</h2>
+
+    <p class="texto">
+      La app <strong>no usa cookies</strong>, ni tecnologías de rastreo
+      publicitario, ni publicidad dentro de la aplicación. Tampoco usa servicios
+      de analítica.
+    </p>
+
+    <p class="texto">
+      Lo que sí guarda en tu teléfono, en un espacio privado que pertenece a la app
+      y al que otras aplicaciones no pueden entrar, es esto:
+    </p>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Tu sesión iniciada y, para que el servicio de ubicación pueda evaluar tus
+          zonas seguras con la app cerrada, una copia mínima de los datos de la
+          cuenta.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Una copia de tu perfil y la dirección de tu foto, que se borra sola al
+          cabo de una hora.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Una copia local de tus recordatorios y de las alarmas que ya viste, para
+          que las alarmas suenen aunque no tengas datos.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          La última posición conocida y la dirección a la que corresponde.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          El estado de tus zonas seguras, de las alertas y del modo viaje.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          El identificador de notificaciones, tus preferencias de accesibilidad y
+          tus marcas en los juegos.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Mientras creas la cuenta, tu nombre, tu teléfono y tu correo. Se borran
+          del teléfono en cuanto terminas el registro.
+        </span>
+      </li>
+    </ul>
+
+    <p class="texto">
+      Cuando cierras sesión, el teléfono borra la copia local de tu perfil y de tu
+      foto, la copia local de los recordatorios y el identificador de
+      notificaciones de esa cuenta.
+    </p>
+
+    <h2 class="seccion">Dónde se guardan y cómo se protegen</h2>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Tus datos <strong>no están en el teléfono</strong>: están en los
+          servidores del servicio Supabase. Lo que se queda en el teléfono es lo
+          que se listó antes, y es lo mínimo para que la app funcione sin
+          conexión.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Todas las comunicaciones entre la app y el servidor viajan cifradas
+          (HTTPS).
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Las fotos de perfil no son públicas: se entregan con enlaces
+          temporales que duran una hora, así que el enlace de una foto no sirve
+          más tarde ni para otra persona.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Cada cuenta sólo puede leer y escribir sus propios datos: las tablas
+          están protegidas con políticas de acceso por usuario.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          La clave que viaja dentro de la app es una clave pública, pensada para
+          que la aplicación no tenga permisos de administrador. Las claves con
+          permisos de administración no están en la app: viven en el servidor.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Cuánto tiempo se conservan</h2>
+
+    <p class="texto">
+      La regla es sencilla: los datos se conservan mientras tu cuenta esté
+      activa. Mientras tanto:
+    </p>
+
+    <ul class="lista">
+      <li class="item">
+        <span class="item-detalle">
+          Puedes cambiar o borrar lo que quieras desde la pantalla donde lo
+          creaste: perfil, foto, contactos, recordatorios y zonas seguras.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Si se rompe el vínculo con un cuidador, desde ese momento deja de ver
+          tus datos y las alertas nuevas ya no le llegan.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Al cerrar sesión, el teléfono borra la copia local de tu perfil, de tu
+          foto y de tus recordatorios, y suelta el identificador de
+          notificaciones.
+        </span>
+      </li>
+      <li class="item">
+        <span class="item-detalle">
+          Cuando terminas con la cuenta, para eliminar también lo que está en el
+          servidor hay que pedirlo, y está explicado en el documento 5.
+        </span>
+      </li>
+    </ul>
+
+    <h2 class="seccion">Cambios en esta política</h2>
+
+    <p class="texto">
+      Esta política se revisa cada vez que la app cambia. Si un cambio modifica
+      lo que se guarda o para qué se usa, se actualiza esta misma página: la fecha
+      del final es la última actualización y sirve para saber con qué versión del
+      texto se creó la app que tienes instalada.
+    </p>
+
+    <p class="pie">
+      Última actualización: {{ actualizacion }}
+    </p>
+
+    <button type="button" class="boton boton-secundario" (click)="volver()">
+      Volver al índice
+    </button>
+
+  </div>
+</ion-content>

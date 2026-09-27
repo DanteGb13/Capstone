@@ -158,6 +158,36 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/ajustes/voz/voz.page').then( m => m.VozPage)
   },
   {
+    // Índice de la sección de privacidad. Los seis documentos van en páginas
+    // aparte: `privacidad.page` sólo lista y abre, no repite el texto.
+    path: 'privacidad',
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad.page').then( m => m.PrivacidadPage)
+  },
+  {
+    path: 'privacidad-datos',
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-datos.page').then( m => m.PrivacidadDatosPage)
+  },
+  {
+    path: 'privacidad-terminos',
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-terminos.page').then( m => m.PrivacidadTerminosPage)
+  },
+  {
+    path: 'privacidad-seguridad',
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-seguridad.page').then( m => m.PrivacidadSeguridadPage)
+  },
+  {
+    path: 'privacidad-estandares',
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-estandares.page').then( m => m.PrivacidadEstandaresPage)
+  },
+  {
+    path: 'privacidad-derechos',
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-derechos.page').then( m => m.PrivacidadDerechosPage)
+  },
+  {
+    path: 'privacidad-contacto',
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-contacto.page').then( m => m.PrivacidadContactoPage)
+  },
+  {
     path: 'recuperar-contrasena',
     loadComponent: () => import('./auth/recuperar-contrasena/recuperar-contrasena.page').then( m => m.RecuperarContrasenaPage)
   },

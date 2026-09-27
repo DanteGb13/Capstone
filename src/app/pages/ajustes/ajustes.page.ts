@@ -62,6 +62,10 @@ export class AjustesPage implements OnInit {
     this.router.navigate(['/voz']);
   }
 
+  irAPrivacidad() {
+    this.router.navigate(['/privacidad']);
+  }
+
   async volver() {
     await this.navRol.irAPanelPrincipal();
   }
