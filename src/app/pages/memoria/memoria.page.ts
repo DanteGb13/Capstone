@@ -1,4 +1,4 @@
-import { Component, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonContent,
@@ -10,7 +10,9 @@ import {
   IonIcon
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { arrowBack, albumsOutline, refreshOutline } from 'ionicons/icons';
+import { arrowBack, albumsOutline, helpCircleOutline, refreshOutline } from 'ionicons/icons';
+import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
+import { TUTORIAL_MEMORIA } from '../juegos/tutoriales';
 
 /** Una carta del tablero de memoria. */
 export interface CartaMemoria {
@@ -42,10 +44,15 @@ const PARES: { parejaId: number; emoji: string }[] = [
     IonTitle,
     IonButtons,
     IonButton,
-    IonIcon
+    IonIcon,
+    TutorialJuegoComponent
   ]
 })
 export class MemoriaPage implements OnDestroy {
+
+  /** True mientras se muestra el tutorial de "Cómo jugar". */
+  mostrarTutorial = true;
+  pasosTutorial = TUTORIAL_MEMORIA;
 
   cartas: CartaMemoria[] = [];
 
@@ -60,9 +67,11 @@ export class MemoriaPage implements OnDestroy {
   private cronoId: any = null;
   private tiempoIniciado = false;
   private volteandas: CartaMemoria[] = [];
+  /** Evita repintar cuando la página ya fue destruida. */
+  private destruido = false;
 
-  constructor(private router: Router) {
-    addIcons({ arrowBack, albumsOutline, refreshOutline });
+  constructor(private router: Router, private cdr: ChangeDetectorRef) {
+    addIcons({ arrowBack, albumsOutline, helpCircleOutline, refreshOutline });
     this.iniciar();
   }
 
@@ -132,6 +141,9 @@ export class MemoriaPage implements OnDestroy {
       b.volteada = false;
       this.podemosJugar = true;
       this.volteandas = [];
+      if (!this.destruido) {
+        this.cdr.detectChanges();
+      }
     }, 1100);
   }
 
@@ -142,6 +154,11 @@ export class MemoriaPage implements OnDestroy {
       if (this.segundos === 60) {
         this.segundos = 0;
         this.minutos++;
+      }
+      // Los temporizadores no disparan la detección de cambios en esta app,
+      // así que se fuerza el renderizado para que el tiempo se vea avanzar.
+      if (!this.destruido) {
+        this.cdr.detectChanges();
       }
     }, 1000);
   }
@@ -158,6 +175,9 @@ export class MemoriaPage implements OnDestroy {
       this.detenerCrono();
       setTimeout(() => {
         this.terminado = true;
+        if (!this.destruido) {
+          this.cdr.detectChanges();
+        }
       }, 650);
     }
   }
@@ -178,6 +198,7 @@ export class MemoriaPage implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.destruido = true;
     this.detenerCrono();
   }
 }

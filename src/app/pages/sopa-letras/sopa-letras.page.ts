@@ -10,7 +10,9 @@ import {
   IonIcon
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { arrowBack, chevronDownOutline, chevronUpOutline } from 'ionicons/icons';
+import { arrowBack, chevronDownOutline, chevronUpOutline, helpCircleOutline } from 'ionicons/icons';
+import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
+import { TUTORIAL_SOPA } from '../juegos/tutoriales';
 
 /** Una celda de la sopa de letras. */
 export interface CeldaSopa {
@@ -90,10 +92,15 @@ const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     IonTitle,
     IonButtons,
     IonButton,
-    IonIcon
+    IonIcon,
+    TutorialJuegoComponent
   ]
 })
 export class SopaLetrasPage {
+
+  /** True mientras se muestra el tutorial de "Cómo jugar". */
+  mostrarTutorial = true;
+  pasosTutorial = TUTORIAL_SOPA;
 
   temas = TEMAS;
   temaIndex = 0;
@@ -116,7 +123,7 @@ export class SopaLetrasPage {
   terminado = false;
 
   constructor(private router: Router) {
-    addIcons({ arrowBack, chevronDownOutline, chevronUpOutline });
+    addIcons({ arrowBack, chevronDownOutline, chevronUpOutline, helpCircleOutline });
     this.regenerar();
   }
 

@@ -1,0 +1,171 @@
+:host {
+  --primary: #7715c7;
+  --primary-light: rgba(119, 21, 199, 0.1);
+}
+
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(30, 27, 75, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.tutorial-card {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 22px 18px 18px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+  max-height: 94vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  /* Botón X para salir de las instrucciones */
+  .cerrar {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 2px solid #ede9fe;
+    background: #f4f0ff;
+    color: var(--primary, #7715c7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    ion-icon {
+      font-size: 26px;
+    }
+  }
+
+  .tutorial-icono {
+    text-align: center;
+    font-size: 40px;
+    line-height: 1;
+  }
+
+  h2 {
+    margin: 0;
+    text-align: center;
+    font-size: 23px;
+    font-weight: 800;
+    color: var(--primary, #7715c7);
+    line-height: 1.3;
+  }
+
+  .tutorial-contador {
+    margin: 0;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: #8c92a4;
+  }
+
+  .tutorial-intro {
+    margin: 0;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.45;
+    color: #1a1d26;
+  }
+
+  /* Un solo paso por pantalla */
+  .paso-actual {
+    background: #f8f7fc;
+    border: 2px solid #ede9fe;
+    border-radius: 18px;
+    padding: 16px 14px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+
+    .paso-numero {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--primary, #7715c7);
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .paso-emoji {
+      font-size: 46px;
+      line-height: 1;
+    }
+
+    .paso-texto {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.45;
+      font-weight: 700;
+      color: #1a1d26;
+    }
+  }
+
+  /* Puntos de avance */
+  .puntos {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+
+    .punto {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #ddd6fe;
+
+      &.activo {
+        width: 22px;
+        border-radius: 999px;
+        background: var(--primary, #7715c7);
+      }
+    }
+  }
+
+  /* Botones de navegación */
+  .tutorial-acciones {
+    display: flex;
+    gap: 10px;
+  }
+
+  .btn-anterior {
+    --border-color: #ddd6fe;
+    --color: var(--primary, #7715c7);
+    --border-radius: 14px;
+    font-size: 16px;
+    font-weight: 800;
+    min-height: 54px;
+    flex: 1 1 34%;
+  }
+
+  .btn-siguiente {
+    --background: var(--primary, #7715c7);
+    --background-hover: #5f0fa3;
+    --background-activated: #5f0fa3;
+    --border-radius: 14px;
+    --color: #ffffff;
+    font-size: 17px;
+    font-weight: 800;
+    min-height: 54px;
+    flex: 2 1 66%;
+  }
+}

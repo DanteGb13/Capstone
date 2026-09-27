@@ -10,7 +10,9 @@ import {
   IonIcon
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { arrowBack, refreshOutline, trashOutline } from 'ionicons/icons';
+import { arrowBack, helpCircleOutline, refreshOutline, trashOutline } from 'ionicons/icons';
+import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
+import { TUTORIAL_TRES_EN_LINEA } from '../juegos/tutoriales';
 
 /** Ficha del tablero: X (usuario), O (IA) o vacío. */
 export type FichaTres = 'X' | 'O' | null;
@@ -49,10 +51,15 @@ const PROBABILIDAD_ERROR_DIFICIL = 0.1;
     IonTitle,
     IonButtons,
     IonButton,
-    IonIcon
+    IonIcon,
+    TutorialJuegoComponent
   ]
 })
 export class TicTacToePage implements OnDestroy {
+
+  /** True mientras se muestra el tutorial de "Cómo jugar". */
+  mostrarTutorial = true;
+  pasosTutorial = TUTORIAL_TRES_EN_LINEA;
 
   tablero: FichaTres[] = Array(9).fill(null);
   turno: FichaTres = 'X';
@@ -79,7 +86,7 @@ export class TicTacToePage implements OnDestroy {
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {
-    addIcons({ arrowBack, refreshOutline, trashOutline });
+    addIcons({ arrowBack, helpCircleOutline, refreshOutline, trashOutline });
     this.cargarStats();
   }
 
