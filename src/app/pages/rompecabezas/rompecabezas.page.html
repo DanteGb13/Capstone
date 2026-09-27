@@ -6,6 +6,12 @@
       </ion-button>
     </ion-buttons>
     <ion-title>Rompecabeza</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="mostrarTutorial = true" aria-label="Ver cómo se juega">
+        <ion-icon name="help-circle-outline" slot="start"></ion-icon>
+        Cómo jugar
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -113,27 +119,6 @@
 
   </div>
 
-  @if (terminado) {
-
-    <div class="overlay">
-      <div class="overlay-card">
-        <div class="celebra">🎉</div>
-        <h2>¡Rompecabeza armado!</h2>
-        <p>Completaste la imagen en <strong>{{ movimientos }}</strong> movimientos.</p>
-
-        <ion-button expand="block" class="btn-primario" (click)="jugarDeNuevo()">
-          <ion-icon name="refresh-outline" slot="start"></ion-icon>
-          Jugar de nuevo
-        </ion-button>
-
-        <ion-button expand="block" fill="outline" class="btn-secundario" (click)="volver()">
-          Volver a Juegos
-        </ion-button>
-      </div>
-    </div>
-
-  }
-
   <!-- Recorte interactivo de la foto -->
   @if (recorteVisible) {
 
@@ -187,3 +172,41 @@
 
   }
 </ion-content>
+
+<!-- Pantalla de victoria -->
+@if (terminado) {
+
+  <div class="overlay">
+    <div class="overlay-card">
+      <div class="celebra">🎉</div>
+      <h2>¡Ganaste!</h2>
+      <p>
+        ¡Armaste el rompecabeza en <strong>{{ movimientos }}</strong> movimientos.
+        <br />
+        Puedes jugarlo de nuevo o volver al menú de juegos.
+      </p>
+
+      <ion-button expand="block" class="btn-primario" (click)="jugarDeNuevo()">
+        <ion-icon name="refresh-outline" slot="start"></ion-icon>
+        Jugar de nuevo
+      </ion-button>
+
+      <ion-button expand="block" fill="outline" class="btn-secundario" (click)="volver()">
+        Volver a Juegos
+      </ion-button>
+    </div>
+  </div>
+
+}
+
+@if (mostrarTutorial) {
+
+  <app-tutorial-juego
+    titulo="Cómo jugar: Rompecabeza"
+    introduccion="Ordena las piezas para armar la imagen."
+    [pasos]="pasosTutorial"
+    (comenzar)="mostrarTutorial = false"
+    (cerrar)="mostrarTutorial = false">
+  </app-tutorial-juego>
+
+}

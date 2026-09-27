@@ -157,7 +157,13 @@ export class SupabaseService {
       const expiraLocal = local?.expires_at || 0;
       const nativaEsMasReciente = expiraNativa > expiraLocal + 120;
 
-      if (nativa.refreshToken && (nativaEsMasReciente || !local)) {
+      // Nunca adoptamos un token nativo ya vencido: al refrescarlo con un
+      // refresh_token que Supabase ya no reconoce, la sesión se destruye y la
+      // app expulsa al usuario al login. Si está vencido, que cada lado
+      // renueve su propio token.
+      const nativaVigente = (nativa.expiresAt || 0) > Date.now() + 60_000;
+
+      if (nativa.refreshToken && nativaVigente && (nativaEsMasReciente || !local)) {
         // El servicio refrescó el token con la app cerrada: lo adoptamos aquí
         await this.supabase.auth.setSession({
           access_token: nativa.accessToken,

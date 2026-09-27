@@ -6,6 +6,12 @@
       </ion-button>
     </ion-buttons>
     <ion-title>Sopa de Letras</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="mostrarTutorial = true" aria-label="Ver cómo se juega">
+        <ion-icon name="help-circle-outline" slot="start"></ion-icon>
+        Cómo jugar
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -101,3 +107,15 @@
 
   }
 </ion-content>
+
+@if (mostrarTutorial) {
+
+  <app-tutorial-juego
+    titulo="Cómo jugar: Sopa de Letras"
+    introduccion="Busca y marca las palabras escondidas en el tablero."
+    [pasos]="pasosTutorial"
+    (comenzar)="mostrarTutorial = false"
+    (cerrar)="mostrarTutorial = false">
+  </app-tutorial-juego>
+
+}

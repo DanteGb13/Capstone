@@ -1,0 +1,58 @@
+<div class="tutorial-overlay">
+  <div class="tutorial-card">
+
+    <!-- Salir de las instrucciones -->
+    <button
+      type="button"
+      class="cerrar"
+      (click)="salir()"
+      aria-label="Cerrar instrucciones">
+      <ion-icon name="close-outline"></ion-icon>
+    </button>
+
+    <div class="tutorial-icono" aria-hidden="true">📖</div>
+    <h2>{{ titulo }}</h2>
+
+    <!-- Aviso de cuántos pasos son -->
+    <p class="tutorial-contador">Paso {{ indice + 1 }} de {{ total }}</p>
+
+    <!-- La explicación corta solo aparece en el primer paso -->
+    @if (esPrimero) {
+      <p class="tutorial-intro">{{ introduccion }}</p>
+    }
+
+    <!-- Un solo paso por pantalla -->
+    @if (pasoActual; as paso) {
+      <div class="paso-actual">
+        <span class="paso-numero" aria-hidden="true">{{ indice + 1 }}</span>
+        <div class="paso-emoji" aria-hidden="true">{{ paso.icono }}</div>
+        <p class="paso-texto">{{ paso.texto }}</p>
+      </div>
+    }
+
+    <!-- Puntos de avance -->
+    <div class="puntos" aria-hidden="true">
+      @for (paso of pasos; track $index; let i = $index) {
+        <span class="punto" [class.activo]="i === indice"></span>
+      }
+    </div>
+
+    <!-- Navegación entre pasos -->
+    <div class="tutorial-acciones">
+      @if (!esPrimero) {
+        <ion-button fill="outline" class="btn-anterior" (click)="anterior()">
+          Atrás
+        </ion-button>
+      }
+
+      <ion-button class="btn-siguiente" (click)="siguiente()">
+        @if (esUltimo) {
+          ▶ Comenzar a jugar
+        } @else {
+          Siguiente ▶
+        }
+      </ion-button>
+    </div>
+
+  </div>
+</div>

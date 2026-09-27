@@ -1,4 +1,4 @@
-import { Component, ChangeDetectorRef, ElementRef, ViewChild } from '@angular/core';
+import { Component, ChangeDetectorRef, ElementRef, OnDestroy, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonContent,
@@ -18,11 +18,14 @@ import {
   checkmarkDoneOutline,
   chevronDownOutline,
   chevronUpOutline,
+  helpCircleOutline,
   imagesOutline,
   refreshOutline,
   removeOutline,
   swapHorizontalOutline
 } from 'ionicons/icons';
+import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
+import { TUTORIAL_ROMPECABEZA } from '../juegos/tutoriales';
 
 /** Cantidad de piezas por lado (tablero de 3 x 3 = 8 piezas + un hueco). */
 const LADO = 3;
@@ -44,10 +47,18 @@ const MAXIMO_FUENTE_FOTO = 1600;
     IonButtons,
     IonButton,
     IonIcon,
-    IonRange
+    IonRange,
+    TutorialJuegoComponent
   ]
 })
-export class RompecabezasPage {
+export class RompecabezasPage implements OnDestroy {
+
+  /** Evita repintar cuando la página ya fue destruida. */
+  private destruido = false;
+
+  /** True mientras se muestra el tutorial de "Cómo jugar". */
+  mostrarTutorial = true;
+  pasosTutorial = TUTORIAL_ROMPECABEZA;
 
   /** Estado del tablero: un número por casilla (0 = casilla vacía). */
   piezas: number[] = [];
@@ -100,7 +111,7 @@ export class RompecabezasPage {
   @ViewChild('imagenRecorte') imagenRecorte!: ElementRef<HTMLImageElement>;
 
   constructor(private router: Router, private cdr: ChangeDetectorRef) {
-    addIcons({ arrowBack, cameraOutline, imagesOutline, refreshOutline, removeOutline, addOutline, checkmarkDoneOutline, chevronDownOutline, chevronUpOutline, swapHorizontalOutline });
+    addIcons({ arrowBack, cameraOutline, imagesOutline, refreshOutline, removeOutline, addOutline, checkmarkDoneOutline, chevronDownOutline, chevronUpOutline, swapHorizontalOutline, helpCircleOutline });
     this.imagen = this.generarImagen();
     this.jugarDeNuevo();
   }
@@ -402,6 +413,9 @@ export class RompecabezasPage {
     if (this.estaOrdenado()) {
       setTimeout(() => {
         this.terminado = true;
+        if (!this.destruido) {
+          this.cdr.detectChanges();
+        }
       }, 350);
     }
   }
@@ -542,5 +556,9 @@ export class RompecabezasPage {
   /** Vuelve a la lista de juegos. */
   volver(): void {
     void this.router.navigate(['/juegos']);
+  }
+
+  ngOnDestroy(): void {
+    this.destruido = true;
   }
 }

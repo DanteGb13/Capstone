@@ -1,17 +1,56 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import type { Session } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase';
 import { NavegacionRolService, RUTAS_CUIDADOR, RUTAS_ADULTO_MAYOR } from '../navegacion-rol/navegacion-rol';
 
+/** Espera breve entre reintentos. */
+function esperar(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Estado "permitido" cuando falla la red: no significa que se haya cerrado sesión. */
+const ESTADO_SIN_RED = {
+  autenticado: true,
+  perfilCompleto: true,
+  existeUsuario: true,
+  rol: null
+};
+
 /**
  * Obtiene el estado actual de la sesión y el perfil del usuario utilizando getSession (rápido y local).
+ *
+ * Ojo: getSession() intenta RENOVAR el token cuando este ya venció. Si en ese
+ * instante no hay conexión devuelve error aunque la sesión siga guardada; antes
+ * eso terminaba en un falso "cierre de sesión" que expulsaba al usuario al login.
+ * Por eso ahora:
+ *  - se reintenta una vez si falla la renovación,
+ *  - si el error persiste (red) se permite el paso (el servidor sigue validando
+ *    el token en cada consulta, así que no se abre ningún acceso),
+ *  - si el error viene de la base de datos, no se toma como perfil incompleto.
  */
 async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
   try {
     const supabase = supabaseService.getClient();
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-    if (sessionError || !session?.user) {
+    let session: Session | null = null;
+    let sessionError: unknown = null;
+
+    for (let intento = 0; intento < 2; intento++) {
+      const resultado = await supabase.auth.getSession();
+      session = resultado.data?.session ?? null;
+      sessionError = resultado.error ?? null;
+      if (session || !sessionError) {
+        break;
+      }
+      await esperar(500);
+    }
+
+    if (!session) {
+      // Error de red al renovar el token: la sesión sigue viva, no se expulsa.
+      if (sessionError) {
+        return { ...ESTADO_SIN_RED };
+      }
       return { autenticado: false, perfilCompleto: false, existeUsuario: false, rol: null };
     }
 
@@ -31,7 +70,12 @@ async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
       .eq('id', user.id)
       .maybeSingle();
 
-    if (usuarioError || !usuario || !usuario.rut || !usuario.id_direccion) {
+    if (usuarioError) {
+      // Falló la consulta del perfil (red/BD): no significa perfil incompleto.
+      return { ...ESTADO_SIN_RED };
+    }
+
+    if (!usuario || !usuario.rut || !usuario.id_direccion) {
       return { autenticado: true, perfilCompleto: false, existeUsuario: !!usuario, rol: null };
     }
 
@@ -40,7 +84,8 @@ async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
 
     return { autenticado: true, perfilCompleto: true, existeUsuario: true, rol };
   } catch {
-    return { autenticado: false, perfilCompleto: false, existeUsuario: false, rol: null };
+    // Cualquier fallo inesperado tampoco debe cerrar la sesión.
+    return { ...ESTADO_SIN_RED };
   }
 }
 

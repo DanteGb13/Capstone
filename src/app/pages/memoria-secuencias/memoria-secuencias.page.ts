@@ -10,7 +10,9 @@ import {
   IonIcon
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { arrowBack, refreshOutline, play } from 'ionicons/icons';
+import { arrowBack, helpCircleOutline, refreshOutline, play } from 'ionicons/icons';
+import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
+import { TUTORIAL_SECUENCIAS } from '../juegos/tutoriales';
 
 /** Fase actual del juego. */
 export type FaseSimon = 'listo' | 'mostrando' | 'entrada' | 'fin';
@@ -29,10 +31,15 @@ const COLORES_SIMON = ['rojo', 'azul', 'verde', 'amarillo'];
     IonTitle,
     IonButtons,
     IonButton,
-    IonIcon
+    IonIcon,
+    TutorialJuegoComponent
   ]
 })
 export class MemoriaSecuenciasPage implements OnDestroy {
+
+  /** True mientras se muestra el tutorial de "Cómo jugar". */
+  mostrarTutorial = true;
+  pasosTutorial = TUTORIAL_SECUENCIAS;
 
   colores = COLORES_SIMON;
 
@@ -61,7 +68,7 @@ export class MemoriaSecuenciasPage implements OnDestroy {
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {
-    addIcons({ arrowBack, refreshOutline, play });
+    addIcons({ arrowBack, helpCircleOutline, refreshOutline, play });
     this.cargarMejor();
   }
 

@@ -6,6 +6,12 @@
       </ion-button>
     </ion-buttons>
     <ion-title>Memoria</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="mostrarTutorial = true" aria-label="Ver cómo se juega">
+        <ion-icon name="help-circle-outline" slot="start"></ion-icon>
+        Cómo jugar
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -72,3 +78,15 @@
 
   }
 </ion-content>
+
+@if (mostrarTutorial) {
+
+  <app-tutorial-juego
+    titulo="Cómo jugar: Memoria"
+    introduccion="Encuentra todas las parejas de dibujos iguales."
+    [pasos]="pasosTutorial"
+    (comenzar)="mostrarTutorial = false"
+    (cerrar)="mostrarTutorial = false">
+  </app-tutorial-juego>
+
+}
