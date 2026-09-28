@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+﻿import { Injectable } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
 
 
@@ -368,7 +368,7 @@ export class Vinculacion {
     /** Varios usuarios en UNA consulta (mismo motivo que `cuidadoresPorId`). */
     private async usuariosPorId(
       ids: string[],
-      columnas = 'id, nombre, appellidopa, appellidoma, telefono'
+      columnas = 'id, nombre, apellidopa, apellidoma, telefono'
     ): Promise<Map<string, any>> {
       const mapa = new Map<string, any>();
       if (ids.length === 0) return mapa;
@@ -473,7 +473,7 @@ export class Vinculacion {
 
           const mapaUsuario = await this.usuariosPorId(
             idsUsuario,
-            'id, nombre, appellidopa, appellidoma, telefono, correo, rut'
+            'id, nombre, apellidopa, apellidoma, telefono, correo, rut'
           );
 
           for (const item of lista as any[]) {
@@ -637,41 +637,120 @@ async obtenerAdultosACargo() {
           .maybeSingle();
     
         // Intentar RPC
-        try {
-          await this.supabase.rpc(
-            'aceptar_solicitud_vinculacion',
-            {
-              p_solicitud_id: idSolicitud
-            }
-          );
-        } catch (e) {
-          // fallback
+        const { error: errorRpc } = await this.supabase.rpc(
+          'aceptar_solicitud_vinculacion',
+          {
+            p_solicitud_id: idSolicitud
+          }
+        );
+
+        // Esto antes iba dentro de un try/catch "vacío". El problema es que
+        // supabase-js NO lanza excepción cuando Postgres rechaza la
+        // operación: devuelve { data: null, error }. El catch nunca se
+        // activaba y el error se perdía, así que la app creía que había
+        // aceptado algo que en realidad no había pasado.
+        if (errorRpc) {
+          console.warn('La RPC aceptar_solicitud_vinculacion falló:', errorRpc.message);
         }
-    
+
+
         // Asegurar actualización de estado en solicitud_vinculacion
-        await this.supabase
+        const { error: errorEstado } = await this.supabase
           .from('solicitud_vinculacion')
           .update({
             estado: 'aceptada',
             fecha_respuesta: new Date().toISOString()
           })
           .eq('id', idSolicitud);
-    
-        // Registrar en tabla cuidador_usuario si no existe
+
+        if (errorEstado) {
+          console.warn('No se pudo marcar la solicitud como aceptada:', errorEstado.message);
+        }
+
+
+        /*
+         * Registrar en `cuidador_usuario`, que es la tabla que de verdad
+         * importa: es la que consultan las políticas RLS del resto de la app.
+         *
+         * Hace falta confirmar que la fila quedó, no sólo que el insert no
+         * devolvió error. Sin esa relectura, una vinculación "aceptada" sin
+         * vínculo real pasaba el filtro de `obtenerAdultosACargo()` en la
+         * base y desaparecía recién al listar, sin explicación para nadie.
+         */
         if (solData?.id_cuidador && solData?.id_usuario) {
-          try {
-            await this.supabase
-              .from('cuidador_usuario')
-              .insert({
-                id_cuidador: solData.id_cuidador,
-                id_usuario: solData.id_usuario
-              });
-          } catch (err) {
-            // ignore duplicate
+          const vinculado = await this.asegurarVinculo(
+            solData.id_cuidador,
+            solData.id_usuario
+          );
+
+          if (!vinculado) {
+            throw new Error(
+              'No se pudo registrar el vínculo. Revisa los permisos de la base de datos.'
+            );
           }
         }
-    
+
         return true;
+      }
+
+
+      /**
+       * Deja el vínculo en `cuidador_usuario` y confirma que quedó ahí.
+       *
+       * Idempotente: si la fila ya existe no inserta otra vez, así que
+       * reintentar una aceptación no duplica el vínculo.
+       */
+      private async asegurarVinculo(
+        idCuidador: string,
+        idUsuario: string
+      ): Promise<boolean> {
+
+        if ((await this.contarVinculos(idCuidador, idUsuario)) > 0) {
+          return true;
+        }
+
+        const { error } = await this.supabase
+          .from('cuidador_usuario')
+          .insert({
+            id_cuidador: idCuidador,
+            id_usuario: idUsuario
+          });
+
+        if (error) {
+          console.warn('No se pudo insertar el vínculo:', error.message);
+          return false;
+        }
+
+        // Relectura de confirmación: es lo único que demuestra que la
+        // escritura quedó y no sólo que no devolvió error.
+        return (await this.contarVinculos(idCuidador, idUsuario)) > 0;
+      }
+
+
+      /**
+       * Cuántas filas de vínculo hay entre este cuidador y este adulto.
+       *
+       * Lanza si la consulta falla a propósito. La otra versión, que devolvía
+       * cero, hacía que un error de red se confundiera con "no queda ningún
+       * vínculo" y `desvincular()` le informaba al usuario que había
+       * desvinculado con éxito cuando en realidad no había pasado nada.
+       */
+      private async contarVinculos(
+        idCuidador: string,
+        idUsuario: string
+      ): Promise<number> {
+
+        const { data, error } = await this.supabase
+          .from('cuidador_usuario')
+          .select('id')
+          .eq('id_cuidador', idCuidador)
+          .eq('id_usuario', idUsuario);
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
+        return data?.length ?? 0;
       }
     
     
@@ -718,13 +797,28 @@ async obtenerAdultosACargo() {
 
         let ultimoError = '';
 
-        // El vínculo real es la fila de cuidador_usuario (es la tabla que usan
-        // las políticas de acceso del resto de la app). Se borra y se verifica.
-        // El estado de la solicitud es solo informativo: hoy el cuidador no
-        // tiene permiso de UPDATE sobre solicitud_vinculacion, así que su
-        // fallo no debe impedimento desvincular.
-        for (let intento = 0; intento < 2; intento++) {
+        /*
+         * Borra el vínculo Y cierra la solicitud en una sola operación.
+         *
+         * Antes se hacían dos escrituras desde el cliente: primero el DELETE
+         * en `cuidador_usuario` y después un UPDATE en `solicitud_vinculacion`
+         * que el cuidador no tiene permiso de hacer. Ese segundo paso fallaba
+         * en silencio y dejaba el residuo que después rompía los listados:
+         * una solicitud "aceptada" sin vínculo, que `obtenerAdultosACargo()`
+         * omitía y que hacía que el adulto mayor dejara de ver a su cuidador.
+         *
+         * La función `desvincular_vinculo` se ejecuta con permisos del dueño
+         * y deja el par de escrituras consistente.
+         */
+        const { error: errorRpc } = await this.supabase.rpc('desvincular_vinculo', {
+          p_id_usuario: idUsuario
+        });
 
+        if (errorRpc) {
+          ultimoError = errorRpc.message;
+
+          // Reintento con el borrado directo, por si la función no llegara a
+          // estar creada todavía en la base.
           const { error: errorCU } = await this.supabase
             .from('cuidador_usuario')
             .delete()
@@ -732,61 +826,31 @@ async obtenerAdultosACargo() {
             .eq('id_usuario', idUsuario);
 
           if (errorCU) {
-            ultimoError = errorCU.message;
-            continue;
+            throw new Error(errorCU.message);
           }
-
-          await this.supabase
-            .from('solicitud_vinculacion')
-            .update({
-              estado: 'rechazada',
-              fecha_respuesta: new Date().toISOString()
-            })
-            .eq('id_cuidador', idCuidador)
-            .eq('id_usuario', idUsuario)
-            .eq('estado', 'aceptada');
-
-          // La confirmación se consulta justo después de escribir, por lo que
-          // puede todavía devolver datos antiguos. Se reintenta antes de asumir
-          // que el borrado falló.
-          for (const espera of [0, 500, 1500]) {
-
-            if (espera > 0) {
-              await new Promise(resolver => setTimeout(resolver, espera));
-            }
-
-            const restantes = await this.contarVinculosRestantes(idCuidador, idUsuario);
-
-            if (restantes === 0) {
-              return true;
-            }
-          }
-
-          ultimoError = 'Quedó un registro del vínculo sin eliminar.';
         }
 
+        // La confirmación se consulta justo después de escribir, por lo que
+        // puede todavía devolver datos antiguos. Se reintenta antes de asumir
+        // que el borrado falló.
+        for (const espera of [0, 500, 1500]) {
+
+          if (espera > 0) {
+            await new Promise(resolver => setTimeout(resolver, espera));
+          }
+
+          const restantes = await this.contarVinculos(idCuidador, idUsuario);
+
+          if (restantes === 0) {
+            return true;
+          }
+        }
+
+        ultimoError = 'Quedó un registro del vínculo sin eliminar.';
         throw new Error(
           'No se pudo completar la desvinculación. ' +
           (ultimoError || 'Verifica tu conexión y permisos.')
         );
-      }
-
-      private async contarVinculosRestantes(
-        idCuidador: string,
-        idUsuario: string
-      ): Promise<number> {
-
-        const cuRes = await this.supabase
-          .from('cuidador_usuario')
-          .select('id')
-          .eq('id_cuidador', idCuidador)
-          .eq('id_usuario', idUsuario);
-
-        if (cuRes.error) {
-          throw new Error(cuRes.error.message);
-        }
-
-        return cuRes.data?.length ?? 0;
       }
 
     }

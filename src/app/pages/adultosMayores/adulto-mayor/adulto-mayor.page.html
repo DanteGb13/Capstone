@@ -113,9 +113,9 @@
 
           <strong>
             @if (nombreCuidadorActivo) {
-              Protección Activa 🛡️
+              Protección Activa 
             } @else {
-              Protección Activa 🛡️
+              Protección Activa 
             }
           </strong>
 
@@ -168,7 +168,7 @@
     @if (!cargandoSolicitudes && solicitudes.length > 0) {
 
     <h2 class="section-title" style="color: #d32f2f;">
-      🔔 Solicitudes pendientes
+       Solicitudes pendientes
       @if (solicitudes.length > 0) {
         <span class="badge-solicitudes">{{ solicitudes.length }}</span>
       }
@@ -314,6 +314,34 @@
         </h3>
 
       </div>
+
+      <!-- Signos vitales: sólo aparece cuando el teléfono puede leer Health
+           Connect (Android 9+). Autorizar es un solo toque y después el envío
+           es automático, así que no hay nada más que hacer desde acá. -->
+      @if (saludDisponible) {
+
+        <div class="menu-card ripple" (click)="saludInvitaAAutorizar ? autorizarSalud() : null" [style.background]="saludInvitaAAutorizar
+            ? 'linear-gradient(135deg, #607d8b, #90a4ae)'
+            : 'linear-gradient(135deg, #e91e63, #f06292)'" [style.box-shadow]="saludInvitaAAutorizar
+            ? '0 10px 25px rgba(96, 125, 139, 0.35)'
+            : '0 10px 25px rgba(233, 30, 99, 0.35)'" style="border:none">
+
+          <ion-icon [name]="saludInvitaAAutorizar ? 'watch-outline' : 'heart'"></ion-icon>
+
+          <h3>
+            {{ saludInvitaAAutorizar ? 'Activar mi reloj' : 'Signos vitales' }}
+          </h3>
+
+          <!-- Segunda línea: dice si los datos están llegando de verdad. Antes
+               la tarjeta decía "Signos vitales" tanto si subía 4.000 pasos
+               como si no recibiera nada, y esa ambigüedad escondía el fallo. -->
+          <p class="salud-detalle" [class.con-problema]="saludConProblema">
+            {{ saludDetalle }}
+          </p>
+
+        </div>
+
+      }
 
       <div class="menu-card ripple" (click)="abrirJuegos()" style="
           background: linear-gradient(135deg, #7715c7, #9c3ded);

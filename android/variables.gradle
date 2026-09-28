@@ -1,5 +1,9 @@
 ext {
-    minSdkVersion = 24
+    // 26 y no 24 por @capgo/capacitor-health: Health Connect es la única vía
+    // para leer un reloj, y su SDK no existe por debajo de Android 8. Bajar
+    // esto rompería la fusión de manifests y, además, la app perdería los
+    // signos vitales sin avisar.
+    minSdkVersion = 26
     compileSdkVersion = 36
     targetSdkVersion = 36
     androidxActivityVersion = '1.11.0'

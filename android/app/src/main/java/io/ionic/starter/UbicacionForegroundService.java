@@ -13,6 +13,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 
@@ -29,6 +30,56 @@ public class UbicacionForegroundService extends Service implements LocationListe
 
     private LocationManager locationManager;
     private boolean isTracking = false;
+
+    // =====================================================
+    // SINCRONIZACIÓN DE SALUD
+    //
+    // El adulto mayor no tiene que apretar nada para que su cuidador vea sus
+    // signos vitales: este servicio ya está vivo por la ubicación, así que
+    // aprovecha el mismo proceso para preguntar cada 15 minutos por los datos
+    // de Health Connect y subirlos a Supabase.
+    //
+    // Se eligieron 15 minutos y no 30 porque es lo que tarda la app del
+    // fabricante en volcar el reloj a Health Connect: pedirlo más seguido
+    // devolvería los mismos números una y otra vez.
+    // =====================================================
+
+    private static final long INTERVALO_SALUD_MS = 15 * 60 * 1000;
+
+    private final Handler handlerSalud = new Handler(Looper.getMainLooper());
+
+    /**
+     * Lo invoca el plugin para que la app JavaScript sepa que toca sincronizar.
+     *
+     * El servicio no lee Health Connect ni habla con Supabase: de eso se
+     * encarga la capa web, que es la que tiene la sesión iniciada y los
+     * permisos ya concedidos.
+     */
+    public interface SaludCallback {
+        void onSyncSaludRequerido();
+    }
+
+    private static SaludCallback saludCallback;
+
+    public static void setSaludCallback(SaludCallback cb) {
+        saludCallback = cb;
+    }
+
+    private final Runnable tareaSyncSalud = new Runnable() {
+        @Override
+        public void run() {
+            if (saludCallback != null) {
+                try {
+                    saludCallback.onSyncSaludRequerido();
+                } catch (Exception e) {
+                    android.util.Log.w("UbicacionForeground", "Falló la señal de sincronización de salud", e);
+                }
+            }
+            // Se rearma aunque no haya callback todavía: el plugin puede
+            // cargarse más tarde que el servicio y así no se pierde el ciclo.
+            handlerSalud.postDelayed(this, INTERVALO_SALUD_MS);
+        }
+    };
 
     public static final String ACTION_START = "io.ionic.starter.START_LOCATION";
     public static final String ACTION_STOP = "io.ionic.starter.STOP_LOCATION";
@@ -107,6 +158,12 @@ public class UbicacionForegroundService extends Service implements LocationListe
 
             isTracking = true;
             isRunning = true;
+
+            // La primera sincronización va a los 15 minutos, no de inmediato:
+            // al arrancar la app ya se sube un resumen (ver el panel del
+            // adulto mayor) y hacerlo dos veces seguidas sólo gasta batería.
+            handlerSalud.removeCallbacks(tareaSyncSalud);
+            handlerSalud.postDelayed(tareaSyncSalud, INTERVALO_SALUD_MS);
         } catch (SecurityException e) {
             stopSelf();
         }
@@ -119,6 +176,7 @@ public class UbicacionForegroundService extends Service implements LocationListe
         } catch (Exception ignored) {}
         isTracking = false;
         isRunning = false;
+        handlerSalud.removeCallbacks(tareaSyncSalud);
     }
 
     @Override

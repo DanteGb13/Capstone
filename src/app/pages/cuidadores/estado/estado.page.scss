@@ -1,0 +1,466 @@
+:host {
+    --primary: #7715c7;
+    --primary-light: rgba(119, 21, 199, 0.1);
+    --background: #f8f7fc;
+    --text-main: #1a1d26;
+    --text-muted: #8c92a4;
+    --alerta: #e67e22;
+}
+
+ion-content {
+    --background: var(--background);
+}
+
+.page-container {
+    padding: 36px 18px 100px;
+}
+
+.header {
+    margin-bottom: 24px;
+
+    h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 800;
+        color: var(--text-main);
+    }
+
+    p {
+        margin: 4px 0 0;
+        color: var(--text-muted);
+        font-size: 14px;
+    }
+}
+
+.loading-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 60px 0;
+    color: var(--text-muted);
+
+    .spin-icon {
+        font-size: 28px;
+        animation: spin 1s linear infinite;
+    }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.btn-refrescar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    margin-bottom: 18px;
+    padding: 11px 14px;
+    border: 1px solid rgba(119, 21, 199, 0.2);
+    border-radius: 12px;
+    background: white;
+    color: var(--primary);
+    font-size: 13.5px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:active {
+        background: var(--primary-light);
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: default;
+    }
+
+    ion-icon {
+        font-size: 16px;
+    }
+
+    .girando {
+        animation: spin 1s linear infinite;
+    }
+}
+
+.banner-mensaje {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 11px 13px;
+    border-radius: 12px;
+    background: var(--primary-light);
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--primary);
+
+    ion-icon {
+        font-size: 16px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+}
+
+.btn-pedir {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    margin-top: 14px;
+    padding: 10px 14px;
+    border: 1px solid rgba(119, 21, 199, 0.25);
+    border-radius: 12px;
+    background: white;
+    color: var(--primary);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    ion-icon {
+        font-size: 16px;
+    }
+
+    &:active {
+        background: var(--primary-light);
+    }
+
+    &:disabled {
+        cursor: default;
+    }
+
+    // Ya se pidió y el adulto mayor aún no manda nada: se apaga para que no
+    // se pueda pedir diez veces seguidas.
+    &.pedido {
+        border-color: rgba(140, 146, 164, 0.25);
+        background: #f4f2fa;
+        color: var(--text-muted);
+    }
+}
+
+.adultos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+// =====================================================
+// TARJETA POR PERSONA
+// =====================================================
+
+.salud-card {
+    background: white;
+    border-radius: 20px;
+    padding: 16px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.salud-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .avatar {
+        flex-shrink: 0;
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f0ecfa;
+
+        .avatar-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-iniciales {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--primary);
+        }
+    }
+
+    .identidad {
+        flex: 1;
+        min-width: 0;
+
+        h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 3px;
+
+            .meta-text {
+                display: inline-flex;
+                align-items: center;
+                gap: 3px;
+                font-size: 11px;
+                color: var(--text-muted);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+
+                ion-icon {
+                    font-size: 12px;
+                }
+            }
+        }
+    }
+}
+
+// =====================================================
+// FRESCURA DEL DATO
+// =====================================================
+
+.aviso-frescura {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    background: #f4f2fa;
+    font-size: 11px;
+    color: var(--text-muted);
+
+    ion-icon {
+        font-size: 13px;
+        flex-shrink: 0;
+    }
+
+    // Rancio no es una alarma: es el retraso normal de un reloj que sólo
+    // vuelca datos cuando su app sincroniza. Por eso va en ámbar y no en rojo.
+    &.rancio {
+        background: rgba(230, 126, 34, 0.09);
+        color: var(--alerta);
+    }
+
+    .origen {
+        margin-left: auto;
+        padding-left: 8px;
+        opacity: 0.85;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 45%;
+    }
+}
+
+// =====================================================
+// ESTADO SIN DATOS
+// =====================================================
+
+.sin-datos {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 12px;
+    background: #faf9fd;
+    border: 1px dashed rgba(119, 21, 199, 0.18);
+
+    ion-icon {
+        font-size: 18px;
+        color: var(--primary);
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+
+    p {
+        margin: 0;
+        font-size: 12.5px;
+        line-height: 1.5;
+        color: var(--text-muted);
+    }
+
+    strong {
+        color: var(--text-main);
+    }
+}
+
+// =====================================================
+// MÉTRICAS
+// =====================================================
+
+.grupo {
+    margin-top: 16px;
+
+    h4 {
+        margin: 0 0 8px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--text-muted);
+    }
+}
+
+.metricas {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+// Dos columnas para las tarjetas con menos métricas: con tres, la caja de
+// "pasos" quedaba ancha y la de "kcal" se veía disproportionada al quedar
+// la fila a medio llenar.
+.metricas-2 {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.metrica {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 10px 6px;
+    border-radius: 12px;
+    background: #faf9fd;
+    text-align: center;
+
+    ion-icon {
+        font-size: 16px;
+        color: var(--primary);
+        margin-bottom: 2px;
+    }
+
+    .metrica-valor {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--text-main);
+        line-height: 1.2;
+    }
+
+    .metrica-unidad {
+        font-size: 10px;
+        color: var(--text-muted);
+        line-height: 1.2;
+    }
+}
+
+.nota-linea {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 8px 0 0;
+    font-size: 11.5px;
+    color: var(--text-muted);
+
+    ion-icon {
+        font-size: 12px;
+        flex-shrink: 0;
+    }
+
+    strong {
+        color: var(--text-main);
+    }
+
+    // Más de un día sin medir. Ámbar y no rojo: el dato viejo no es una
+    // emergencia, es información que hay que leer con calma.
+    &.nota-vieja {
+        color: var(--alerta);
+    }
+}
+
+.nota-retraso {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: rgba(230, 126, 34, 0.08);
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--alerta);
+
+    ion-icon {
+        font-size: 15px;
+        flex-shrink: 0;
+        margin-top: 1px;
+    }
+}
+
+// =====================================================
+// PIE
+// =====================================================
+
+.pie-aviso {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin: 22px 10px 0;
+    font-size: 11px;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--text-muted);
+
+    ion-icon {
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+}
+
+// =====================================================
+// SIN PERSONAS VINCULADAS
+// =====================================================
+
+.empty-card {
+    background: white;
+    border-radius: 20px;
+    padding: 50px 30px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+
+    .empty-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: var(--primary-light);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 16px;
+
+        ion-icon {
+            font-size: 28px;
+            color: var(--primary);
+        }
+    }
+
+    h3 {
+        margin: 0 0 8px;
+        font-size: 17px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    p {
+        margin: 0;
+        font-size: 13px;
+        color: var(--text-muted);
+        line-height: 1.5;
+    }
+}

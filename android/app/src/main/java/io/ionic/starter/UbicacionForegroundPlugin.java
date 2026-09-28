@@ -46,6 +46,20 @@ public class UbicacionForegroundPlugin extends Plugin {
 
     private PluginCall pendingCall;
 
+    /**
+     * El servicio de ubicación corre en este mismo proceso, así que puede
+     * avisarle a la app JavaScript cuando toca sincronizar los datos de salud.
+     *
+     * Se registra en `load()` y no en el constructor porque `notifyListeners`
+     * sólo es válido una vez que Capacitor ya tiene puente con la WebView.
+     */
+    @Override
+    public void load() {
+        UbicacionForegroundService.setSaludCallback(
+            () -> notifyListeners("saludSync", new JSObject())
+        );
+    }
+
     // =====================================================
     // INICIAR SERVICIO - SOLO PIDE PERMISO FOREGROUND
     // =====================================================

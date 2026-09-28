@@ -1,4 +1,4 @@
-import { registerPlugin } from '@capacitor/core';
+import { registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 
 /** Estado detallado de la ubicación. Antes sólo había un sí/no. */
 export interface PermisosUbicacion {
@@ -49,6 +49,18 @@ export interface UbicacionForegroundPlugin {
   solicitarBackground(): Promise<ResultadoBackground>;
 
   abrirAjustes(): Promise<void>;
+
+  /**
+   * El servicio de ubicación ya está vivo en este proceso, así que también
+   * lo usa para avisar cada 15 minutos que toca subir los datos de salud
+   * leídos de Health Connect.
+   */
+  addListener(
+    eventName: 'saludSync',
+    listener: () => void
+  ): Promise<PluginListenerHandle>;
+
+  removeAllListeners(): Promise<void>;
 }
 
 export const UbicacionForeground = registerPlugin<UbicacionForegroundPlugin>('UbicacionForeground');

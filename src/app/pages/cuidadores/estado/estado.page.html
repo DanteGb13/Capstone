@@ -1,13 +1,203 @@
-<ion-header [translucent]="true">
+<ion-header>
   <ion-toolbar>
-    <ion-title>estado</ion-title>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Estado de salud</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">estado</ion-title>
-    </ion-toolbar>
-  </ion-header>
+
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content pullingText="Desliza para actualizar" refreshingText="Actualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page-container">
+
+    <div class="header">
+      <h1>Estado de salud</h1>
+      <p>Datos que envía el reloj de cada persona</p>
+    </div>
+
+    <!--
+      Refresco: relee la base. No pide nada al teléfono del adulto mayor,
+      porque ese teléfono es el único que puede leer su reloj. Los datos
+      llegan solos cada 15 minutos; esto sólo evita que la pantalla se quede
+      mirando lo que había la última vez que se abrió.
+    -->
+    <button class="btn-refrescar" type="button" (click)="handleRefresh($event)" [disabled]="cargando">
+      <ion-icon name="refresh-outline" [class.girando]="cargando"></ion-icon>
+      <span>{{ cargando ? 'Consultando...' : 'Actualizar ahora' }}</span>
+    </button>
+
+    @if (cargando && adultos.length === 0) {
+      <div class="loading-box">
+        <ion-icon name="sync-outline" class="spin-icon"></ion-icon>
+        <p>Cargando...</p>
+      </div>
+    }
+
+    @if (!cargando && adultos.length === 0) {
+      <div class="empty-card">
+        <div class="empty-icon">
+          <ion-icon name="people-outline"></ion-icon>
+        </div>
+        <h3>Sin personas vinculadas</h3>
+        <p>Vincula un adulto mayor desde el menú principal para ver su estado de salud.</p>
+      </div>
+    }
+
+    <div class="adultos-list">
+
+      @for (adulto of adultos; track adulto.id_usuario) {
+
+        <div class="salud-card">
+
+          <!-- QUIÉN ES -->
+          <div class="salud-cabecera">
+            <div class="avatar">
+              @if (adulto.fotoUrl) {
+                <img [src]="adulto.fotoUrl" alt="Foto de perfil" class="avatar-img">
+              } @else {
+                <span class="avatar-iniciales">{{ iniciales(adulto) }}</span>
+              }
+            </div>
+
+            <div class="identidad">
+              <h3>{{ nombreAdulto(adulto) }}</h3>
+              <div class="meta">
+                <app-estado-conexion
+                  [idUsuario]="adulto.id_usuario"
+                  [ultimoVisto]="adulto.ultimoVisto"
+                  [refrescar]="false" />
+                @if (adulto.comuna) {
+                  <span class="meta-text">
+                    <ion-icon name="location-outline"></ion-icon>
+                    {{ adulto.comuna }}
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- CUÁNDO SE SUPIDIÓ -->
+          <div class="aviso-frescura" [class.rancio]="datosRancios(adulto)">
+            <ion-icon name="time-outline"></ion-icon>
+            <span>{{ antiguedad(adulto) }}</span>
+            @if (origen(adulto)) {
+              <span class="origen">{{ origen(adulto) }}</span>
+            }
+          </div>
+
+          <!-- AÚN NO HA ENVIADO NADA -->
+          @if (nuncaReporto(adulto)) {
+            <div class="sin-datos">
+              <ion-icon name="watch-outline"></ion-icon>
+              <p>
+                <strong>{{ nombreAdulto(adulto) }}</strong> todavía no ha enviado datos de su reloj.
+                Tiene que abrir la app del reloj y conectarla a Salud de Google.
+              </p>
+            </div>
+          } @else if (!tieneAlgunDato(adulto)) {
+            <div class="sin-datos">
+              <ion-icon name="pulse-outline"></ion-icon>
+              <p>El reloj todavía no ha registrado datos de salud.</p>
+            </div>
+          } @else {
+
+            <!--
+              Solo se muestra lo que el reloj entrega de forma confiable con
+              esta integración: pasos, calorías, pulso promedio, oxígeno y
+              sueño.
+
+              Se quitaron la distancia, la mínima/máxima de pulso y la
+              frecuencia respiratoria porque salían vacías. No se Borran de la
+              base: si algún día el reloj empieza a mandarlos, basta con
+              volver a poner la casilla.
+            -->
+            <div class="grupo">
+              <h4>Actividad de hoy</h4>
+              <div class="metricas metricas-2">
+                <div class="metrica">
+                  <ion-icon name="walk-outline"></ion-icon>
+                  <span class="metrica-valor">{{ valor(adulto.salud?.pasos) }}</span>
+                  <span class="metrica-unidad">pasos</span>
+                </div>
+                <div class="metrica">
+                  <ion-icon name="flame-outline"></ion-icon>
+                  <span class="metrica-valor">{{ valor(adulto.salud?.calorias) }}</span>
+                  <span class="metrica-unidad">kcal</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="grupo">
+              <h4>Corazón</h4>
+              <div class="metricas metricas-2">
+                <div class="metrica">
+                  <ion-icon name="heart-outline"></ion-icon>
+                  <span class="metrica-valor">{{ valor(adulto.salud?.fc_media) }}</span>
+                  <span class="metrica-unidad">latidos por minuto</span>
+                </div>
+                @if (adulto.salud?.fc_reposo !== null && adulto.salud?.fc_reposo !== undefined) {
+                  <div class="metrica">
+                    <ion-icon name="bed-outline"></ion-icon>
+                    <span class="metrica-valor">{{ valor(adulto.salud?.fc_reposo) }}</span>
+                    <span class="metrica-unidad">en reposo</span>
+                  </div>
+                }
+              </div>
+              @if (antiguedadLectura(adulto.salud?.fc_ultima_hora)) {
+                <p class="nota-linea" [class.nota-vieja]="lecturaVieja(adulto.salud?.fc_ultima_hora)">
+                  <ion-icon name="time-outline"></ion-icon>
+                  Última lectura: {{ antiguedadLectura(adulto.salud?.fc_ultima_hora) }}
+                </p>
+              }
+            </div>
+
+            <div class="grupo">
+              <h4>Oxígeno y sueño</h4>
+              <div class="metricas metricas-2">
+                <div class="metrica">
+                  <ion-icon name="fitness-outline"></ion-icon>
+                  <span class="metrica-valor">{{ valor(adulto.salud?.spo2, '') }}</span>
+                  <span class="metrica-unidad">SpO2 %</span>
+                </div>
+                <div class="metrica">
+                  <ion-icon name="moon-outline"></ion-icon>
+                  <span class="metrica-valor">{{ formatearSueno(adulto.salud?.sueno_minutos) }}</span>
+                  <span class="metrica-unidad">durmió</span>
+                </div>
+              </div>
+            </div>
+
+            @if (datosRancios(adulto)) {
+              <div class="nota-retraso">
+                <ion-icon name="information-circle-outline"></ion-icon>
+                <span>
+                  Estos datos llevan un rato sin actualizarse. Suele ser que la app del reloj
+                  todavía no ha sincronizado, no que haya un problema.
+                </span>
+              </div>
+            }
+
+          }
+
+        </div>
+
+      }
+
+    </div>
+
+    <p class="pie-aviso">
+      <ion-icon name="shield-checkmark-outline"></ion-icon>
+      Los relojes de consumo no son dispositivos médicos. Úsalos como referencia, no como diagnóstico.
+    </p>
+
+  </div>
+
 </ion-content>

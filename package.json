@@ -37,6 +37,7 @@
     "@capacitor/share": "^8.0.2",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "8.0.3",
+    "@capgo/capacitor-health": "^8.11.4",
     "@ionic/angular": "^9.0.0",
     "@supabase/supabase-js": "^2.112.3",
     "@types/leaflet": "^1.9.12",

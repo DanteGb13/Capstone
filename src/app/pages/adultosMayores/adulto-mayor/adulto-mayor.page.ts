@@ -53,6 +53,8 @@ import { AlertController } from '@ionic/angular';
 import { PerfilCacheService } from '../../../services/perfil-cache/perfil-cache.service';
 import { PermisosService } from '../../../services/permisos/permisos.service';
 import { RealtimeService } from '../../../services/realtime/realtime.service';
+import { SaludSyncService } from '../../../services/Backend/salud/salud-sync';
+import { Salud, type ResumenSalud } from '../../../services/Backend/salud/salud';
 
 
 @Component({
@@ -117,6 +119,39 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   // =====================================================
 
   avisoPermisos: { titulo: string; detalle: string } | null = null;
+
+  /**
+   * Estado de la lectura de signos vitales.
+   *
+   * `saludDisponible` va aparte de `saludAutorizada` a propósito: en un
+   * iPhone o en el navegador no hay Health Connect, y eso no es lo mismo que
+   * "todavía no autorizaste". Si se mezclaran, la tarjeta pediría un permiso
+   * que no existe en ninguna parte.
+   */
+  saludDisponible = false;
+
+  saludAutorizada = false;
+
+  /** Por qué no hay datos, en palabras que se puedan mostrar. */
+  saludProblema: string | null = null;
+
+  /**
+   * Lo último leído de Health Connect, exista o no el permiso.
+   *
+   * Se guarda en el panel a propósito: sin él, un "sin datos" no distingue
+   * entre un reloj que no manda nada y una app que no lo puede guardar, y
+   * los dos se ven igual desde afuera.
+   */
+  saludResumen: ResumenSalud | null = null;
+
+  /**
+   * Tipos de dato que el usuario todavía no ha autorizado.
+   *
+   * Existe porque "autorizado" es engañoso: se puede haber aceptado los pasos
+   * y rechazado el corazón. La app lo trataba como acceso completo, leía, no
+   * encontraba nada y le echaba la culpa al reloj.
+   */
+  saludFaltan: string[] = [];
 
   avisoPermisosUrgente = false;
 
@@ -240,7 +275,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
     private permisosService: PermisosService,
 
-    private realtimeService: RealtimeService
+    private realtimeService: RealtimeService,
+
+    private saludSyncService: SaludSyncService,
+
+    private saludService: Salud
 
   ) {
 
@@ -283,6 +322,14 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     //    Servicio de ubicación: con la app cerrada el servicio sigue evaluando
     //    las zonas seguras y avisando a los cuidadores.
     this.iniciarMonitoreoSegundoPlano();
+
+
+    // 4b. Signos vitales: el adulto mayor no tiene que apretar nada. El
+    //     servicio de ubicación ya está vivo y cada 15 minutos avisa por aquí
+    //     para subir los datos del reloj a Supabase. Lo que sí necesita es una
+    //     sola autorización, y por eso se pide al abrir el panel: después
+    //     nunca más.
+    this.iniciarSyncSalud();
 
 
     // 5. Recordatorios: repone las alarmas programadas y escucha el toque
@@ -536,6 +583,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     // notificaciones ya no deben seguir apareciendo.
     this.actualizarSonando();
     this.iniciarTimerSonando();
+    // La tarjeta de signos vitales se relee también al volver. Antes sólo se
+    // armaba en ngOnInit, así que si la app quedaba cargada en segundo plano
+    // la tarjeta seguía diciendo "Esperando datos de tu reloj" aunque el
+    // teléfono ya hubiera subido los pasos hace rato.
+    this.refrescarTarjetaSalud();
     this.changeDetectorRef.detectChanges();
   }
 
@@ -603,6 +655,163 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     } catch {
       // sin servicio en segundo plano: el chequeo con la app abierta sigue
     }
+  }
+
+  /**
+   * Pide la autorización de Health Connect (sólo la primera vez) y deja
+   * corriendo el envío automático.
+   *
+   * `disponibilidad()` y `tienePermisos()` van contra el sistema, así que se
+   * preguntan una vez al abrir el panel y no en cada vuelta a la pantalla:
+   * la tarjeta tiene que decir la verdad sin hacer la pantalla parpadear.
+   */
+  /**
+   * Relee el resumen de salud sin pedir permisos ni abrir diálogos.
+   *
+   * Separado de `iniciarSyncSalud()` a propósito: al volver a la pantalla sólo
+   * hace falta volver a leer y a publicar, no volver a preguntar por los
+   * permisos. Si se mezclaran, cada vuelta al panel pediría autorización otra
+   * vez.
+   */
+  private async refrescarTarjetaSalud(): Promise<void> {
+    if (!this.saludDisponible || !this.saludAutorizada) return;
+
+    try {
+      await this.saludSyncService.sincronizar();
+      this.saludResumen = this.saludSyncService.ultimoResumen;
+      this.saludProblema = this.saludSyncService.ultimoProblema;
+    } catch (e) {
+      console.warn('No se pudo refrescar la tarjeta de salud:', e);
+    }
+  }
+
+  private async iniciarSyncSalud(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) return;
+
+    await this.saludSyncService.iniciar();
+
+    const disp = await this.saludService.disponibilidad();
+    if (!disp.disponible) {
+      this.saludDisponible = false;
+      this.saludAutorizada = false;
+      this.saludProblema = disp.motivo;
+      return;
+    }
+
+    this.saludDisponible = true;
+    this.saludAutorizada = await this.saludService.tienePermisos();
+
+    // Un reintento con datos frescos: el arranque puede haber caído antes de
+    // que el reloj alcanzara a escribir en Health Connect.
+    await this.saludSyncService.sincronizar(true);
+
+    this.saludResumen = this.saludSyncService.ultimoResumen;
+    this.saludProblema = this.saludAutorizada
+      ? this.saludSyncService.ultimoProblema
+      : 'Toca el reloj para autorizar el acceso a tus datos de salud.';
+
+    await this.revisarPermisosFaltantes();
+
+    this.changeDetectorRef.detectChanges();
+  }
+
+  /**
+   * Anota qué datos no están autorizados todavía.
+   *
+   * Con esto la tarjeta puede decir "faltan las pulsaciones" en vez de
+   * mostrar un guion que no explica nada.
+   */
+  private async revisarPermisosFaltantes(): Promise<void> {
+    if (!this.saludAutorizada) {
+      this.saludFaltan = [];
+      return;
+    }
+
+    try {
+      const faltantes = await this.saludService.tiposSinPermiso();
+      this.saludFaltan = faltantes.map((t) => this.saludService.traducirTipo(t));
+    } catch {
+      this.saludFaltan = [];
+    }
+  }
+
+  /**
+   * Segunda línea de la tarjeta de salud.
+   *
+   * Se muestra el primer dato que exista, no sólo los pasos. Antes miraba
+   * únicamente `pasos` y `fc_media`, y con eso una persona que sólo tiene
+   * calorías registradas veía "Esperando datos de tu reloj" aunque la app
+   * estuviera recibiendo y publicando todo lo que el reloj manda.
+   */
+  get saludDetalle(): string {
+    const r = this.saludResumen;
+
+    if (!this.saludAutorizada) {
+      return 'Toca para conectar tu reloj';
+    }
+
+    // Un permiso sin autorizar se dice aunque haya datos de los demás: si no,
+    // la tarjeta muestra pasos y un guion al lado, y parece un fallo del reloj
+    // cuando en realidad nunca se le pidió acceso a esa cifra.
+    if (this.saludFaltan.length > 0) {
+      return `Falta autorizar: ${this.saludFaltan.join(', ')}`;
+    }
+
+    if (!r) {
+      return 'Esperando datos de tu reloj';
+    }
+
+    const partes: string[] = [];
+
+    if (r.pasos !== null) partes.push(`Hoy ${r.pasos.toLocaleString('es-CL')} pasos`);
+    if (r.fc_media !== null) partes.push(`${r.fc_media} lpm`);
+    if (r.spo2 !== null) partes.push(`SpO2 ${r.spo2}%`);
+    if (r.calorias !== null && partes.length === 0) partes.push(`${r.calorias} kcal`);
+
+    if (partes.length > 0) {
+      return partes.join(' · ');
+    }
+
+    return 'Sincronizando con el reloj...';
+  }
+
+  /** La tarjeta ofrece el diálogo de permisos si falta alguno. */
+  get saludInvitaAAutorizar(): boolean {
+    return !this.saludAutorizada || this.saludFaltan.length > 0;
+  }
+
+  /** En rojo sólo si de verdad no hay forma de que lleguen datos. */
+  get saludConProblema(): boolean {
+    return this.saludAutorizada && !this.saludResumen && !!this.saludProblema;
+  }
+
+  /**
+   * Abre el diálogo de Health Connect.
+   *
+   * Va a mano en vez de llamar a `iniciarSyncSalud()` porque el diálogo sólo
+   * puede aparecer como respuesta a un toque del usuario: si se disparara
+   * desde una sincronización de fondo, Android lo rechazaría.
+   */
+  async autorizarSalud() {
+    if (!this.saludDisponible) return;
+
+    const res = await this.saludService.solicitarPermisos();
+    this.saludAutorizada = res.autorizado;
+
+    // Sin esto la primera subida tardaría 15 minutos: el permiso se acaba de
+    // dar, no hay nada esperando en la cola todavía.
+    await this.saludSyncService.sincronizar(true);
+    this.saludResumen = this.saludSyncService.ultimoResumen;
+    this.saludProblema = this.saludSyncService.ultimoProblema;
+
+    await this.revisarPermisosFaltantes();
+
+    this.changeDetectorRef.detectChanges();
+  }
+
+  /** Manda al usuario a los ajustes de Health Connect si el diálogo ya no sale. */
+  async abrirAjustesSalud() {
+    await this.saludService.abrirAjustes();
   }
 
   private async verificarZonaSegura(latitud: number, longitud: number) {
