@@ -134,11 +134,13 @@ export const routes: Routes = [
   },
   {
     path: 'ajustes',
-    loadComponent: () => import('./pages/ajustes/ajustes.page').then( m => m.AjustesPage)
+    loadComponent: () => import('./pages/ajustes/ajustes.page').then( m => m.AjustesPage),
+    canActivate: [authGuard]
   },
   {
     path: 'permisos',
-    loadComponent: () => import('./pages/ajustes/permisos/permisos.page').then( m => m.PermisosPage)
+    loadComponent: () => import('./pages/ajustes/permisos/permisos.page').then( m => m.PermisosPage),
+    canActivate: [authGuard]
   },
   {
     path: 'permisos-inicial',
@@ -147,45 +149,55 @@ export const routes: Routes = [
   },
   {
     path: 'tamano-letra',
-    loadComponent: () => import('./pages/ajustes/tamano-letra/tamano-letra.page').then( m => m.TamanoLetraPage)
+    loadComponent: () => import('./pages/ajustes/tamano-letra/tamano-letra.page').then( m => m.TamanoLetraPage),
+    canActivate: [authGuard]
   },
   {
     path: 'filtro-color',
-    loadComponent: () => import('./pages/ajustes/filtro-color/filtro-color.page').then( m => m.FiltroColorPage)
+    loadComponent: () => import('./pages/ajustes/filtro-color/filtro-color.page').then( m => m.FiltroColorPage),
+    canActivate: [authGuard]
   },
   {
     path: 'voz',
-    loadComponent: () => import('./pages/ajustes/voz/voz.page').then( m => m.VozPage)
+    loadComponent: () => import('./pages/ajustes/voz/voz.page').then( m => m.VozPage),
+    canActivate: [authGuard]
   },
   {
     // Índice de la sección de privacidad. Los seis documentos van en páginas
     // aparte: `privacidad.page` sólo lista y abre, no repite el texto.
     path: 'privacidad',
-    loadComponent: () => import('./pages/ajustes/privacidad/privacidad.page').then( m => m.PrivacidadPage)
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad.page').then( m => m.PrivacidadPage),
+    canActivate: [authGuard]
   },
   {
     path: 'privacidad-datos',
-    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-datos.page').then( m => m.PrivacidadDatosPage)
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-datos.page').then( m => m.PrivacidadDatosPage),
+    canActivate: [authGuard]
   },
   {
     path: 'privacidad-terminos',
-    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-terminos.page').then( m => m.PrivacidadTerminosPage)
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-terminos.page').then( m => m.PrivacidadTerminosPage),
+    canActivate: [authGuard]
   },
   {
     path: 'privacidad-seguridad',
-    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-seguridad.page').then( m => m.PrivacidadSeguridadPage)
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-seguridad.page').then( m => m.PrivacidadSeguridadPage),
+    canActivate: [authGuard]
   },
   {
     path: 'privacidad-estandares',
-    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-estandares.page').then( m => m.PrivacidadEstandaresPage)
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-estandares.page').then( m => m.PrivacidadEstandaresPage),
+    canActivate: [authGuard]
   },
   {
     path: 'privacidad-derechos',
-    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-derechos.page').then( m => m.PrivacidadDerechosPage)
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-derechos.page').then( m => m.PrivacidadDerechosPage),
+    canActivate: [authGuard]
   },
   {
     path: 'privacidad-contacto',
-    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-contacto.page').then( m => m.PrivacidadContactoPage)
+    loadComponent: () => import('./pages/ajustes/privacidad/privacidad-contacto.page').then( m => m.PrivacidadContactoPage),
+    canActivate: [authGuard]
   },
   {
     path: 'recuperar-contrasena',
