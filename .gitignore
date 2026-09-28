@@ -71,3 +71,10 @@ Thumbs.db
 
 # Firebase
 google-services.json
+
+# Estado local del CLI de Supabase
+# Guarda el project ref, la versión de Postgres, el pooler y el `cli-latest`.
+# Es de la máquina de cada uno: si se versiona, cada `npm run android` deja el
+# archivo cambiado y ensucia el historial con commits que no son código.
+supabase/.temp/
+
