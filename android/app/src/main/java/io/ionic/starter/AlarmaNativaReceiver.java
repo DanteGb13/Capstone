@@ -12,6 +12,7 @@ import android.content.SharedPreferences;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.util.Log;
 import android.service.notification.StatusBarNotification;
 
@@ -22,7 +23,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Alarma que publica Android y no la app: el sonido sigue aunque la app este
@@ -54,6 +58,7 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
     public static final String EXTRA_CUERPO = "cuerpo";
     public static final String EXTRA_FECHA = "fecha";
     public static final String EXTRA_ID_NOTIF = "idNotificacion";
+    public static final String EXTRA_EXACTA = "exacta";
 
     private static final String PREFIJO_APAGADA = "alarma.apagada.";
     private static final String PREFIJO_PROGRAMADA = "alarma.programada.";
@@ -73,15 +78,37 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
     // ESTADO COMPARTIDO CON LA APP
     // =====================================================
 
+    /**
+     * Separa el id de la alarma de la clave de la ocurrencia.
+     *
+     * Antes era un punto, y el id se recuperaba con indexOf('.'). Como los ids
+     * hoy son UUID o "local-<ts>-<rand>", nunca tenian punto y salia bien... por
+     * convencion, no por construccion: cualquier id futuro con punto partia la
+     * clave en dos y la marca de apagado se guardaba con un id imposible de
+     * recuperar, o sea la alarma se volvia a quedar muda. El pipe no aparece en
+     * ningun id, asi que el corte ya no depende del formato.
+     */
+    private static final String SEPARADOR = "|";
+
     static String clavePreferencia(String idAlarma, String clave) {
-        return PREFIJO_APAGADA + idAlarma + "." + clave;
+        return PREFIJO_APAGADA + idAlarma + SEPARADOR + clave;
     }
 
-    /** Convierte una clave "2026-09-28T13:10" a milisegundos en hora local. */
+    /**
+     * Convierte una clave "2026-09-28T13:10" a milisegundos en hora local.
+     *
+     * Locale.ROOT y setLenient(false) no son cosmeticos: con un locale no
+     * occidental los simbolos del patron cambian y el parseo falla, y con el
+     * modo leniente un "13:10" invalido se corrige solo en vez de fallar. En la
+     * hora repetida del cambio de horario de otono, el modo leniente elegia el
+     * primer offset y la fecha caia una hora, con lo que se borraba una marca de
+     * apagado que si era legitima.
+     */
     static long claveAFecha(String clave) throws java.text.ParseException {
-        return new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm")
-            .parse(clave.substring(0, 16))
-            .getTime();
+        java.text.SimpleDateFormat formato =
+            new java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm", java.util.Locale.ROOT);
+        formato.setLenient(false);
+        return formato.parse(clave.substring(0, 16)).getTime();
     }
 
     public static boolean estaApagada(Context ctx, String idAlarma, String clave) {
@@ -92,6 +119,24 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
     public static void marcarApagada(Context ctx, String idAlarma, String clave) {
         SharedPreferences prefs = ctx.getSharedPreferences(SiempreCercaPlugin.PREFS, Context.MODE_PRIVATE);
         prefs.edit().putLong(clavePreferencia(idAlarma, clave), System.currentTimeMillis()).apply();
+    }
+
+    /**
+     * Olvida que una alarma esta sonando.
+     *
+     * Importa que se llame en TODOS los caminos donde la notificacion deja de
+     * estar en pantalla. La unica fuente de verdad de "esta sonando" es que haya
+     * notificacion; si la marca sobrevive, la app se queda pidiendo "Apagar
+     * alarma" por un aviso que ya no existe y no hay forma de quitarlo.
+     */
+    private static void forgetSonando(Context ctx, String idAlarma) {
+        if (idAlarma == null) {
+            return;
+        }
+        ctx.getSharedPreferences(SiempreCercaPlugin.PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .remove(PREFIJO_SONANDO + idAlarma)
+            .apply();
     }
 
     /** Cuanto se guardan los apagados antes de limpiar los viejos. */
@@ -109,34 +154,57 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
         JSONArray salida = new JSONArray();
         SharedPreferences prefs = ctx.getSharedPreferences(SiempreCercaPlugin.PREFS, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = prefs.edit();
+        boolean cambio = false;
         for (Map.Entry<String, ?> entrada : prefs.getAll().entrySet()) {
             String clave = entrada.getKey();
             if (!clave.startsWith(PREFIJO_APAGADA)) {
                 continue;
             }
             String resto = clave.substring(PREFIJO_APAGADA.length());
-            int corte = resto.indexOf('.');
+            int corte = resto.indexOf(SEPARADOR);
             if (corte <= 0) {
+                // Marca de una version vieja, con punto como separador. Ya no se
+                // puede interpretar, asi que se borra: si se deja, ocupa sitio
+                // para siempre y nunca la va a leer nadie.
+                editor.remove(clave);
+                cambio = true;
                 continue;
             }
             try {
+                long marca = entrada.getValue() instanceof Long ? (Long) entrada.getValue() : 0L;
+                if (marca <= 0L) {
+                    // Reloj en epoch o tipo raro. Con marca 0 la comprobacion
+                    // estaApagada() da true para siempre y esa ocurrencia queda
+                    // muda de forma permanente. No se puede fechar, asi que se
+                    // descarta: es preferible que la alarma suene de mas una vez
+                    // a que no suene nunca.
+                    Log.w(TAG, "Marca de apagado sin fecha, se descarta: " + clave);
+                    editor.remove(clave);
+                    cambio = true;
+                    continue;
+                }
                 JSONObject fila = new JSONObject();
                 fila.put("idAlarma", resto.substring(0, corte));
                 fila.put("clave", resto.substring(corte + 1));
-                long marca = entrada.getValue() instanceof Long ? (Long) entrada.getValue() : 0L;
-                if (marca > 0 && ahora - marca < INTERESTANTE_MS) {
+                if (ahora - marca < INTERESTANTE_MS) {
                     fila.put("fecha", marca);
                     salida.put(fila);
                 }
-                if (marca > 0 && ahora - marca > RETENCION_MS) {
+                if (ahora - marca > RETENCION_MS) {
                     // La app ya lo sabe hace semanas: no hace falta guardarlo.
                     editor.remove(clave);
+                    cambio = true;
                 }
             } catch (JSONException e) {
                 // fila incompleta: se ignora
             }
         }
-        editor.apply();
+        // Este metodo lo llama la app cada 5 s. Antes hacia apply() siempre, y
+        // eso reescribia el fichero de preferencias entero aunque no hubiera
+        // borrado nada (y en el mismo fichero esta el token de Supabase).
+        if (cambio) {
+            editor.apply();
+        }
         return salida;
     }
 
@@ -144,17 +212,34 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
      * Las alarmas que el sistema tiene sonando ahora mismo. La app lo usa como
      * fuente de la verdad: si pregunta "que suena" al nativo, una alarma puede
      * seguir sonando las horas que haga falta sin que la app la olvide.
+     *
+     * "Sonando" se comprueba contra la barra de notificaciones, no contra la
+     * preferencia. Antes se creia a la preferencia y se producia el peor
+     * fallo posible: la marca sobrevivia a que la notificacion desapareciera
+     * (reinicio del telefono, notificaciones desactivadas, canal silenciado) y
+     * la app se quedaba horas -o dias, con recordatorios diarios- mostrando
+     * "Apagar alarma" por algo que ya estaba callado, sin forma de pararlo.
+     * Ahora, si la notificacion no esta en pantalla, la marca se borra.
      */
     public static JSONArray leerSonando(Context ctx) {
         JSONArray salida = new JSONArray();
         SharedPreferences prefs = ctx.getSharedPreferences(SiempreCercaPlugin.PREFS, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = prefs.edit();
+        boolean cambio = false;
+
+        Set<Integer> enPantalla = idsEnPantalla(ctx);
+
         for (Map.Entry<String, ?> entrada : prefs.getAll().entrySet()) {
             String clave = entrada.getKey();
             if (!clave.startsWith(PREFIJO_SONANDO)) {
                 continue;
             }
             int idNotif = entrada.getValue() instanceof Integer ? (Integer) entrada.getValue() : 0;
-            if (idNotif == 0) {
+            if (idNotif == 0 || (enPantalla != null && !enPantalla.contains(idNotif))) {
+                // La notificacion ya no esta: la alarma no esta sonando.
+                Log.i(TAG, "Se limpia el estado de sonando de " + clave + " (no hay notificacion)");
+                editor.remove(clave);
+                cambio = true;
                 continue;
             }
             try {
@@ -166,7 +251,35 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
                 // fila incompleta: se ignora
             }
         }
+        if (cambio) {
+            editor.apply();
+        }
         return salida;
+    }
+
+    /**
+     * Ids de las notificaciones de la app que hay ahora mismo en la barra, o
+     * null si no se puede saber (API menor a 23, o la lista no se pudo leer).
+     * null significa "no info", y el llamador no descarta nada en ese caso.
+     */
+    private static Set<Integer> idsEnPantalla(Context ctx) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return null;
+        }
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            return null;
+        }
+        try {
+            Set<Integer> ids = new HashSet<>();
+            for (StatusBarNotification activa : nm.getActiveNotifications()) {
+                ids.add(activa.getId());
+            }
+            return ids;
+        } catch (Exception e) {
+            Log.w(TAG, "No se pudo leer la barra de notificaciones: " + e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -185,8 +298,10 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
                 continue;
             }
             String resto = clave.substring(PREFIJO_APAGADA.length());
-            int corte = resto.indexOf('.');
+            int corte = resto.indexOf(SEPARADOR);
             if (corte <= 0) {
+                editor.remove(clave);
+                borradas++;
                 continue;
             }
             try {
@@ -210,13 +325,38 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
     // =====================================================
 
     /** Programa la alarma de una ocurrencia. Repetirla reescribe la anterior. */
-    public static void programarAlarma(
-        Context ctx, String idAlarma, String clave, String titulo, String cuerpo,
-        long fecha, int idNotificacion, boolean exacta
+    /** Programa un lote con una sola escritura de preferencias. */
+    public static void programarAlarmas(
+        Context ctx, List<Ocurrencia> ocurrencias, boolean exacta
     ) {
-        guardarProgramada(ctx, idAlarma, clave, titulo, cuerpo, fecha, idNotificacion);
-        Intent base = intentBase(ctx, ACCION_REFUERZO, idAlarma, clave, titulo, cuerpo, fecha, idNotificacion);
-        programarEn(ctx, fecha, base, idNotificacion, exacta);
+        guardarProgramadas(ctx, ocurrencias);
+        for (Ocurrencia o : ocurrencias) {
+            Intent base = intentBase(
+                ctx, ACCION_REFUERZO, o.idAlarma, o.clave, o.titulo, o.cuerpo, o.fecha, o.idNotificacion);
+            programarEn(ctx, o.fecha, base, o.idNotificacion, exacta);
+        }
+    }
+
+    /** Una ocurrencia programada, tal como la describe la app. */
+    public static final class Ocurrencia {
+        public final String idAlarma;
+        public final String clave;
+        public final String titulo;
+        public final String cuerpo;
+        public final long fecha;
+        public final int idNotificacion;
+        public final boolean exacta;
+
+        public Ocurrencia(String idAlarma, String clave, String titulo, String cuerpo,
+                          long fecha, int idNotificacion, boolean exacta) {
+            this.idAlarma = idAlarma;
+            this.clave = clave;
+            this.titulo = titulo;
+            this.cuerpo = cuerpo;
+            this.fecha = fecha;
+            this.idNotificacion = idNotificacion;
+            this.exacta = exacta;
+        }
     }
 
     /**
@@ -293,6 +433,10 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
                 if (fecha <= ahora || estaApagada(ctx, idAlarma, clave)) {
                     // Ya paso o se apago: se limpia y no se vuelve a programar.
                     editor.remove(nombre);
+                    // Y su estado de "sonando" tambien se va. Si no, la fila
+                    // desaparece pero la marca queda, y la app se queda
+                    // mostrando "Apagar alarma" por algo que ya no existe.
+                    editor.remove(PREFIJO_SONANDO + idAlarma);
                     continue;
                 }
                 Intent base = intentBase(
@@ -300,7 +444,12 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
                     fila.optString(EXTRA_TITULO, ""), fila.optString(EXTRA_CUERPO, ""),
                     fecha, idNotificacion
                 );
-                programarEn(ctx, fecha, base, idNotificacion, true);
+                // Se respeta lo que la app decidio al programar, en vez de
+                // asumir alarma exacta. Aqui no hay forma de saber si el permiso
+                // se concedio entremedio, y forzar "true" hacia que cada alarma
+                // rearmada cayera al catch y se difiriera en Doze.
+                boolean exacta = fila.optBoolean(EXTRA_EXACTA, true);
+                programarEn(ctx, fecha, base, idNotificacion, exacta);
             } catch (JSONException e) {
                 editor.remove(nombre);
             }
@@ -308,25 +457,34 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
         editor.apply();
     }
 
-    private static void guardarProgramada(
-        Context ctx, String idAlarma, String clave, String titulo, String cuerpo,
-        long fecha, int idNotificacion
-    ) {
-        try {
-            JSONObject fila = new JSONObject();
-            fila.put(EXTRA_ID_ALARMA, idAlarma);
-            fila.put(EXTRA_CLAVE, clave);
-            fila.put(EXTRA_TITULO, titulo == null ? "" : titulo);
-            fila.put(EXTRA_CUERPO, cuerpo == null ? "" : cuerpo);
-            fila.put(EXTRA_FECHA, fecha);
-            fila.put(EXTRA_ID_NOTIF, idNotificacion);
-            ctx.getSharedPreferences(SiempreCercaPlugin.PREFS, Context.MODE_PRIVATE)
-                .edit()
-                .putString(PREFIJO_PROGRAMADA + idNotificacion, fila.toString())
-                .apply();
-        } catch (JSONException e) {
-            // si no se puede guardar, la alarma igual queda programada en esta
-            // sesion; solo se pierde la re-programacion tras reiniciar.
+    private static void guardarProgramadas(Context ctx, List<Ocurrencia> ocurrencias) {
+        SharedPreferences.Editor editor =
+            ctx.getSharedPreferences(SiempreCercaPlugin.PREFS, Context.MODE_PRIVATE).edit();
+        boolean alguna = false;
+        for (Ocurrencia o : ocurrencias) {
+            try {
+                JSONObject fila = new JSONObject();
+                fila.put(EXTRA_ID_ALARMA, o.idAlarma);
+                fila.put(EXTRA_CLAVE, o.clave);
+                fila.put(EXTRA_TITULO, o.titulo == null ? "" : o.titulo);
+                fila.put(EXTRA_CUERPO, o.cuerpo == null ? "" : o.cuerpo);
+                fila.put(EXTRA_FECHA, o.fecha);
+                fila.put(EXTRA_ID_NOTIF, o.idNotificacion);
+                // La exactitud queda guardada con la propia alarma. Antes solo la
+                // sabia la app en el momento de programar, y al rearmar tras un
+                // reinicio se asumia "exacta": cuando el permiso no estaba dado,
+                // setExact reventaba con SecurityException y caia a la ventana
+                // laxa sin dejar rastro, y el rearmado se diferia en Doze.
+                fila.put(EXTRA_EXACTA, o.exacta);
+                editor.putString(PREFIJO_PROGRAMADA + o.idNotificacion, fila.toString());
+                alguna = true;
+            } catch (JSONException e) {
+                // si no se puede guardar, la alarma igual queda programada en esta
+                // sesion; solo se pierde la re-programacion tras reiniciar.
+            }
+        }
+        if (alguna) {
+            editor.apply();
         }
     }
 
@@ -352,7 +510,7 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
             // No se sabe que ocurrencia es (notificaciones viejas que no
             // traian la hora): se para la de esa alarma que este sonando ahora.
             Log.w(TAG, "detenerAlarma sin clave, se busca la que este sonando: " + idAlarma);
-            detenerLaQueEstaSonando(ctx, idAlarma);
+            detenerLaQueEstaSonando(ctx, idAlarma, marcar);
             return;
         }
         Log.i(TAG, "Apagando " + idAlarma + " clave=" + clave + " idNotif=" + idNotificacion + " marcar=" + marcar);
@@ -384,6 +542,8 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
                 callarNotificacion(ctx, nm, publicado);
             }
         }
+        // El remove de arriba ya limpio el estado de "sonando": va en el mismo
+        // editor, asi que una sola escritura.
     }
 
     /**
@@ -426,8 +586,15 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
             return SiempreCercaPlugin.CANAL_ALARMA_ID;
         }
         if (nm.getNotificationChannel(CANAL_MUDO_ID) == null) {
+            // Android no deja borrar canales, así que este va a aparecer siempre
+            // en los ajustes del sistema. Se crea solo cuando hace falta (hay
+            // ROMs que no sueltan la notificación aunque se cancele) y se nombra
+            // de forma que se entienda de qué va, en vez de "Auxiliar" a secas.
             NotificationChannel canal = new NotificationChannel(
-                CANAL_MUDO_ID, "Auxiliar", NotificationManager.IMPORTANCE_LOW);
+                CANAL_MUDO_ID,
+                "SiempreCerca (reajuste de avisos)",
+                NotificationManager.IMPORTANCE_LOW);
+            canal.setDescription("Canal interno para terminar un aviso de recordatorio");
             canal.setSound(null, null);
             canal.enableVibration(false);
             nm.createNotificationChannel(canal);
@@ -436,7 +603,7 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
     }
 
     /** Para la ocurrencia de esa alarma que este sonando en este momento. */
-    private static void detenerLaQueEstaSonando(Context ctx, String idAlarma) {
+    private static void detenerLaQueEstaSonando(Context ctx, String idAlarma, boolean marcar) {
         long ahora = System.currentTimeMillis();
         SharedPreferences prefs = ctx.getSharedPreferences(SiempreCercaPlugin.PREFS, Context.MODE_PRIVATE);
         for (Map.Entry<String, ?> entrada : prefs.getAll().entrySet()) {
@@ -452,12 +619,35 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
                 if (fecha > ahora) {
                     continue;
                 }
+                // OJO: hay que pasar `marcar` hacia abajo. Antes se llamaba a la
+                // sobrecarga de 5 argumentos, que es marcar=true, y se perdia la
+                // intencion: desactivar un recordatorio dejaba marcas de apagado
+                // para ocurrencias que todavia no habian ocurrido, que es justo
+                // lo que este parametro existe para evitar.
                 detenerAlarma(
-                    ctx, idAlarma, fila.getString(EXTRA_CLAVE), fecha, fila.getInt(EXTRA_ID_NOTIF));
+                    ctx, idAlarma, fila.getString(EXTRA_CLAVE), fecha,
+                    fila.getInt(EXTRA_ID_NOTIF), marcar);
             } catch (JSONException e) {
                 // fila incompleta: se ignora
             }
         }
+    }
+
+    /**
+     * Saca de AlarmManager y de la barra todo lo que quedara de una alarma que
+     * ya no existe. Sin esto, un recordatorio borrado fuera de la app (otro
+     * dispositivo, la base de datos) seguia sonando los 8 dias de su ventana.
+     */
+    public static void desprogramarAlarmas(Context ctx, String idAlarma) {
+        if (idAlarma == null || idAlarma.isEmpty()) {
+            return;
+        }
+        limpiarProgramadasDe(ctx, idAlarma);
+        ctx.getSharedPreferences(SiempreCercaPlugin.PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .remove(PREFIJO_SONANDO + idAlarma)
+            .apply();
+        Log.i(TAG, "Alarma desprogramada por completo: " + idAlarma);
     }
 
     // =====================================================
@@ -466,6 +656,18 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        try {
+            recibir(context, intent);
+        } catch (Exception e) {
+            // Sin esto, una excepcion aqui (por ejemplo una RemoteServiceException
+            // de nm.notify) tumba el proceso y la cadena de reemision se rompe
+            // sin dejar rastro. El sonido se sostiene con FLAG_INSISTENT, asi que
+            // no es fatal, pero hay que saberlo.
+            Log.e(TAG, "Fallo procesando la alarma: " + intent.getAction(), e);
+        }
+    }
+
+    private void recibir(Context context, Intent intent) {
         if (intent == null || intent.getAction() == null) {
             return;
         }
@@ -504,12 +706,14 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
             // El usuario apago las notificaciones: no hay nada que vigilar y
             // ademas Android ya limpio la barra, asi que no se rearma.
             nm.cancel(idNotificacion);
+            forgetSonando(context, idAlarma);
             return;
         }
 
         if (estaApagada(context, idAlarma, clave)) {
             // El usuario ya la apago: se limpia y no se rearma.
             nm.cancel(idNotificacion);
+            forgetSonando(context, idAlarma);
             return;
         }
 
@@ -556,6 +760,16 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
 
         Intent parar = intentBase(context, ACCION_APAGAR, idAlarma, clave, titulo, cuerpo, fecha, idNotificacion);
 
+        // Estos extras van en el BUNDLE de la notificacion, no solo en el
+        // intent de apertura. Antes solo estaban en el contentIntent, y el
+        // plugin de la app (getDeliveredNotifications) lee el bundle: sin esto
+        // nunca encontraba estas notificaciones y la limpieza de notificaciones
+        // vencidas era codigo muerto que no limpiaba nada.
+        Bundle extras = new Bundle();
+        extras.putString("tipo", "recordatorio");
+        extras.putString(EXTRA_ID_ALARMA, idAlarma);
+        extras.putLong(EXTRA_FECHA, fecha);
+
         NotificationCompat.Builder b =
             new NotificationCompat.Builder(context, SiempreCercaPlugin.CANAL_ALARMA_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -566,6 +780,7 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setWhen(fecha)
                 .setShowWhen(true)
+                .addExtras(extras)
                 // Sin esto el mensaje se puede deslizar y borrar sin apagar nada.
                 .setOngoing(true)
                 .setAutoCancel(false)
@@ -649,6 +864,7 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
     private static void programarEn(Context ctx, long cuando, Intent intent, int idNotificacion, boolean exacta) {
         AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
         if (am == null) {
+            Log.w(TAG, "Sin AlarmManager: la alarma " + idNotificacion + " queda solo guardada, no armada");
             return;
         }
         PendingIntent pi = pendiente(ctx, intent, idNotificacion);
@@ -659,7 +875,10 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
                 am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, pi);
             }
         } catch (SecurityException e) {
-            // Sin permiso de alarma exacta: se usa la ventana laxa.
+            // Sin permiso de alarma exacta: se usa la ventana laxa. Sin este
+            // registro no habia forma de saber por que una alarma rearmada
+            // empezo a llegar tarde.
+            Log.w(TAG, "Sin permiso de alarma exacta, se usa la ventana laxa para " + idNotificacion);
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, pi);
         }
     }

@@ -118,14 +118,9 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   async ngOnInit() {
-    this.alarmasService.escucharTap(() => {
+    this.alarmasService.escucharTap('recordatorios', () => {
       this.cargar();
       this.router.navigate(['/recordatorios']);
-    });
-
-    this.alarmasService.onDisparo(() => {
-      this.cargar();
-      this.changeDetectorRef.detectChanges();
     });
 
     // Al empezar a sonar una alarma, la tarjeta "Apagar alarma" aparece sola.
@@ -213,6 +208,11 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     }
     this.suscripcionAlarma?.unsubscribe();
     this.suscripcionSonando?.unsubscribe();
+    // Si no se suelta, una alarma que suene estando en otra pantalla llama a
+    // esta página destruida y trae al usuario aquí sin haberlo pedido. Se pasa
+    // el nombre para no desregistrar el handler de app.component, que es la red
+    // de seguridad de toda la app.
+    this.alarmasService.desescuchar('recordatorios');
     this.detenerRepeticion();
   }
 
@@ -527,17 +527,21 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     await this.cargar();
   }
 
+  /**
+   * La hora se muestra en 24 h en toda la pantalla: lista, vista previa y
+   * editor.
+   *
+   * Antes la lista usaba 12 h con AM/PM y la vista previa usaba 24 h, en la misma
+   * pantalla: la misma alarma se leía "01:30 PM" arriba y "Hoy a las 13:30" un
+   * poco más abajo. Y a medianoche salía "00:00 AM", que no significa nada. En
+   * Chile la convención es 24 h y no tiene ambigüedad, así que se usa una sola.
+   */
   horaTexto(alarma: AlarmaRecordatorio): string {
-    const ampm = alarma.hora < 12 ? 'AM' : 'PM';
-    return `${this.dosDigitos(alarma.hora)}:${this.dosDigitos(alarma.minuto)} ${ampm}`;
+    return this.horaTexto24(alarma.hora, alarma.minuto);
   }
 
   horaTexto24(hora: number, minuto: number): string {
     return `${this.dosDigitos(hora)}:${this.dosDigitos(minuto)}`;
-  }
-
-  get amPm(): string {
-    return this.nuevaHoraSel < 12 ? 'AM' : 'PM';
   }
 
   diasTexto(alarma: AlarmaRecordatorio): string {
@@ -596,7 +600,12 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   // =====================================================
 
   async cambiarActivacion(alarma: AlarmaRecordatorio, activa: boolean) {
-  if (activa) {
+    if (!activa) {
+      await this.alarmasService.activarDesactivar(alarma, false);
+      await this.cargar();
+      return;
+    }
+
     const estado = await this.prepararAlarma();
 
     if (estado === 'sinNotif') {
@@ -617,12 +626,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
 
     await this.alarmasService.activarDesactivar(alarma, true);
     await this.cargar();
-    return;
   }
-
-  await this.alarmasService.activarDesactivar(alarma, false);
-  await this.cargar();
-}
 
 
   // =====================================================

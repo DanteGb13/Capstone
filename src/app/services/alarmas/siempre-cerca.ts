@@ -100,6 +100,13 @@ export interface SiempreCercaPlugin {
   abrirAjustesNotificaciones(): Promise<void>;
   accionNotificacion(): Promise<AccionNotificacion>;
   programarAlarmas(opts: { alarmas: OcurrenciaNativa[]; exacta: boolean }): Promise<{ programadas: number }>;
+  /**
+   * Saca de AlarmManager y de la barra todo lo que quedara de una alarma que ya
+   * no existe. Hace falta cuando un recordatorio desaparece por un camino que no
+   * es el de esta pantalla: sus PendingIntent seguían armados y la alarma
+   * seguía sonando hasta el siguiente reinicio del teléfono.
+   */
+  desprogramarAlarmas(opts: { idAlarma: string }): Promise<void>;
   detenerAlarma(opts: { idAlarma: string; clave: string; fecha: number; idNotificacion: number; marcar?: boolean }): Promise<void>;
   leerAlarmasApagadas(): Promise<{ apagadas: string }>;
   /** Las alarmas sonando ahora mismo en Android. */

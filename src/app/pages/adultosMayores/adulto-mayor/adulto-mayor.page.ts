@@ -289,7 +289,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     //    en las notificaciones para abrir el panel de consolar con "Apagar".
     this.actualizarSonando();
 
-    this.alarmasService.escucharTap(() => {
+    this.alarmasService.escucharTap('adulto-mayor', () => {
       this.actualizarSonando();
       this.router.navigate(['/recordatorios']);
     });
@@ -662,6 +662,11 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     // pantalla, no el canal. El canal se cierra al cambiar de cuenta.
     this.soltarRealtime?.();
     this.suscripcionAlarma?.unsubscribe();
+    // Igual que en Recordatorios: sin soltar estos, una alarma que suene
+    // estando en otra pantalla actualiza esta página ya destruida. Se pasa el
+    // nombre para no desregistrar el handler de app.component, que es la red de
+    // seguridad de toda la app.
+    this.alarmasService.desescuchar('adulto-mayor');
     this.suscripcionSonando?.unsubscribe();
     this.detenerTimerSonando();
 

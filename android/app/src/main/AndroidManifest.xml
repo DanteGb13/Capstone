@@ -53,6 +53,15 @@
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <!--
+                  Las alarmas son RTC_WAKEUP, o sea que dependen del reloj del
+                  dispositivo. Sin rearmar aqui, cambiar la hora o la zona dejaba
+                  las alarmas desplazadas en silencio: el usuario ponia su alarma a
+                  las 8, viajaba a otra zona y la alarma sonaba a cualquier hora.
+                -->
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
             </intent-filter>
         </receiver>
 

@@ -40,7 +40,11 @@ export class AppComponent {
     void this.fontSizeService;
     void this.colorblindService;
 
-    this.alarmasService.escucharTap(() => {
+    // Red de seguridad de toda la app: si no hay ninguna pantalla de
+    // recordatorios montada, un toque en la notificación abre la lista. Se
+    // registra bajo su propio nombre porque el root no se destruye nunca, y
+    // ninguna pantalla debe desregistrarlo por accidente.
+    this.alarmasService.escucharTap('app', () => {
       this.router.navigate(['/recordatorios']);
     });
 

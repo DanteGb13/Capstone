@@ -27,7 +27,9 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 
 @CapacitorPlugin(name = "SiempreCerca")
 public class SiempreCercaPlugin extends Plugin {
@@ -46,7 +48,12 @@ public class SiempreCercaPlugin extends Plugin {
     static final String PREFS = "sc_prefs";
     // Cambiar este valor obliga a recrear los canales con los nuevos ajustes
     // (sin él, Android conserva la versión vieja del canal y no cambia nada).
-    private static final String VERSION_CANALES = "v5";
+    //
+    // Un solo flag para todos los canales, incluido el de recordatorios. Antes
+    // el canal de alarma llevaba su propio "canal_alarma_v3", y subir la version
+    // desde aquí no lo recreaba: había que acordarse de subir los dos, o el
+    // canal se quedaba con el sonido viejo para siempre.
+    private static final String VERSION_CANALES = "v6";
 
     // =====================================================
     // CANALES DE NOTIFICACIÓN
@@ -59,6 +66,7 @@ public class SiempreCercaPlugin extends Plugin {
      *  - sos-alertas:      SOS, vibración larga e intensa + alarma + no molestar.
      *  - zona-alertas:     primera salida de zona, alerta intensa.
      *  - zona-estado:      actualizaciones de estado (cada 10 min), aviso normal.
+     *  - recordatorios-alarma: los avisos de los recordatorios.
      */
     public static void crearCanales(Context contexto) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return;
@@ -72,6 +80,7 @@ public class SiempreCercaPlugin extends Plugin {
         eliminar(nm, CANAL_SOS_ID);
         eliminar(nm, CANAL_ZONA_ALERTA_ID);
         eliminar(nm, CANAL_ZONA_ESTADO_ID);
+        eliminar(nm, CANAL_ALARMA_ID);
 
         // --- SOS: máxima intensidad (se repite hasta que el cuidador conteste) ---
         NotificationChannel sos = new NotificationChannel(
@@ -130,6 +139,12 @@ public class SiempreCercaPlugin extends Plugin {
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build());
         nm.createNotificationChannel(zonaEstado);
+
+        // --- Recordatorios: alarma larga y persistente ---
+        // Vive aquí y no en crearCanalAlarma() para que la version del canal y el
+        // resto compartan el mismo flag. Si se deja fuera, subir VERSION_CANALES
+        // no lo recrea y el usuario se queda con el sonido anterior.
+        crearCanalAlarma(nm, contexto);
 
         prefs.edit().putString("version_canales", VERSION_CANALES).apply();
     }
@@ -385,28 +400,22 @@ public class SiempreCercaPlugin extends Plugin {
 
     @PluginMethod
     public void crearCanalAlarma(PluginCall call) {
+        // El canal lo crea (o recrea) crearCanales() con el mismo flag de versión
+        // que el resto. Aquí solo se asegura por si la alarma salta antes de que
+        // la app llegue a crearCanales() (MainActivity lo hace, pero no siempre
+        // ha corrido). Si ya existe, no se toca: tocar un canal existente lo
+        // reinicia para el usuario, y no se debe deshacer un silencio que él
+        // eligió a propósito en Ajustes.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager nm = getContext().getSystemService(NotificationManager.class);
-            NotificationChannel canal = nm.getNotificationChannel(CANAL_ALARMA_ID);
-            boolean migrado = Boolean.parseBoolean(
-                getContext().getSharedPreferences("sc_prefs", Context.MODE_PRIVATE)
-                    .getString("canal_alarma_v3", "")
-            );
-            if (canal == null || !migrado) {
-                if (canal != null) {
-                    nm.deleteNotificationChannel(CANAL_ALARMA_ID);
-                }
-                crearCanal(nm);
-                getContext().getSharedPreferences("sc_prefs", Context.MODE_PRIVATE)
-                    .edit()
-                    .putString("canal_alarma_v3", "1")
-                    .apply();
+            if (nm != null && nm.getNotificationChannel(CANAL_ALARMA_ID) == null) {
+                crearCanalAlarma(nm, getContext());
             }
         }
         call.resolve();
     }
 
-    private void crearCanal(NotificationManager nm) {
+    private static void crearCanalAlarma(NotificationManager nm, Context contexto) {
         NotificationChannel canal = new NotificationChannel(
             CANAL_ALARMA_ID,
             "Recordatorios",
@@ -419,10 +428,10 @@ public class SiempreCercaPlugin extends Plugin {
         canal.setLightColor(Color.parseColor("#7715c7"));
         canal.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
 
-        int resId = getContext().getResources().getIdentifier(
-            "alarmmelodia", "raw", getContext().getPackageName());
+        int resId = contexto.getResources().getIdentifier(
+            "alarmmelodia", "raw", contexto.getPackageName());
         if (resId != 0) {
-            Uri sonido = Uri.parse("android.resource://" + getContext().getPackageName() + "/" + resId);
+            Uri sonido = Uri.parse("android.resource://" + contexto.getPackageName() + "/" + resId);
             AudioAttributes atributos = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -503,8 +512,11 @@ public class SiempreCercaPlugin extends Plugin {
             Intent intent = getActivity().getIntent();
             if (intent != null) {
                 String pendiente = intent.getStringExtra("LocalNotificationUserAction");
-                // "tap" es el toque normal sobre la notificación, no el botón.
-                if (pendiente != null && !"tap".equals(pendiente)) {
+                // "tap" también se entrega. Antes se filtraba aquí, y con ello el
+                // toque normal sobre la notificación con la app cerrada se
+                // perdía: la app abría y no iba a ninguna parte. En caliente sí
+                // funcionaba, porque el camino 1 no filtraba nada. Inconsistente.
+                if (pendiente != null) {
                     accion = pendiente;
                     notificacion = intent.getStringExtra("LocalNotficationObject");
                     intent.removeExtra("LocalNotificationUserAction");
@@ -548,6 +560,7 @@ public class SiempreCercaPlugin extends Plugin {
         boolean exacta = Boolean.TRUE.equals(call.getBoolean("exacta", false));
         int programadas = 0;
         HashSet<String> yaLimpias = new HashSet<>();
+        List<AlarmaNativaReceiver.Ocurrencia> lote = new ArrayList<>();
 
         for (int i = 0; i < lista.length(); i++) {
             // JSArray entrega JSONObject plano, no el wrapper de Capacitor.
@@ -571,17 +584,33 @@ public class SiempreCercaPlugin extends Plugin {
                 AlarmaNativaReceiver.limpiarProgramadasDe(getContext(), idAlarma);
             }
 
-            AlarmaNativaReceiver.programarAlarma(
-                getContext(), idAlarma, clave,
+            lote.add(new AlarmaNativaReceiver.Ocurrencia(
+                idAlarma, clave,
                 item.optString("titulo", ""), item.optString("cuerpo", ""),
                 fecha, idNotificacion, exacta
-            );
+            ));
             programadas++;
         }
+
+        // Un solo lote: antes se guardaba cada fila con su propio Editor.apply(),
+        // o sea hasta 8 reescrituras del fichero de preferencias por alarma, y
+        // la app sincroniza en cada primer plano.
+        AlarmaNativaReceiver.programarAlarmas(getContext(), lote, exacta);
 
         JSObject ret = new JSObject();
         ret.put("programadas", programadas);
         call.resolve(ret);
+    }
+
+    /**
+     * Saca de AlarmManager todo lo que quedara de una alarma que ya no existe.
+     * La app la llama cuando un recordatorio desaparece y no vino de esta
+     * pantalla (borrado en otro dispositivo, o la base de datos no lo devolvió).
+     */
+    @PluginMethod
+    public void desprogramarAlarmas(PluginCall call) {
+        AlarmaNativaReceiver.desprogramarAlarmas(getContext(), call.getString("idAlarma"));
+        call.resolve();
     }
 
     /** Corta una ocurrencia ya publicada por AlarmaNativaReceiver. */

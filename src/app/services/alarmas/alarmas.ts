@@ -22,6 +22,16 @@ export interface AlarmaRecordatorio {
   minuto: number;
   descripcion: string;
   activa: boolean;
+  /**
+   * Fecha (YYYY-MM-DD) del último apagado. Es un dato de auditoría: dice cuándo
+   * se paró por última vez, no qué ocurrencias están cubiertas.
+   *
+   * Antes se escribía pero no se leía nunca, y el comentario lo reconocía. No
+   * puede usarse para decidir si una alarma sonó, porque el servidor guarda solo
+   * el día: una alarma confirmada a las 13:10 parecería haber tapado también la
+   * de las 18:00. El estado real de cada ocurrencia vive en `apagadas` (claves
+   * `id:YYYY-MM-DDTHH:mm`), que sí distingue hora.
+   */
   confirmado: string | null;
   dias: number[];
   fecha_creacion?: string;
@@ -31,7 +41,6 @@ export interface AlarmaRecordatorio {
 export const DIAS_SEMANA_TODOS = [1, 2, 3, 4, 5, 6, 7];
 
 const TABLA = 'alarma_recordatorio';
-const TIPO_ACCION = 'apagar-alarma';
 const ACCION_APAGAR = 'apagar';
 
 @Injectable({
@@ -54,10 +63,20 @@ export class AlarmasService {
    */
   readonly alarmaSonando$ = new Subject<string>();
 
-  private tapHandler: ((idAlarma: string) => void) | null = null;
-  private disparoHandler: (() => void) | null = null;
-  private suscripcion: any = null;
-  private accionesRegistradas = false;
+  /**
+   * Handlers de toque y de disparo, indexados por quién los registró.
+   *
+   * Antes eran dos campos sueltos y el último que llegaba se imponía. Con eso,
+   * que una pantalla se desregistrara en su ngOnDestroy apagaba también el
+   * handler que había puesto `app.component`, que es la red de seguridad de la
+   * app: el root nunca vuelve a ejecutar su constructor, así que esa red no se
+   * recuperaba en toda la sesión. Con un mapa, `desescuchar` quita solo lo suyo
+   * y las demás pantallas siguen registrando su handler.
+   */
+  private readonly tapHandlers = new Map<string, (idAlarma: string) => void>();
+  private suspendida = false;
+  /** Ids que esta app se sabe haber programado en Android. */
+  private programadasAnteriormente = new Set<string>();
   private apagadas = new Set<string>();
   private apagadasCargadas = false;
   private readonly CLAVE_APAGADAS = 'alarmas.apagadas';
@@ -85,6 +104,20 @@ export class AlarmasService {
     const supabase = this.supabaseService.getClient();
     const { data } = await supabase.auth.getUser();
     const id = data?.user?.id ?? null;
+
+    // Cambio de cuenta sin logout limpio: se desecha todo lo local de la
+    // cuenta anterior.
+    //
+    // El botón "Cerrar sesión" es el único que limpia esto, y no siempre se usa:
+    // la sesión puede expirar, el usuario puede entrar a otra cuenta, o basta con
+    // que Android mate la app. Sin este aviso, el espejo y la cola del usuario
+    // anterior seguían vivos, y como la cola pendiente se mezclaba al leer del
+    // servidor, la cuenta nueva veía los recordatorios de la otra en la lista.
+    if (id && this.userIdActual && id !== this.userIdActual) {
+      console.warn('[Alarmas] cambió la cuenta: se descarta el estado local anterior');
+      this.descartarEstadoLocal();
+    }
+
     this.userIdActual = id;
     if (id) {
       try {
@@ -94,6 +127,20 @@ export class AlarmasService {
       }
     }
     return id;
+  }
+
+  /** Borra espejo, cola y marcas de apagado. No toca el id de usuario. */
+  private descartarEstadoLocal(): void {
+    this.alarmasCache = [];
+    this.apagadas = new Set<string>();
+    this.apagadasCargadas = true;
+    try {
+      localStorage.removeItem(this.CLAVE_ESPEJO);
+      localStorage.removeItem(this.CLAVE_COLA);
+      localStorage.removeItem(this.CLAVE_APAGADAS);
+    } catch {
+      // sin persistencia
+    }
   }
 
 
@@ -135,7 +182,12 @@ export class AlarmasService {
           ? row.dias
           : [...DIAS_SEMANA_TODOS]
       }));
-      const resultado = this.aplicarCambiosPendientes(filas);
+      const resultado = this.aplicarCambiosPendientes(filas)
+        // Última barrera contra la fuga entre cuentas: por muy filtrada que
+        // venga la consulta, la mezcla con el espejo local no puede devolver
+        // filas de otra cuenta. getAlarmasLocales() ya lo hacía; esta ruta, que
+        // es la que pinta la lista de Recordatorios, no.
+        .filter((a) => a.id_usuario === userId);
       this.guardarEspejo(resultado);
       this.alarmasCache = resultado;
 
@@ -157,14 +209,25 @@ export class AlarmasService {
    */
   limpiarDatosLocal() {
     this.userIdActual = null;
-    this.alarmasCache = [];
+    this.descartarEstadoLocal();
+    this.apagadasCargadas = false;
     try {
-      localStorage.removeItem(this.CLAVE_ESPEJO);
-      localStorage.removeItem(this.CLAVE_COLA);
-      localStorage.removeItem(this.CLAVE_APAGADAS);
       localStorage.removeItem(this.CLAVE_USUARIO);
     } catch {
       // sin persistencia: ignorar
+    }
+
+    // Y se sacan de Android las alarmas de la cuenta que se acaba de ir. Sin
+    // esto, cerrar sesión dejaba los recordatorios armed en AlarmManager: el
+    // teléfono seguía sonando avisos de una cuenta que ya no está y no hay
+    // ninguna pantalla desde la que pararlos.
+    const salientes = [...this.programadasAnteriormente];
+    this.programadasAnteriormente = new Set();
+    for (const id of salientes) {
+      if (!Capacitor.isNativePlatform()) {
+        continue;
+      }
+      SiempreCerca.desprogramarAlarmas({ idAlarma: id }).catch(() => {});
     }
   }
 
@@ -225,7 +288,7 @@ export class AlarmasService {
     restantes.push({ id: alarma.id, op: 'insert', payload: alarma, ts: Date.now() });
     this.guardarCola(restantes);
 
-    this.flushCola();
+    void this.flushCola();
 
     this.alarmasCache = this.leerEspejo();
     return alarma;
@@ -257,7 +320,7 @@ export class AlarmasService {
     restantes.push({ id, op: 'update', payload: cambios, ts: Date.now() });
     this.guardarCola(restantes);
 
-    this.flushCola();
+    void this.flushCola();
 
     const cache = this.leerEspejo().filter((e) => e.id_usuario === userId);
     this.alarmasCache = cache;
@@ -277,17 +340,23 @@ export class AlarmasService {
 
     this.espejoQuitar(id);
 
-    let cola = this.leerCola();
-    if (cola.some((o) => o.op === 'insert' && o.id === id)) {
-      // la fila nunca llegó al servidor: solo se quita la cola, sin delete
-      cola = cola.filter((o) => o.id !== id);
-    } else {
-      cola = cola.filter((o) => o.op !== 'insert' || o.id !== id);
-      cola.push({ id, op: 'delete', payload: {}, ts: Date.now() });
-    }
+    // El borrado se encola siempre, aunque haya un insert pendiente de este id.
+    //
+    // Antes, al encontrar un insert en la cola se daba por perdido y no se
+    // mandaba el delete, creyendo que la fila nunca había llegado al servidor.
+    // El problema es que el insert podía haber salido justo antes, mientras la
+    // red respondía: en ese caso la fila SÍ estaba en el servidor, y como no
+    // había delete, volvía a aparecer sola en la lista en la siguiente carga.
+    //
+    // La cola se recorre en orden y el delete va detrás del insert, así que
+    // mandarlo siempre da el resultado correcto en los dos casos: si el insert
+    // aún no salió, se borra lo que se acababa de crear; si ya salió, se borra
+    // eso. Un delete de una fila que no existe no da error, no cuesta nada.
+    const cola = this.leerCola().filter((o) => o.op !== 'insert' || o.id !== id);
+    cola.push({ id, op: 'delete', payload: {}, ts: Date.now() });
     this.guardarCola(cola);
 
-    this.flushCola();
+    void this.flushCola();
 
     const cache = this.leerEspejo().filter((e) => e.id_usuario === userId);
     this.alarmasCache = cache;
@@ -378,7 +447,51 @@ export class AlarmasService {
     );
   }
 
-  private async flushCola() {
+  /**
+   * Vacía la cola de operaciones pendientes hacia el servidor.
+   *
+   * Antes esta función leía la cola, esperaba la red y al final escribía la cola
+   * COMPLETA que había leído al principio. Todo lo que se encolara durante esos
+   * esperas se perdía sin aviso: sin fila en la cola, sin reintento y sin error.
+   *
+   * Se notaba justo en Recordatorios: al crear un recordatorio y borrarlo enseguida,
+   * al editarlo y apagarlo, o al tocar dos seguidos. La operación desaparecía y el
+   * servidor acababa con datos que la app ya no tenía. En el caso del borrado la
+   * fila volvía a aparecer sola en la lista en la siguiente carga, y en el de la
+   * activación el recordatorio se quedaba "apagado" en la pantalla pero armado en
+   * el teléfono, sonando igual.
+   *
+   * Ahora los vaciados se serializan y, al escribir, solo se quitan de la cola las
+   * operaciones que este volcado sí resolvió. Lo que se haya encolado mientras
+   * esperaba la red se queda, y también lo que falló, para el siguiente intento.
+   */
+  private vaciandoCola = false;
+  private colaPorVaciar = false;
+  private esperaCola: Promise<void> = Promise.resolve();
+
+  private flushCola(): Promise<void> {
+    if (this.vaciandoCola) {
+      this.colaPorVaciar = true;
+      return this.esperaCola;
+    }
+
+    this.vaciandoCola = true;
+    this.esperaCola = this.drenarCola().finally(() => {
+      this.vaciandoCola = false;
+      this.esperaCola = Promise.resolve();
+    });
+    return this.esperaCola;
+  }
+
+  /** Repasa la cola hasta que nadie haya encolado nada nuevo durante el volcado. */
+  private async drenarCola(): Promise<void> {
+    do {
+      this.colaPorVaciar = false;
+      await this.procesarCola();
+    } while (this.colaPorVaciar);
+  }
+
+  private async procesarCola(): Promise<void> {
     const cola = this.leerCola();
     if (cola.length === 0) {
       return;
@@ -388,10 +501,19 @@ export class AlarmasService {
     }
 
     const supabase = this.supabaseService.getClient();
-    const restantes: OperacionCola[] = [];
-    let indice = 0;
+    /** Operaciones de este volcado que ya quedaron resueltas y se pueden quitar. */
+    const resueltas = new Set<OperacionCola>();
 
     for (const op of cola) {
+      // Una operación que pertenece a otra cuenta no se puede mandar: RLS la
+      // rechaza siempre. Antes se quedaba en la cola para siempre y envejeciendo
+      // el error, y hacía que la sincronización nunca terminara de vaciarse.
+      if (op.payload.id_usuario && op.payload.id_usuario !== this.userIdActual) {
+        console.warn('[Alarmas] se descarta una operación de otra cuenta:', op.op, op.id);
+        resueltas.add(op);
+        continue;
+      }
+
       let error: any = null;
       try {
         if (op.op === 'insert') {
@@ -417,33 +539,34 @@ export class AlarmasService {
         error = e;
       }
 
-      if (error) {
-        const mensaje = (error?.message || '').toLowerCase();
-        const duplicado =
-          op.op === 'insert' &&
-          (mensaje.includes('duplicate') || mensaje.includes('unique constraint') || mensaje.includes('ya existe'));
-
-        if (duplicado) {
-          // el registro ya está en el servidor (lo envió otra sincronización)
-          indice++;
-          continue;
-        }
-
-        console.error('Sincronización pendiente falló (op ' + op.op + '):', error.message);
-        restantes.push(op);
-        if (this.esErrorDeRed(error.message)) {
-          this.redConectada = false;
-          indice++;
-          break;
-        }
+      if (!error) {
+        resueltas.add(op);
+        continue;
       }
-      indice++;
+
+      const mensaje = (error?.message || '').toLowerCase();
+      const duplicado =
+        op.op === 'insert' &&
+        (mensaje.includes('duplicate') || mensaje.includes('unique constraint') || mensaje.includes('ya existe'));
+
+      if (duplicado) {
+        // el registro ya está en el servidor (lo envió otra sincronización)
+        resueltas.add(op);
+        continue;
+      }
+
+      console.error('Sincronización pendiente falló (op ' + op.op + '):', error.message);
+      // No entra en `resueltas`: sigue en la cola para el siguiente intento.
+      if (this.esErrorDeRed(error.message)) {
+        this.redConectada = false;
+        break;
+      }
     }
 
-    if (indice < cola.length) {
-      restantes.push(...cola.slice(indice));
-    }
-    this.guardarCola(restantes);
+    // No se reescribe la cola del principio: se relee y solo se quitan las
+    // operaciones que este volcado resolvió. Así lo encolado durante los esperas
+    // no se pierde, que era justo lo que se perdía.
+    this.guardarCola(this.leerCola().filter((op) => !resueltas.has(op)));
   }
 
   /**
@@ -562,7 +685,7 @@ export class AlarmasService {
    * alarma puede seguir sonando las horas que haga falta, y si la app la
    * olvidara por un reloj propio la tarjeta se esconderia sin dejar apagarla.
    */
-  private sonandoNativo = new Set<string>();
+  private sonandoNativo = new Map<string, number>();
 
   private async refrescarSonandoNativo(): Promise<void> {
     if (!Capacitor.isNativePlatform()) {
@@ -571,10 +694,27 @@ export class AlarmasService {
     try {
       const { sonando } = await SiempreCerca.leerAlarmasSonando();
       const filas: SonandoNativa[] = sonando ? JSON.parse(sonando) : [];
-      this.sonandoNativo = new Set(filas.map((f) => f.idAlarma));
+      // Se guarda el id con el que quedó sonando de verdad, no solo el id de la
+      // alarma. Android lo publica justamente para esto, y la app lo descartaba:
+      // al apagar había que recalcular el id desde la fecha de la ocurrencia, y
+      // si esa fecha no era la que estaba sonando, el cancel iba al requestCode
+      // equivocado y la cadena de reemisión seguía viva.
+      this.sonandoNativo = new Map(
+        filas
+          .filter((f) => typeof f.idAlarma === 'string' && f.idNotificacion)
+          .map((f) => [f.idAlarma, f.idNotificacion])
+      );
     } catch (e) {
       // Si no se puede preguntar, se sigue con la cuenta por hora de abajo.
     }
+  }
+
+  /**
+   * Id con el que la alarma está sonando ahora mismo en Android, si el sistema
+   * lo dice. Es el único dato fiable para llamar a AlarmManager.cancel.
+   */
+  private idSonandoReal(alarmaId: string, respaldo: number): number {
+    return this.sonandoNativo.get(alarmaId) ?? respaldo;
   }
 
   private ocurrenciaEnCurso(alarma: AlarmaRecordatorio, ahora: Date): Date | null {
@@ -584,6 +724,15 @@ export class AlarmasService {
 
     let ocurrencia = this.fechaOcurrencia(alarma, ahora);
     if (ocurrencia.getTime() > ahora.getTime()) {
+      // La de hoy todavía no llegó, así que solo puede estar sonando la de ayer.
+      // OJO: esto antes se aplicaba siempre, y devolvía la de ayer aunque la
+      // alarma no estuviera sonando: ahí nacía el "apago la clave y el id
+      // equivocados". Ahora solo se acepta la de ayer si el sistema confirma que
+      // esa alarma sigue sonando, que es el único caso en que la de ayer es la
+      // correcta (la alarma no tiene tope y puede sonar muchas horas).
+      if (!this.sonandoNativo.has(alarma.id)) {
+        return null;
+      }
       ocurrencia = new Date(
         ahora.getFullYear(),
         ahora.getMonth(),
@@ -712,28 +861,67 @@ export class AlarmasService {
   private readonly VENTANA_SONANDO_MS = 60 * 60 * 1000;
 
 
+  /**
+   * Hash de 21 bits del id de la alarma, para usarlo de requestCode.
+   *
+   * Antes era un hash de 20 bits con multiplicador 31, y el requestCode era
+   * `dia * 1_000_000 + base`. Dos cosas estaban mal:
+   *
+   *  1. El requestCode no depende de la hora, solo del día. Dos ocurrencias de
+   *     la MISMA alarma en el mismo día compartían PendingIntent, fila de
+   *     preferencias y id de notificación. Hoy no ocurre porque se genera una
+   *     ocurrencia por día, pero es una fragilidad que el código ya contemplaba
+   *     en un comentario ("13:10, se apaga, 18:00").
+   *  2. Con 20 bits, dos alarmas distintas podían caer en el mismo `base` y el
+   *     mismo día UTC. La segunda sobrescribía el PendingIntent de la primera
+   *     (FLAG_UPDATE_CURRENT), su fila y su notificación: la primera quedaba
+   *     muda y sin forma de recuperarse. Probabilidad baja, consecuencia grave.
+   *
+   * Ahora son 21 bits de alarma y 10 de día, con un hash de mezcla final. El
+   * máximo es 1023 * 2^21 + (2^21 - 1) = 2_147_483_647, exactamente
+   * Integer.MAX_VALUE: cabe en un int de Java sin volverse negativo, pero sin
+   * ningún margen. Si alguna vez se sube a 11 bits de día o 22 de alarma, hay
+   * que volver a recalcularlo.
+   */
   private idNumerico(id: string): number {
     if (!id) {
       return 0;
     }
-    let hash = 0;
+    // FNV-1a de 32 bits: reparte mucho mejor que el "hash*31 + c" de antes.
+    let hash = 0x811c9dc5;
     for (let i = 0; i < id.length; i++) {
-      const char = id.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
+      hash ^= id.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
     }
-    return Math.abs(hash) % 900000 + 100000;
+    hash ^= hash >>> 16;
+    hash = Math.imul(hash, 0x7feb352d);
+    hash ^= hash >>> 15;
+    hash = Math.imul(hash, 0x846ca68b);
+    hash ^= hash >>> 16;
+    return hash & 0x1fffff;
   }
 
   private idOcurrencia(base: number, fecha: Date): number {
-    const dia = Math.floor(fecha.getTime() / 86400000) % 2147;
-    return dia * 1000000 + base;
+    // Día en epochs, con 10 bits. Dos ocurrencias distintas solo pueden coincidir
+    // si caen el mismo día, y 1024 días de margen hace imposible que eso pase
+    // entre dos alarmas dentro de la ventana de 8 días.
+    const dia = Math.abs(Math.floor(fecha.getTime() / 86400000)) % 1024;
+    return dia * 0x200000 + base;
   }
 
+  /**
+   * Todos los ids que puede tener una alarma: las ocurrencias de la ventana más
+   * los formatos de las versiones viejas.
+   *
+   * Se generan con los MISMOS parámetros que usa programar(), con la tolerancia
+   * incluida. Antes iban con tolerancia 0, o sea que el conjunto de ids a
+   * cancelar era distinto del que se había agendado.
+   */
   private idsNotificacion(alarma: AlarmaRecordatorio): number[] {
     const base = this.idNumerico(alarma.id);
-    const estables = this.generarOcurrencias(alarma, new Date())
-      .map((fecha) => this.idOcurrencia(base, fecha));
+    const estables = this.generarOcurrencias(
+      alarma, new Date(), this.VENTANA_DIAS, this.TOLERANCIA_HORA_MS
+    ).map((fecha) => this.idOcurrencia(base, fecha));
     const viejos = alarma.dias.map((d) => base * 10 + d);
     const masViejos = Array.from(
       { length: this.VENTANA_DIAS },
@@ -761,6 +949,17 @@ export class AlarmasService {
         0
       );
 
+      // El filtro de días va ANTES de mirar si la hora ya pasó, y no después.
+      // Estaba después, así que la rama de tolerancia (que hace un `continue`)
+      // se saltaba el filtro entero: una alarma de solo lunes, sincronizada un
+      // martes a las 13:11 para las 13:10, se agendaba y sonaba en martes.
+      // Peor: ocurrenciaEnCurso() sí valida los días, así que la tarjeta
+      // "Apagar alarma" no aparecía y no había forma de pararla desde la app.
+      const dia = fecha.getDay() + 1;
+      if (!alarma.dias.includes(dia)) {
+        continue;
+      }
+
       if (fecha.getTime() <= base.getTime()) {
         // La app sincroniza cada minuto. Si la hora de hoy ya paso por unos
         // segundos, descartarla en silencio dejaba al usuario sin aviso y la
@@ -776,11 +975,6 @@ export class AlarmasService {
         if (i === 0 && retraso <= toleranciaMs) {
           ocurrencias.push(fecha);
         }
-        continue;
-      }
-
-      const dia = fecha.getDay() + 1;
-      if (!alarma.dias.includes(dia)) {
         continue;
       }
 
@@ -805,11 +999,16 @@ export class AlarmasService {
       return;
     }
     try {
+      // Si Android dice con qué id quedó sonando, ese es el bueno. Recalcularlo
+      // desde la fecha de la ocurrencia es un intento a ciegas: si la fecha no
+      // es la que está sonando de verdad, el AlarmManager.cancel va al
+      // requestCode equivocado y la cadena de reemisión sigue viva.
+      const calculado = this.idOcurrencia(this.idNumerico(idAlarma), ocurrencia);
       await SiempreCerca.detenerAlarma({
         idAlarma,
         clave: this.claveOcurrencia(ocurrencia),
         fecha: ocurrencia.getTime(),
-        idNotificacion: this.idOcurrencia(this.idNumerico(idAlarma), ocurrencia),
+        idNotificacion: this.idSonandoReal(idAlarma, calculado),
         marcar
       });
     } catch (e) {
@@ -1102,10 +1301,46 @@ export class AlarmasService {
           await this.cancelarAlarma(alarma);
         }
       }
+      await this.desprogramarDesconocidas(alarmas);
       await this.limpiarApagadas(alarmas);
       await this.limpiarNotificacionesVencidas();
     } finally {
       this.sincronizando = false;
+    }
+  }
+
+  /**
+   * Saca de Android las alarmas que este dispositivo tenía programadas y que ya
+   * no están en la cuenta.
+   *
+   * Antes el bucle de sincronizar() solo repasaba las que existía, así que una
+   * alarma borrada por otro camino —otro dispositivo, la base de datos, o una
+   * lectura que devolvió vacío— se quedaba armada en AlarmManager y seguía
+   * sonando hasta que el teléfono se reiniciara. El camino de la UI sí llama a
+   * cancelarAlarma antes de borrar, por eso el fallo no se notaba: ocurría con
+   * cualquier otro camino.
+   *
+   * Solo se desprograma si la lista vino de la red. Si estamos sin conexión, la
+   * lista es un espejo y no hay forma de saber qué es un borrado real y qué es
+   * solo que no se pudo leer.
+   */
+  private async desprogramarDesconocidas(alarmas: AlarmaRecordatorio[]) {
+    if (!Capacitor.isNativePlatform() || this.redConectada === false) {
+      return;
+    }
+    const conocidas = new Set(alarmas.map((a) => a.id));
+    const programadas = this.programadasAnteriormente;
+    this.programadasAnteriormente = new Set(conocidas);
+
+    for (const id of programadas) {
+      if (conocidas.has(id)) {
+        continue;
+      }
+      try {
+        await SiempreCerca.desprogramarAlarmas({ idAlarma: id });
+      } catch (e) {
+        console.warn('No se pudo desprogramar una alarma que ya no existe', id, e);
+      }
     }
   }
 
@@ -1116,10 +1351,14 @@ export class AlarmasService {
     try {
       const entregadas = await LocalNotifications.getDeliveredNotifications();
       const ahora = Date.now();
+      // En Android el plugin entrega el bundle de extras bajo "data", no bajo
+      // "extra" (ese solo lo pone el migrador de notificaciones antiguas). Con
+      // "extra" el filtro no encontraba nada y esto era código muerto.
       const vencidas = (entregadas.notifications ?? [])
-        .filter((n) => n.extra?.tipo === 'recordatorio' && typeof n.extra?.fecha === 'number')
-        .filter((n) => ahora - Number(n.extra.fecha) > this.VENTANA_SONANDO_MS)
-        .map((n) => n.id);
+        .map((n: any) => ({ id: n.id, ...(n.data || {}) }))
+        .filter((n: any) => n.tipo === 'recordatorio' && typeof n.fecha === 'number')
+        .filter((n: any) => ahora - Number(n.fecha) > this.VENTANA_SONANDO_MS)
+        .map((n: any) => n.id);
 
       if (vencidas.length > 0) {
         await LocalNotifications.removeDeliveredNotificationsById({ ids: vencidas });
@@ -1155,44 +1394,34 @@ export class AlarmasService {
   // TOQUE EN LA NOTIFICACIÓN
   // =====================================================
 
-  onDisparo(handler: () => void) {
-    this.disparoHandler = handler;
+  /**
+   * Suelta los handlers de esta pantalla. Sin esto, al salir de la pantalla que
+   * los registró, un toque en la notificación seguía llamando a una página ya
+   * destruida: se hacía un `cargar()` sobre un componente muerto y, en el caso
+   * del toque, el usuario aparecía en Recordatorios sin haberlo pedido.
+   *
+   * Se pasa el nombre de la pantalla para no llevarse por delante el handler de
+   * otra, en particular el de `app.component`, que nunca se desregistra.
+   */
+  desescuchar(donde: string): void {
+    this.tapHandlers.delete(donde);
   }
 
-  escucharTap(handler: (idAlarma: string) => void) {
-    this.tapHandler = handler;
+  escucharTap(donde: string, handler: (idAlarma: string) => void) {
+    this.tapHandlers.set(donde, handler);
 
-    if (Capacitor.isNativePlatform() && !this.suscripcion) {
-      this.suscripcion = LocalNotifications.addListener(
-        'localNotificationActionPerformed',
-        (data: any) => {
-          const idAlarma = data?.notification?.extra?.idAlarma;
-          const fechaMs = data?.notification?.extra?.fecha;
-          if (data?.actionId === ACCION_APAGAR && typeof idAlarma === 'string') {
-            const dedupe = `${idAlarma}:${typeof fechaMs === 'number' ? fechaMs : 0}`;
-            if (this.accionesProcesadas.has(dedupe)) {
-              return;
-            }
-            this.accionesProcesadas.add(dedupe);
-            this.apagarDesdeNotificacion(idAlarma, typeof fechaMs === 'number' ? fechaMs : undefined);
-          } else if (typeof idAlarma === 'string' && this.tapHandler) {
-            this.tapHandler(idAlarma);
-          }
-        }
-      );
-
-      LocalNotifications.addListener(
-        'localNotificationReceived',
-        (data: any) => {
-          const idAlarma = data?.notification?.extra?.idAlarma;
-          if (typeof idAlarma === 'string') {
-            this.alarmaSonando$.next(idAlarma);
-          }
-          if (this.disparoHandler) {
-            this.disparoHandler();
-          }
-        }
-      );
+    if (Capacitor.isNativePlatform() && !this.suspendida) {
+      // OJO: aquí ya no se escuchan 'localNotificationActionPerformed' ni
+      // 'localNotificationReceived', y es a propósito. Ambas alarmas las publica
+      // Android (AlarmaNativaReceiver) y no el plugin: el botón "Apagar" es un
+      // PendingIntent.getBroadcast y la notificación sale de nm.notify(). Esos
+      // dos eventos nunca se disparaban, y con ellos se arrastraba
+      // registerActionTypes(), que no hacía falta para nada.
+      //
+      // El apagado y el aviso de "empezó a sonar" llegan por otros caminos de
+      // verdad: leerAlarmasApagadas() en el sondeo, y el estado real de
+      // AlarmManager para lo segundo.
+      this.suspendida = true;
 
       App.addListener('appStateChange', (estado) => {
         if (estado.isActive) {
@@ -1204,7 +1433,6 @@ export class AlarmasService {
 
     this.registrarRed();
 
-    this.registrarAccionApagar();
     this.revisarAccionDeArranque();
     this.sincronizar();
   }
@@ -1235,9 +1463,7 @@ export class AlarmasService {
 
       if (accion !== ACCION_APAGAR) {
         // Toque normal sobre la notificacion: se abre la app en esa alarma.
-        if (this.tapHandler) {
-          this.tapHandler(idAlarma);
-        }
+        this.notificarToque(idAlarma);
         return;
       }
 
@@ -1253,6 +1479,23 @@ export class AlarmasService {
       await this.apagarDesdeNotificacion(idAlarma, fechaMs);
     } catch (e) {
       console.error('No se pudo recuperar la acción de la notificación', e);
+    }
+  }
+
+  /**
+   * Reparte un toque entre todas las pantallas que registraron un handler.
+   *
+   * Todas hacen lo mismo (refrescar y abrir Recordatorios), así que se ejecutan
+   * todas: la que está en pantalla pinta al momento, y la de app.component
+   * garantiza que el toque nunca se pierda aunque no haya ninguna montada.
+   */
+  private notificarToque(idAlarma: string): void {
+    for (const handler of [...this.tapHandlers.values()]) {
+      try {
+        handler(idAlarma);
+      } catch (e) {
+        console.warn('Un handler de toque falló', e);
+      }
     }
   }
 
@@ -1286,27 +1529,6 @@ export class AlarmasService {
       .catch(() => {
         this.redConectada = true;
       });
-  }
-
-  private async registrarAccionApagar() {
-    if (!Capacitor.isNativePlatform() || this.accionesRegistradas) {
-      return;
-    }
-    try {
-      await LocalNotifications.registerActionTypes({
-        types: [
-          {
-            id: TIPO_ACCION,
-            actions: [
-              { id: ACCION_APAGAR, title: 'Apagar alarma' }
-            ]
-          }
-        ]
-      });
-      this.accionesRegistradas = true;
-    } catch (e) {
-      console.error('No se pudo registrar la acción de apagado', e);
-    }
   }
 
   private async apagarDesdeNotificacion(idAlarma: string, fechaMs?: number) {
@@ -1354,7 +1576,10 @@ export class AlarmasService {
       return;
     }
     try {
-      const idEntregada = this.idOcurrencia(this.idNumerico(idAlarma), ocurrencia);
+      const idEntregada = this.idSonandoReal(
+        idAlarma,
+        this.idOcurrencia(this.idNumerico(idAlarma), ocurrencia)
+      );
       if (idEntregada <= 0) {
         return;
       }
