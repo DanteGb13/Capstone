@@ -172,14 +172,34 @@ export class Vinculacion {
     
       async obtenerCuidadorActual() {
     
+        /**
+         * `getSession()` y no `getUser()`.
+         *
+         * `getUser()` NO es local: va al servidor de autenticación a validar el
+         * token, y ahí se ejecutan cinco consultas (users, sessions,
+         * identities, mfa_factors y mfa_amr_claims). Este método está en el
+         * camino del sondeo del panel del cuidador, así que se llamaba en cada
+         * pasada, y en la base de este proyecto se contaron unas 40.000
+         * invocaciones de `getUser()` en 43 días.
+         *
+         * `getSession()` lee la sesión que el cliente ya tiene en memoria: en el
+         * caso normal no genera ningún viaje de red, y sigue siendo la fuente
+         * correcta tras un cambio de cuenta porque siempre refleja la sesión
+         * activa, sin necesidad de caché ni invalidación.
+         *
+         * No baja la seguridad: el id es el del propio llamador en ambos casos,
+         * y todas las consultas de este servicio siguen gobernadas por la RLS.
+         */
         const {
-          data: { user },
-          error: userError
-        } = await this.supabase.auth.getUser();
+          data: { session },
+          error: sessionError
+        } = await this.supabase.auth.getSession();
     
-        if (userError) {
-          throw userError;
+        if (sessionError) {
+          throw sessionError;
         }
+    
+        const user = session?.user;
     
         if (!user) {
           throw new Error(

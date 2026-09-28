@@ -64,9 +64,10 @@ serve(async (req) => {
     const body: PushRequest = await req.json();
     const { token, titulo, cuerpo, data } = body;
 
+    // Sin el token (es una credencial) y sin el título/cuerpo: el título de un
+    // push de alerta puede llevar el nombre del adulto mayor o el texto de un
+    // SOS, y los logs de una Edge Function son consultables desde el panel.
     console.log("=== PUSH REQUEST ===");
-    console.log("Token:", token?.substring(0, 20) + "...");
-    console.log("Titulo:", titulo);
     console.log("Canal:", canalDe(data));
 
     if (!token || !titulo || !cuerpo) {

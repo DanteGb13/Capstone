@@ -170,15 +170,18 @@ export class SOSService {
       return resultado;
     }
 
-    console.log('SOS: Cuidadores:', JSON.stringify(cuidadores.map(c => ({ id: c.id, nombre: c.nombre, telefono: c.telefono }))));
+    // Sólo cuántos cuidadores hay: sus nombres y teléfonos son datos de
+    // terceros y no hacen falta para que la alerta funcione.
+    console.log(`SOS: cuidadores notificados: ${cuidadores?.length ?? 0}`);
 
     let ubicacion = null;
     let nombreAdulto = 'Desconocido';
     try { ubicacion = await this.obtenerUbicacionActual(); } catch (e) { console.warn('SOS: Error ubicación:', e); }
     try { nombreAdulto = await this.obtenerNombreAdulto(); } catch (e) { console.warn('SOS: Error nombre:', e); }
 
-    console.log('SOS: Ubicación:', JSON.stringify(ubicacion));
-    console.log('SOS: Nombre:', nombreAdulto);
+    // Ni coordenadas ni nombre: son la ubicación exacta y el nombre de un
+    // adulto mayor, en texto plano en el log del sistema.
+    console.log(`SOS: ubicación obtenida: ${!!ubicacion ? 'sí' : 'no'}`);
 
     // La dirección NO va en el texto: al tocar el aviso se abre Google Maps
     // con las coordenadas que viajan en `data`.

@@ -191,10 +191,10 @@ export class AdultoCargoPage implements OnInit {
       const idCuidador = item.id_cuidador;
       const idUsuario = item.adulto_mayor?.id || item.id_usuario;
 
-      console.log('Intentando desvincular:', { idCuidador, idUsuario, item });
-
+      // Sin volcar `item`: trae el perfil del adulto mayor (nombre, RUT,
+      // teléfono, correo), que es dato personal de un tercero.
       if (!idCuidador || !idUsuario) {
-        console.error('Faltan datos para desvincular', { idCuidador, idUsuario });
+        console.error('Faltan datos para desvincular: idCuidador o idUsuario vacío');
         const alert = await this.alertController.create({
           header: 'Error',
           message: 'No se pudieron obtener los datos para desvincular.',

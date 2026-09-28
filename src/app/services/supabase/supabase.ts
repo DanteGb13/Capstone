@@ -125,6 +125,18 @@ export class SupabaseService {
     }
   }
 
+  /**
+   * Pasa la sesión al plugin nativo para que el servicio en segundo plano
+   * (evaluación de zonas) pueda validar el JWT con la app cerrada.
+   *
+   * NADA de lo de aquí se loguea, ni siquiera un "ok". En compilación de
+   * depuración, el puente de Capacitor escribe los `methodData` de cada llamada
+   * nativa en `logcat`, así que un solo `console.log` de esta llamada basta para
+   * volcar el access token, el refresh token y el id de usuario en texto plano:
+   * con eso, cualquiera con `adb logcat` sobre un dispositivo con depuración USB
+   * puede suplantar la cuenta. El token llega igual al plugin (hace falta para
+   * el servicio en segundo plano); lo que no debe es quedar registrado.
+   */
   private guardarSesionNativa(sesion: Session | null): void {
     if (!Capacitor.isNativePlatform()) return;
 
@@ -164,7 +176,9 @@ export class SupabaseService {
       const nativaVigente = (nativa.expiresAt || 0) > Date.now() + 60_000;
 
       if (nativa.refreshToken && nativaVigente && (nativaEsMasReciente || !local)) {
-        // El servicio refrescó el token con la app cerrada: lo adoptamos aquí
+        // El servicio refrescó el token con la app cerrada: lo adoptamos aquí.
+        // Sin log: son credenciales, y el puente de Capacitor vuelca los
+        // `methodData` de esta llamada en `logcat` al compilar en depuración.
         await this.supabase.auth.setSession({
           access_token: nativa.accessToken,
           refresh_token: nativa.refreshToken

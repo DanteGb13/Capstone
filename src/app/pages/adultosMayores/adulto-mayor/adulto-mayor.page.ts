@@ -1017,7 +1017,13 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
     try {
       const resultado = await this.sosService.ejecutarSOS();
-      console.log('SOS resultado:', JSON.stringify(resultado));
+      // Sólo los tres sí/no. El objeto completo puede traer la sesión SOS y
+      // otros identificadores que no necesitan quedar en el log.
+      console.log(
+        `SOS enviado — push: ${resultado.pushEnviado ? 'sí' : 'no'}, ` +
+        `llamada: ${resultado.llamadaIniciada ? 'sí' : 'no'}, ` +
+        `sms: ${resultado.smsEnviado ? 'sí' : 'no'}`
+      );
     } catch (e: any) {
       console.error('SOS error:', e);
     }

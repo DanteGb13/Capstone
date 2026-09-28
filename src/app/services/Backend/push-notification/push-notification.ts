@@ -176,7 +176,9 @@ export class PushNotificationService {
 
     PushNotifications.addListener('registration', (token: Token) => {
       this.tokenFCM = token.value;
-      console.log('Token FCM:', token.value);
+      // El token FCM NO se loguea: es una credencial. Con él cualquiera puede
+      // mandar notificaciones a este teléfono. `adb logcat` lo muestra entero.
+      console.log('Token FCM recibido (no se muestra por seguridad)');
       // Pasa por asegurarTokenRegistrado (y no guardarToken directo) para que
       // reintente si la fila no queda: así el teléfono se repara solo.
       void this.asegurarTokenRegistrado(token.value);

@@ -73,7 +73,9 @@ export class AppComponent {
         if (evento === 'SIGNED_OUT' || !sesion) {
           console.log('[App] sesión cerrada: se limpian los datos de la cuenta anterior');
           this.perfilCache.limpiar();
-          void this.realtimeService.cerrar();
+          // Sin reabrir: al cambiar de cuenta no hay que volver a suscribir a
+          // la anterior cuando la app vuelva al primer plano.
+          void this.realtimeService.cerrarSinReabrir();
           return;
         }
 
