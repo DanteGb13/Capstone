@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 
 import {
   CuidadoresService
@@ -40,6 +40,7 @@ import * as icons from 'ionicons/icons';
 import * as QRCode from 'qrcode';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { Gps } from '../../../services/Backend/gps/gps';
+import { DesplazamientoTracker } from '../../../services/Backend/desplazamiento-tracker/desplazamiento-tracker';
 import { ZonaSeguraService } from '../../../services/Backend/zona-segura/zona-segura';
 import { AlarmasService, AlarmaRecordatorio } from '../../../services/alarmas/alarmas';
 import { SOSService, ResultadoSOS } from '../../../services/Backend/sos/sos';
@@ -241,6 +242,15 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   mensaje: string = '';
 
   mensajeError: string = '';
+
+
+  // =====================================================
+  // DESPLAZAMIENTOS (HISTORIAL)
+  // =====================================================
+
+  private trackerDesplazamiento = inject(DesplazamientoTracker);
+
+  private desplazamientoRevisado = false;
 
 
   // =====================================================
@@ -627,8 +637,19 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       }
     }
     if (this.idUsuarioActual) {
+      if (!this.desplazamientoRevisado) {
+        this.desplazamientoRevisado = true;
+        this.trackerDesplazamiento.revisarArranque(this.idUsuarioActual);
+      }
+
       try {
         const info = await this.gpsService.reportarUbicacionAdulto(this.idUsuarioActual);
+        this.trackerDesplazamiento.procesar(
+          this.idUsuarioActual,
+          info.latitud,
+          info.longitud,
+          info.precision
+        );
         this.verificarZonaSegura(info.latitud, info.longitud);
       } catch (e) {
         // ignore

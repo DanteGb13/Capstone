@@ -246,8 +246,13 @@ export class CuidadoPage implements OnInit {
     }
   }
 
-  verHistorial() {
-    this.router.navigate(['/historial']);
+  verHistorial(item?: any) {
+    const id = item?.adulto_mayor?.id || item?.id_usuario || item?.id;
+    if (id) {
+      this.router.navigate(['/historial'], { queryParams: { id } });
+    } else {
+      this.router.navigate(['/historial']);
+    }
   }
 
   async volver() {

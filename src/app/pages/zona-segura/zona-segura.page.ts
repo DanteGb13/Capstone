@@ -35,6 +35,7 @@ import {
   ViajeActivo
 } from '../../services/Backend/zona-segura/zona-segura';
 import { Gps, UbicacionInfo } from '../../services/Backend/gps/gps';
+import { DesplazamientoTracker } from '../../services/Backend/desplazamiento-tracker/desplazamiento-tracker';
 import { Vinculacion } from '../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../services/Backend/cuidadores/cuidadores';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
@@ -199,6 +200,8 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   private resolviendoDirecciones: boolean = false;
 
   private presenciaService = inject(PresenciaService);
+
+  private trackerDesplazamiento = inject(DesplazamientoTracker);
 
   private actionSheetCtrl = inject(ActionSheetController);
 
@@ -660,6 +663,15 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
       second: '2-digit'
     });
     this.precisionTexto = `${Math.round(coords.accuracy || 0)} m`;
+
+    if (!this.esCuidador && this.idAdulto) {
+      this.trackerDesplazamiento.procesar(
+        this.idAdulto,
+        coords.latitude,
+        coords.longitude,
+        coords.accuracy
+      );
+    }
 
     this.pintarPersona();
     this.evaluarPosicion(true);

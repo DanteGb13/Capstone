@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
-import { Osrm, PuntoRuta } from '../osrm/osrm';
+import { PuntoRuta } from '../osrm/osrm';
+import { haversineMetros } from '../../geo/geo';
 
 export interface PuntoDesplazamiento {
   latitud: number;
@@ -27,12 +28,9 @@ export interface Desplazamiento {
 })
 export class HistorialDesplazamiento {
 
-  private supabase = this.supabaseService.getClient();
+  private supabaseService = inject(SupabaseService);
 
-  constructor(
-    private supabaseService: SupabaseService,
-    private osrmService: Osrm
-  ) { }
+  private supabase = this.supabaseService.getClient();
 
 
   // =====================================================
@@ -80,14 +78,23 @@ export class HistorialDesplazamiento {
   // AGREGAR UN PUNTO AL DESPLAZAMIENTO ACTIVO
   // =====================================================
 
-  async agregarPunto(idDesplazamiento: string, punto: PuntoRuta, precision?: number): Promise<boolean> {
+  async agregarPunto(
+    idDesplazamiento: string,
+    punto: PuntoRuta,
+    precision?: number,
+    orden?: number
+  ): Promise<boolean> {
     try {
-      const { count } = await this.supabase
-        .from('historial_punto')
-        .select('id', { count: 'exact', head: true })
-        .eq('id_desplazamiento', idDesplazamiento);
+      let numeroOrden = orden;
 
-      const orden = (count || 0) + 1;
+      if (numeroOrden == null) {
+        const { count } = await this.supabase
+          .from('historial_punto')
+          .select('id', { count: 'exact', head: true })
+          .eq('id_desplazamiento', idDesplazamiento);
+
+        numeroOrden = (count || 0) + 1;
+      }
 
       const { error } = await this.supabase
         .from('historial_punto')
@@ -97,7 +104,7 @@ export class HistorialDesplazamiento {
           longitud: punto.longitud,
           fecha: new Date().toISOString(),
           precision_metros: precision || null,
-          orden
+          orden: numeroOrden
         });
 
       if (error) {
@@ -114,46 +121,39 @@ export class HistorialDesplazamiento {
 
 
   // =====================================================
-  // FINALIZAR DESPLAZAMIENTO (calcular ruta con OSRM)
+  // FINALIZAR DESPLAZAMIENTO
   // =====================================================
 
   async finalizarDesplazamiento(idDesplazamiento: string): Promise<Desplazamiento | null> {
     try {
-      const puntos = await this.obtenerPuntos(idDesplazamiento);
+      const fila = await this.obtenerDesplazamiento(idDesplazamiento);
 
-      if (puntos.length < 2) {
-        await this.supabase
-          .from('historial_desplazamiento')
-          .update({
-            fecha_fin: new Date().toISOString(),
-            activo: false
-          })
-          .eq('id', idDesplazamiento);
+      if (!fila) return null;
 
-        return await this.obtenerDesplazamiento(idDesplazamiento);
-      }
+      const puntos = fila.puntos || [];
+      const fin = Date.now();
+      const inicio = Date.parse(fila.fecha_inicio);
 
-      const rutaPuntos: PuntoRuta[] = puntos.map(p => ({
-        latitud: p.latitud,
-        longitud: p.longitud
-      }));
-
-      const rutaCalculada = await this.osrmService.reconstruirRuta(rutaPuntos);
-
-      const updateData: any = {
-        fecha_fin: new Date().toISOString(),
+      const datos: any = {
+        fecha_fin: new Date(fin).toISOString(),
         activo: false
       };
 
-      if (rutaCalculada) {
-        updateData.distancia_metros = rutaCalculada.distanciaMetros;
-        updateData.duracion_segundos = rutaCalculada.duracionSegundos;
-        updateData.ruta_geojson = rutaCalculada.geometria;
+      if (Number.isFinite(inicio)) {
+        datos.duracion_segundos = Math.max(Math.round((fin - inicio) / 1000), 0);
+      }
+
+      if (puntos.length >= 2) {
+        datos.distancia_metros = this.distanciaRecorrida(puntos);
+        datos.ruta_geojson = {
+          type: 'LineString',
+          coordinates: puntos.map((p) => [p.longitud, p.latitud])
+        };
       }
 
       await this.supabase
         .from('historial_desplazamiento')
-        .update(updateData)
+        .update(datos)
         .eq('id', idDesplazamiento);
 
       return await this.obtenerDesplazamiento(idDesplazamiento);
@@ -161,6 +161,35 @@ export class HistorialDesplazamiento {
       console.error('Error finalizando desplazamiento:', error);
       return null;
     }
+  }
+
+
+  private distanciaRecorrida(puntos: PuntoDesplazamiento[]): number {
+    let total = 0;
+
+    for (let i = 1; i < puntos.length; i++) {
+      const anterior = puntos[i - 1];
+      const actual = puntos[i];
+
+      const tsAnterior = Date.parse(anterior.fecha);
+      const tsActual = Date.parse(actual.fecha);
+
+      const huecoSegundos =
+        Number.isFinite(tsAnterior) && Number.isFinite(tsActual)
+          ? Math.max((tsActual - tsAnterior) / 1000, 1)
+          : 1;
+
+      const tramo = haversineMetros(
+        anterior.latitud,
+        anterior.longitud,
+        actual.latitud,
+        actual.longitud
+      );
+
+      total += Math.min(tramo, 30 * huecoSegundos);
+    }
+
+    return Math.round(total);
   }
 
 

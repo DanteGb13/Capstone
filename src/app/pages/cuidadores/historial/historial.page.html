@@ -1,270 +1,230 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/cuidador" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Historial</ion-title>
+  </ion-toolbar>
+</ion-header>
+
 <ion-content [fullscreen]="true">
 
-  <div class="historial-page">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content
+      pullingText="Desliza para actualizar"
+      refreshingText="Actualizando...">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page-container">
 
     <!-- =========================
-         ENCABEZADO
+         CARGANDO
     ========================== -->
 
-    <div class="header">
-
-      <ion-button fill="clear" class="back-button">
-        <ion-icon name="arrow-back-outline"></ion-icon>
-      </ion-button>
-
-      <h1>Historial</h1>
-
-    </div>
-
-
-    <!-- =========================
-         ADULTO MAYOR
-    ========================== -->
-
-    <div class="adulto-header">
-
-      <p>Adulto mayor</p>
-
-      <h2>María González</h2>
-
-    </div>
+    @if (cargando) {
+      <div class="loading-box">
+        <ion-icon name="sync-outline" class="spin-icon"></ion-icon>
+        <p>Cargando historial...</p>
+      </div>
+    }
 
 
     <!-- =========================
-         BUSCADOR
+         SIN PERSONAS VINCULADAS
     ========================== -->
 
-    <div class="search-container">
-
-      <ion-icon name="search-outline"></ion-icon>
-
-      <input
-        type="text"
-        placeholder="Buscar en historial"
-      >
-
-    </div>
-
-
-    <!-- =========================
-         FILTROS
-    ========================== -->
-
-    <div class="filter-section">
-
-      <p>FILTRAR POR</p>
-
-      <div class="filters">
-
-        <button class="filter active">
-          Todos
-        </button>
-
-        <button class="filter">
-          SOS
-        </button>
-
-        <button class="filter">
-          Alertas
-        </button>
-
-        <button class="filter">
-          Llamadas
-        </button>
-
-        <button class="filter">
-          Confirmaciones
-        </button>
-
-        <button class="filter">
-          Ubicación
-        </button>
-
+    @if (!cargando && adultosACargo.length === 0) {
+      <div class="empty-card">
+        <div class="empty-icon">
+          <ion-icon name="people-outline"></ion-icon>
+        </div>
+        <h3>Sin personas vinculadas</h3>
+        <p>Vincula un adulto mayor desde el menú principal para ver su historial.</p>
       </div>
+    }
 
-    </div>
 
+    @if (!cargando && adultosACargo.length > 0) {
 
-    <!-- =========================
-         HISTORIAL
-    ========================== -->
+      <!-- =========================
+           SELECTOR DE ADULTO MAYOR
+      ========================== -->
 
-    <div class="history-section">
+      @if (adultosACargo.length > 1) {
+        <div class="selector">
+          <p class="selector-label">Cuidando a</p>
 
-      <h3>Hoy</h3>
+          <div class="selector-scroll">
+            @for (adulto of adultosACargo; track adulto.id) {
+              <button
+                type="button"
+                class="chip-adulto"
+                [class.activo]="esSeleccionado(adulto)"
+                (click)="seleccionarAdulto(adulto)">
+
+                <span class="chip-avatar">
+                  @if (adulto.adulto_mayor?.foto_url) {
+                    <img [src]="adulto.adulto_mayor.foto_url" alt="">
+                  } @else {
+                    <span class="chip-iniciales">{{ iniciales(adulto) }}</span>
+                  }
+                </span>
+
+                <span class="chip-nombre">
+                  {{ adulto.adulto_mayor?.nombre }} {{ adulto.adulto_mayor?.apellidopa }}
+                </span>
+
+              </button>
+            }
+          </div>
+        </div>
+      }
 
 
       <!-- =========================
-           SOS
+           ADULTO MAYOR SELECCIONADO
       ========================== -->
 
-      <div class="history-item">
-
-        <div class="history-icon sos">
-
-          <ion-icon
-            name="alert-circle-outline">
-          </ion-icon>
-
-        </div>
-
-        <div class="history-info">
-
-          <h4>SOS activado</h4>
-
-          <p>María González</p>
-
-          <span>14:32</span>
-
-        </div>
-
-        <ion-icon
-          name="chevron-forward-outline"
-          class="arrow">
-        </ion-icon>
-
+      <div class="adulto-header">
+        <p>Adulto mayor</p>
+        <h2>{{ nombreSeleccionado() }}</h2>
       </div>
 
 
       <!-- =========================
-           LLAMADA
+           BUSCADOR
       ========================== -->
 
-      <div class="history-item">
+      <div class="search-container">
+        <ion-icon name="search-outline"></ion-icon>
 
-        <div class="history-icon call">
+        <input
+          type="text"
+          placeholder="Buscar en historial"
+          [(ngModel)]="busqueda"
+        >
 
-          <ion-icon
-            name="call-outline">
-          </ion-icon>
-
-        </div>
-
-        <div class="history-info">
-
-          <h4>Llamada realizada</h4>
-
-          <p>María González</p>
-
-          <span>13:15</span>
-
-        </div>
-
-        <ion-icon
-          name="chevron-forward-outline"
-          class="arrow">
-        </ion-icon>
-
+        @if (busqueda) {
+          <button
+            type="button"
+            class="btn-limpiar"
+            (click)="limpiarBusqueda()"
+            aria-label="Limpiar búsqueda">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        }
       </div>
 
 
       <!-- =========================
-           CONFIRMACIÓN
+           FILTROS
       ========================== -->
 
-      <div class="history-item">
+      <div class="filter-section">
+        <p>FILTRAR POR</p>
 
-        <div class="history-icon confirmation">
-
-          <ion-icon
-            name="checkmark-circle-outline">
-          </ion-icon>
-
+        <div class="filters">
+          @for (filtro of filtros; track filtro.id) {
+            <button
+              type="button"
+              class="filter"
+              [class.active]="filtroActivo === filtro.id"
+              (click)="filtroActivo = filtro.id">
+              {{ filtro.etiqueta }}
+            </button>
+          }
         </div>
-
-        <div class="history-info">
-
-          <h4>Estado confirmado</h4>
-
-          <p>"Estoy bien"</p>
-
-          <span>10:05</span>
-
-        </div>
-
-        <ion-icon
-          name="chevron-forward-outline"
-          class="arrow">
-        </ion-icon>
-
       </div>
 
 
       <!-- =========================
-           UBICACIÓN
+           LÍNEA DE TIEMPO
       ========================== -->
 
-      <div
-        class="history-item"
-        (click)="verUbicacion()">
+      @if (cargandoEventos) {
 
-        <div class="history-icon location">
+        <div class="loading-box">
+          <ion-icon name="sync-outline" class="spin-icon"></ion-icon>
+          <p>Cargando eventos...</p>
+        </div>
 
-          <ion-icon
-            name="location-outline">
-          </ion-icon>
+      } @else if (eventosFiltrados.length === 0) {
+
+        <div class="empty-card">
+          <div class="empty-icon">
+            <ion-icon name="time-outline"></ion-icon>
+          </div>
+
+          @if (eventos.length === 0) {
+            <h3>Sin eventos todavía</h3>
+            <p>Los SOS, desplazamientos y alertas de {{ nombreSeleccionado() }} aparecerán aquí.</p>
+          } @else {
+            <h3>Sin resultados</h3>
+            <p>No hay eventos que coincidan con tu búsqueda o filtro.</p>
+            <button
+              type="button"
+              class="btn-reset"
+              (click)="filtroActivo = 'todos'; limpiarBusqueda()">
+              Quitar filtros
+            </button>
+          }
+        </div>
+
+      } @else {
+
+        <div class="timeline">
+
+          @for (grupo of grupos; track grupo.etiqueta) {
+
+            <div class="dia">
+              <h3>{{ grupo.etiqueta }}</h3>
+
+              <div class="timeline-lista">
+
+                @for (evento of grupo.eventos; track evento.id) {
+                  <button
+                    type="button"
+                    [class]="'evento tipo-' + evento.tipo"
+                    (click)="abrirEvento(evento)">
+
+                    <span class="punto-col">
+                      <span class="punto"></span>
+                    </span>
+
+                    <span class="evento-card">
+                      <span class="evento-icono">
+                        <ion-icon [name]="iconoDe(evento.tipo)"></ion-icon>
+                      </span>
+
+                      <span class="evento-texto">
+                        <strong>{{ evento.titulo }}</strong>
+                        @if (evento.detalle) {
+                          <small>{{ evento.detalle }}</small>
+                        }
+                      </span>
+
+                      <span class="evento-hora">{{ hora(evento.fecha) }}</span>
+
+                      <ion-icon
+                        name="chevron-forward-outline"
+                        class="arrow">
+                      </ion-icon>
+                    </span>
+
+                  </button>
+                }
+
+              </div>
+            </div>
+
+          }
 
         </div>
 
-        <div class="history-info">
+      }
 
-          <h4>Ubicación registrada</h4>
-
-          <p>María González</p>
-
-          <span>12:48</span>
-
-        </div>
-
-        <ion-icon
-          name="chevron-forward-outline"
-          class="arrow">
-        </ion-icon>
-
-      </div>
-
-
-      <!-- =========================
-           DÍA ANTERIOR
-      ========================== -->
-
-      <h3 class="previous-day">
-        Ayer
-      </h3>
-
-
-      <!-- =========================
-           ALERTA
-      ========================== -->
-
-      <div class="history-item">
-
-        <div class="history-icon alert">
-
-          <ion-icon
-            name="notifications-outline">
-          </ion-icon>
-
-        </div>
-
-        <div class="history-info">
-
-          <h4>Alerta preventiva</h4>
-
-          <p>Sin confirmación</p>
-
-          <span>19:42</span>
-
-        </div>
-
-        <ion-icon
-          name="chevron-forward-outline"
-          class="arrow">
-        </ion-icon>
-
-      </div>
-
-    </div>
+    }
 
   </div>
 

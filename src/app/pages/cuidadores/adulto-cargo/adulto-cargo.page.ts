@@ -237,7 +237,12 @@ export class AdultoCargoPage implements OnInit {
   }
 
   verHistorial(adulto: any) {
-    this.router.navigate(['/historial']);
+    const id = adulto?.adulto_mayor?.id || adulto?.id_usuario || adulto?.id;
+    if (id) {
+      this.router.navigate(['/historial'], { queryParams: { id } });
+    } else {
+      this.router.navigate(['/historial']);
+    }
   }
 
   llamarAdulto(telefono?: string) {
