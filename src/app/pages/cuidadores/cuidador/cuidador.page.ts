@@ -454,6 +454,19 @@ export class CuidadorPage implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * El panel resolve solo a quién mostrar cuando no se le pasa un id: entra por
+   * el menú, sin tarjeta de adulto encima, así que usa el primer vinculado.
+   */
+  verPanelActividad(adulto?: any) {
+    const id = adulto?.adulto_mayor?.id || adulto?.id_usuario || adulto?.id;
+    if (id) {
+      this.router.navigate(['/panel-actividad'], { queryParams: { id } });
+    } else {
+      this.router.navigate(['/panel-actividad']);
+    }
+  }
+
   llamarAdulto(telefono?: string) {
     if (telefono) {
       window.open(`tel:${telefono}`, '_system');

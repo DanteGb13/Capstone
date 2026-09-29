@@ -1,0 +1,846 @@
+:host {
+    --pa-fondo: #f4f8fb;
+    --pa-azul: #0277bd;
+    --pa-azul-claro: #4db6e0;
+    --pa-verde: #43a047;
+    --pa-gris: #b0bec5;
+    --pa-rojo: #e53935;
+    --pa-texto: #16232e;
+    --pa-tenue: #6b7f8d;
+    --pa-linea: #dde7ee;
+}
+
+ion-content {
+    --background: var(--pa-fondo);
+}
+
+.pa-container {
+    padding: 18px 16px 90px;
+}
+
+
+// =====================================================
+// FILTROS
+// =====================================================
+
+.pa-filtros {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.pa-select {
+    --padding-start: 0;
+    font-size: 15px;
+}
+
+.pa-solo-adulto {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 14px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid var(--pa-linea);
+
+    .pa-solo-label {
+        font-size: 12px;
+        color: var(--pa-tenue);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    strong {
+        font-size: 17px;
+        color: var(--pa-texto);
+    }
+}
+
+// El periodo ya no se elige, asi que no es un boton: es un aviso de que se
+// esta mirando una ventana fija.
+.pa-periodo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pa-azul);
+    background: #e8f4fb;
+    border-radius: 10px;
+    align-self: flex-start;
+
+    ion-icon {
+        font-size: 15px;
+    }
+}
+
+
+// =====================================================
+// ESTADOS
+// =====================================================
+
+.pa-cargando,
+.pa-vacio {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 20px;
+    color: var(--pa-tenue);
+    text-align: center;
+
+    ion-icon {
+        font-size: 40px;
+    }
+
+    p {
+        margin: 0;
+        font-size: 15px;
+    }
+}
+
+.pa-nota {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    background: #fff8e1;
+    border-left: 4px solid #ffb300;
+    border-radius: 8px;
+
+    ion-icon {
+        flex-shrink: 0;
+        font-size: 18px;
+        color: #e08a00;
+    }
+
+    p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.45;
+        color: #6b4c00;
+    }
+}
+
+
+// =====================================================
+// TARJETAS
+// =====================================================
+
+.pa-card {
+    padding: 16px;
+    margin-bottom: 16px;
+    background: #fff;
+    border-radius: 16px;
+    border: 1px solid var(--pa-linea);
+}
+
+.pa-card-head {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 10px;
+
+    // Fila del titulo cuando lleva algo a la derecha, como el boton de
+    // agrandar el mapa. El subtitulo se queda debajo, en la columna de siempre.
+    .pa-card-titular {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    h2 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 800;
+        color: var(--pa-texto);
+    }
+
+    .pa-card-sub {
+        font-size: 12px;
+        color: var(--pa-tenue);
+    }
+}
+
+.pa-sin-datos {
+    margin: 0;
+    font-size: 14px;
+    color: var(--pa-tenue);
+    text-align: center;
+    padding: 18px 0;
+}
+
+.pa-pie {
+    margin: 14px 0 0;
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--pa-tenue);
+}
+
+
+// =====================================================
+// LISTAS: UNA FILA POR DATO
+// =====================================================
+
+.pa-lista {
+    display: flex;
+    flex-direction: column;
+}
+
+.pa-fila {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--pa-linea);
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    // Un trayecto sin cerrar se marca, para que no se lea como dato final.
+    &.abierto .pa-fila-cifra {
+        color: #b07d00;
+    }
+}
+
+.pa-fila-principal {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 3px;
+}
+
+.pa-fila-titulo {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--pa-texto);
+
+    ion-icon {
+        font-size: 15px;
+        color: var(--pa-azul);
+    }
+}
+
+.pa-fila-cifra {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--pa-azul);
+    white-space: nowrap;
+
+    &[data-tipo='sos'] {
+        color: var(--pa-rojo);
+    }
+}
+
+.pa-fila-detalle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--pa-tenue);
+}
+
+
+// =====================================================
+// BARRA DE LUGARES
+// =====================================================
+
+.pa-barra-fondo {
+    height: 8px;
+    margin-top: 7px;
+    background: var(--pa-fondo);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.pa-barra {
+    height: 100%;
+    background: linear-gradient(90deg, var(--pa-azul), var(--pa-azul-claro));
+    border-radius: 4px;
+}
+
+
+// =====================================================
+// ALERTAS
+// =====================================================
+
+.pa-fila[data-tipo='sos'] {
+    border-left: 3px solid var(--pa-rojo);
+    padding-left: 10px;
+
+    .pa-fila-titulo ion-icon {
+        color: var(--pa-rojo);
+    }
+}
+
+.pa-fila[data-tipo='zona'] {
+    border-left: 3px solid var(--pa-azul);
+    padding-left: 10px;
+}
+
+.pa-fila[data-tipo='salud'] {
+    border-left: 3px solid var(--pa-verde);
+    padding-left: 10px;
+}
+
+// Salidas, vueltas y salidas de la zona. No son alertas, asi que van en un color
+// que no parezca una alarma: la misma familia del azul de la zona, que es lo que
+// significan. La salida de la zona segura sí es lo más parecido a una alerta
+// de estas, asi que conserva el rojo.
+.pa-fila[data-tipo='casaSalida'],
+.pa-fila[data-tipo='casaEntrada'] {
+    border-left: 3px solid var(--pa-azul);
+    padding-left: 10px;
+}
+
+.pa-fila[data-tipo='zonaSalida'] {
+    border-left: 3px solid var(--pa-rojo);
+    padding-left: 10px;
+
+    .pa-fila-titulo ion-icon {
+        color: var(--pa-rojo);
+    }
+}
+
+// La fila de "Estoy en casa" no lleva un número grande sino una frase, porque
+// mezcla dos cosas: cuántas veces volvió y dónde estaba al final.
+.pa-fila-dato {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--pa-azul);
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.pa-fila.resuelta {
+    opacity: 0.6;
+}
+
+
+// =====================================================
+// FICHA
+// =====================================================
+
+.pa-ficha {
+    padding: 6px 16px;
+}
+
+.pa-ficha-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--pa-linea);
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    span {
+        font-size: 13px;
+        color: var(--pa-tenue);
+    }
+
+    strong {
+        font-size: 14px;
+        color: var(--pa-texto);
+    }
+
+    &.alerta strong {
+        color: var(--pa-rojo);
+    }
+}
+
+
+// =====================================================
+// CUADRILLA DE DATOS POR TRAYECTO
+// =====================================================
+
+.pa-datos {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px 10px;
+    margin-top: 9px;
+    padding: 10px;
+    background: var(--pa-fondo);
+    border-radius: 10px;
+}
+
+.pa-dato {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+
+    .pa-dato-valor {
+        font-size: 13.5px;
+        font-weight: 700;
+        color: var(--pa-texto);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .pa-dato-label {
+        font-size: 10.5px;
+        color: var(--pa-tenue);
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+}
+
+.pa-insignia {
+    display: inline-block;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-weight: 700;
+    font-style: normal;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: #b07d00;
+    background: #fff8e1;
+    border-radius: 5px;
+}
+
+.pa-aviso {
+    color: #b07d00;
+    font-weight: 600;
+}
+
+
+// =====================================================
+// GRÁFICO POR DÍA
+// =====================================================
+
+.pa-grafico {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 140px;
+    margin-top: 6px;
+    padding-bottom: 24px;
+    position: relative;
+}
+
+.pa-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    min-width: 0;
+
+    // Dia sin registro: se marca para que se lea como ausencia de dato y no
+    // como un dia tranquilo.
+    &.vacio {
+        background: repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 3px,
+            var(--pa-linea) 3px,
+            var(--pa-linea) 4px
+        );
+        border-bottom: 1px dashed var(--pa-linea);
+    }
+}
+
+// El valor de cada segmento va arriba de su propio segmento, con el color del
+// segmento. Se le reserva el alto con `flex: 0 0 auto`: si no, una barra al
+// 100% empuja las etiquetas fuera de la tarjeta.
+.pa-valores {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    line-height: 1.15;
+    margin-bottom: 3px;
+
+    // Dia sin registro: se deja el hueco, no se escribe un cero que parece medido.
+    &.oculto {
+        visibility: hidden;
+    }
+
+    .v-mov,
+    .v-qui {
+        font-size: 9px;
+        font-weight: 700;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .v-mov {
+        color: var(--pa-verde);
+    }
+
+    .v-qui {
+        color: var(--pa-tenue);
+    }
+}
+
+.pa-pila {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.pa-seg {
+    width: 100%;
+    min-height: 0;
+
+    &.mov {
+        background: var(--pa-verde);
+        border-radius: 0 0 3px 3px;
+    }
+
+    &.quieto {
+        background: var(--pa-gris);
+        border-radius: 3px 3px 0 0;
+    }
+}
+
+.pa-eje {
+    position: absolute;
+    bottom: 0;
+    font-size: 9px;
+    color: var(--pa-tenue);
+    transform: translateY(20px);
+}
+
+// Centrada, y no pegada a la izquierda: la tarjeta tiene ~160 px de aire a la
+// derecha de la leyenda y se leia como si faltara algo. El flex-wrap mantiene
+// el centrado cuando las dos entradas no caben en una linea.
+.pa-leyenda {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 14px;
+    margin-top: 12px;
+}
+
+.pa-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--pa-tenue);
+
+    .punto {
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        display: inline-block;
+
+        &.mov {
+            background: var(--pa-verde);
+        }
+
+        &.quieto {
+            background: var(--pa-gris);
+        }
+
+        &.ruta {
+            background: var(--pa-azul);
+        }
+
+        &.resto {
+            background: #90a4ae;
+        }
+    }
+}
+
+
+// =====================================================
+// DÍAS CON REGISTRO
+// =====================================================
+
+// Va arriba de todo porque es el dato que decide si lo de abajo significa
+// algo. Si solo hay 2 dias de 7, los promedios describen 2 dias, no la semana.
+.pa-registro {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    background: linear-gradient(100deg, #0277bd, #4db6e0);
+    border-radius: 16px;
+    color: #fff;
+    box-shadow: 0 3px 10px rgba(2, 119, 189, 0.22);
+
+    // Sin un solo dia de registro no hay nada que promediar: se apaga el color
+    // para que no parezca un panel con datos.
+    &.vacio {
+        background: var(--pa-gris);
+        box-shadow: none;
+    }
+}
+
+.pa-registro-cifra {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    flex-shrink: 0;
+
+    .pa-registro-valor {
+        font-size: 30px;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .pa-registro-de {
+        font-size: 14px;
+        font-weight: 600;
+        opacity: 0.9;
+    }
+}
+
+.pa-registro-texto {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+
+    strong {
+        font-size: 14px;
+        font-weight: 800;
+    }
+
+    span {
+        font-size: 12px;
+        line-height: 1.4;
+        opacity: 0.92;
+    }
+}
+
+
+// =====================================================
+// MAPA DE RUTAS
+// =====================================================
+
+.pa-mapa-caja {
+    margin-bottom: 12px;
+}
+
+.pa-mapa {
+    // Alto fijo a proposito: Leaflet necesita que el contenedor tenga medidas
+    // cuando se inicializa, y sin esto se dibuja en un recuadro de 0 px.
+    height: 240px;
+    width: 100%;
+    background: var(--pa-fondo);
+    border: 1px solid var(--pa-linea);
+    border-radius: 12px;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.pa-chip-boton {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    font-family: inherit;
+    color: #fff;
+    background: var(--pa-azul);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.pa-aviso-suelto {
+    margin: 0 0 10px;
+    padding: 9px 12px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: #6b4c00;
+    background: #fff8e1;
+    border-left: 3px solid #ffb300;
+    border-radius: 6px;
+}
+
+.pa-nota-menor {
+    margin-bottom: 12px;
+
+    p {
+        font-size: 12.5px;
+    }
+}
+
+
+// La fila del trayecto es un boton porque toca cambiar la ruta del mapa. Se le
+// quitan los estilos de boton para que se vea igual que las otras filas.
+.pa-fila-boton {
+    width: 100%;
+    font-family: inherit;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+
+    &:disabled {
+        cursor: default;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--pa-azul);
+        outline-offset: 3px;
+        border-radius: 6px;
+    }
+}
+
+// El trayecto resaltado en el mapa se marca tambien en la lista, para saber
+// cual de las lineas azules es la que se esta viendo.
+.pa-fila.resaltada {
+    background: #e8f4fb;
+    box-shadow: inset 3px 0 0 var(--pa-azul);
+    padding-left: 10px;
+    border-radius: 0 8px 8px 0;
+}
+
+
+// =====================================================
+// MAPA A PANTALLA COMPLETA
+// =====================================================
+
+// Se agranda el mismo mapa, no se crea otro: los datos ya estan en memoria y
+// los mosaicos ya cargaron. La transicion es corta a proposito, si se alarga se
+// siente como que la app se cuelga.
+.pa-mapa-caja.expandida {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+
+    .pa-mapa {
+        flex: 1;
+        height: auto;
+        min-height: 0;
+        border: none;
+        border-radius: 0;
+    }
+
+    .pa-leyenda {
+        position: absolute;
+        top: 56px;
+        left: 10px;
+        right: 10px;
+        margin: 0;
+        padding: 7px 10px;
+        background: rgba(255, 255, 255, 0.94);
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    }
+
+    .pa-mapa-picks {
+        flex-shrink: 0;
+    }
+}
+
+// La barra va flotando sobre el mapa: si el mapa ocupara menos alto, quedaria
+// un franja en blanco arriba.
+.pa-mapa-barra {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+}
+
+.pa-mapa-boton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    color: var(--pa-texto);
+    background: var(--pa-fondo);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+
+    ion-icon {
+        font-size: 19px;
+    }
+}
+
+.pa-mapa-titulo {
+    flex: 1;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--pa-texto);
+    text-align: center;
+}
+
+// Boton de agrandar, en la esquina del mapa chico.
+// Va en el encabezado de la tarjeta, a la derecha del titulo. Antes flotaba
+// sobre la esquina del mapa y tapaba una parte del recorrido, que es
+// justamente lo que se abre para mirar.
+.pa-mapa-agrandar {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    color: var(--pa-azul);
+    background: #fff;
+    border: 1px solid var(--pa-linea);
+    border-radius: 10px;
+    cursor: pointer;
+
+    ion-icon {
+        font-size: 19px;
+    }
+}
+
+// Los trayectos de la ventana, para cambiar de ruta sin cerrar el mapa.
+.pa-mapa-picks {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px 16px;
+    overflow-x: auto;
+    background: #fff;
+    border-top: 1px solid var(--pa-linea);
+}
+
+.pa-pick {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--pa-azul);
+    white-space: nowrap;
+    background: #e8f4fb;
+    border: 1.5px solid transparent;
+    border-radius: 999px;
+    cursor: pointer;
+
+    &.activo {
+        color: #fff;
+        background: var(--pa-azul);
+    }
+}

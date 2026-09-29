@@ -1,0 +1,535 @@
+<ion-header class="ion-no-border pa-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="volver()">
+        <ion-icon name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+
+    <ion-title>Panel de actividad</ion-title>
+
+    <ion-buttons slot="end">
+      <ion-button (click)="refrescar()">
+        <ion-icon name="refresh"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="pa-container">
+
+    <!-- Quién y sobre qué período -->
+    <div class="pa-filtros">
+      @if (adultos.length > 1) {
+        <ion-select
+          class="pa-select"
+          label="Adulto mayor"
+          labelPlacement="stacked"
+          [value]="idSeleccionado()"
+          (ionChange)="cambiarAdulto($event)">
+          @for (a of adultos; track a.id) {
+            <ion-select-option [value]="a.id">{{ a.nombre }}</ion-select-option>
+          }
+        </ion-select>
+      } @else if (adultos.length === 1) {
+        <div class="pa-solo-adulto">
+          <span class="pa-solo-label">Adulto mayor</span>
+          <strong>{{ adultos[0].nombre }}</strong>
+        </div>
+      }
+
+      <div class="pa-periodo">
+        <ion-icon name="calendar"></ion-icon>
+        <span>Últimos {{ rango }} días</span>
+      </div>
+    </div>
+
+    @if (error(); as mensaje) {
+      <div class="pa-vacio">
+        <ion-icon name="pulse"></ion-icon>
+        <p>{{ mensaje }}</p>
+        <ion-button fill="outline" size="small" (click)="cargar()">Reintentar</ion-button>
+      </div>
+    } @else if (cargando()) {
+      <div class="pa-cargando">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>Consultando la actividad...</p>
+      </div>
+    } @else if (panel(); as p) {
+
+      <!-- ============================================ -->
+      <!-- DÍAS CON REGISTRO: ARRIBA DEL TODO           -->
+      <!-- ============================================ -->
+
+      <!--
+        Va primero a propósito. Es el dato que decide si todo lo que hay debajo
+        significa algo: si solo se registró 2 de 7 días, los promedios y el
+        gráfico hablan de dos días, no de la semana.
+      -->
+      <div class="pa-registro" [class.vacio]="p.diasConDatos === 0">
+        <div class="pa-registro-cifra">
+          <span class="pa-registro-valor">{{ p.diasConDatos }}</span>
+          <span class="pa-registro-de">de {{ rango }}</span>
+        </div>
+        <div class="pa-registro-texto">
+          <strong>
+            @if (p.diasConDatos === 0 && p.fallos.length) {
+              No se pudo leer la actividad
+            } @else if (p.diasConDatos === 0) {
+              Sin ningún día con registro
+            } @else if (p.diasConDatos === rango) {
+              Días con registro: todos
+            } @else {
+              Días con registro
+            }
+          </strong>
+          <span>
+            @if (p.diasConDatos === 0 && p.fallos.length) {
+              No es que no haya movimiento: es que no se pudo preguntar.
+            } @else if (p.diasConDatos === 0) {
+              En estos {{ rango }} días el GPS no cerró ningún trayecto, así que
+              los números de abajo no describen nada.
+            } @else {
+              El GPS registró {{ p.diasConDatos }} de los {{ rango }} días. Las
+              cifras de abajo son de esos días, no de la semana entera.
+            }
+          </span>
+        </div>
+      </div>
+
+      <!--
+        Aquí ya no van las cuatro cifras grandes. La distancia total y el
+        promedio por día eran lo primero que se veía y ninguna de las dos
+        respuestas una pregunta: el total no dice si fue mucho o poco sin mirar
+        los días, y el promedio mezclaba días con registro con días sin él. Las
+        dos cosas se leen mejor en el gráfico, día por día.
+      -->
+
+      @if (p.sinPuntos && !p.fallos.length) {
+        <div class="pa-nota">
+          <ion-icon name="time"></ion-icon>
+          <p>
+            No hay puntos de GPS en este período. Las distancias vienen de los
+            trayectos cerrados, pero el tiempo detenido y los lugares no se
+            pueden calcular.
+          </p>
+        </div>
+      }
+
+      <!--
+        Orden de lectura, de arriba hacia abajo:
+
+        1. Cuántos días hay con registro. Sin eso, ningún promedio significa.
+        2. Gráfico por día: cuánto se movió y cuánto estuvo quieto cada día.
+        3. Alertas: cuántas hubo, más las salidas y las vueltas a casa, que es
+           lo que hay que mirar antes de bajar.
+        4. Lugares: dónde estuvo.
+        5. Trayectos uno por uno, con el mapa. Va al final porque es la sección
+           larga: primero se lee cómo va la semana, y después se baja al detalle
+           solo si hace falta.
+      -->
+
+      <!-- ============================================ -->
+      <!-- GRÁFICO POR DÍA                              -->
+      <!-- ============================================ -->
+
+      <div class="pa-card">
+        <div class="pa-card-head">
+          <h2>Por día</h2>
+          <span class="pa-card-sub">Minutos de desplazamiento y quieto</span>
+        </div>
+
+        <div class="pa-grafico" role="img"
+             aria-label="Trayectos por día: desplazamiento y tiempo quieto">
+          @for (d of diasGrafico(); track d.fecha) {
+            <div class="pa-col"
+                 [class.vacio]="!diaTieneGrafico(d)"
+                 [title]="d.etiqueta + ': ' + formatoDistancia(d.distanciaM) + ', quieto ' + quieto(d)">
+              <!--
+                El valor va sobre su propio segmento, con el color del
+                segmento: es la unica forma de que se sepa si el 1,2 km es el de
+                movimiento o el de quieto. Se reserva su alto arriba para que
+                una barra al 100% no los empuje fuera de la tarjeta.
+              -->
+              <div class="pa-valores" [class.oculto]="!diaTieneGrafico(d)">
+                <span class="v-mov">{{ distanciaCorta(d) }}</span>
+                <span class="v-qui">{{ quietoCorto(d) }}</span>
+              </div>
+              <div class="pa-pila">
+                <div class="pa-seg quieto" [style.height.%]="alturaSegmentoDia(d, 'quieto')"></div>
+                <div class="pa-seg mov" [style.height.%]="alturaSegmentoDia(d, 'movimiento')"></div>
+              </div>
+              <span class="pa-eje">{{ d.etiqueta }}</span>
+            </div>
+          }
+        </div>
+
+        <!--
+          El punto va antes del nombre porque es el color el que explica la
+          barra, y no al revés. "Quieto" y no "quietado": quietado no es una
+          palabra y el cuidador no entiende qué quiere decir. Es el tiempo que
+          estuvo parado dentro del trayecto, y lo dice el pie de la tarjeta.
+        -->
+        <div class="pa-leyenda">
+          <span class="pa-chip"><i class="punto mov"></i> Desplazamiento</span>
+          <span class="pa-chip"><i class="punto quieto"></i> Quieto</span>
+        </div>
+
+        <p class="pa-pie">
+          Las dos partes van en minutos para poder compararlas. La distancia se
+          convierte con una marcha de 4,5 km/h: es una escala de medida, no la
+          velocidad a la que camina. En cada barra, abajo va el desplazamiento y
+          arriba el tiempo quieto. Los días sin registro quedan vacíos, no en
+          cero.
+        </p>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- ALERTAS                                     -->
+      <!-- ============================================ -->
+
+      <div class="pa-card">
+        <div class="pa-card-head">
+          <h2>Alertas</h2>
+          <span class="pa-card-sub">Cantidad</span>
+        </div>
+
+        @if (!hayAlgoQueContar()) {
+          <p class="pa-sin-datos">Nada que contar en este período.</p>
+        } @else {
+          <div class="pa-lista">
+            @for (c of conteoAlertas(); track c.tipo) {
+              @if (c.cantidad > 0) {
+                <div class="pa-fila" [attr.data-tipo]="c.tipo">
+                  <div class="pa-fila-principal">
+                    <span class="pa-fila-titulo">
+                      <ion-icon [name]="c.icono"></ion-icon>
+                      {{ c.etiqueta }}
+                    </span>
+                    <span class="pa-fila-cifra" [attr.data-tipo]="c.tipo">{{ c.cantidad }}</span>
+                  </div>
+                </div>
+              }
+            }
+
+            <!--
+              Las tres filas siguientes no son alertas del sistema: no suenan ni
+              avisan a nadie. Salen igual en esta tarjeta porque es donde el
+              cuidador ya mira "cuántas veces pasó algo", y entrar, salir y
+              salirse de la zona son las tres cosas que más le importan del día.
+              Con cero se ocultan, igual que las alertas de arriba.
+            -->
+            @if (p.casa.salidas > 0) {
+              <div class="pa-fila" data-tipo="casaSalida">
+                <div class="pa-fila-principal">
+                  <span class="pa-fila-titulo">
+                    <ion-icon name="log-out"></ion-icon>
+                    Salió de casa
+                  </span>
+                  <span class="pa-fila-cifra" data-tipo="casaSalida">{{ p.casa.salidas }}</span>
+                </div>
+              </div>
+            }
+
+            @if (p.casa.evaluados > 0 || p.casa.ahoraDentro !== null) {
+              <div class="pa-fila" data-tipo="casaEntrada">
+                <div class="pa-fila-principal">
+                  <span class="pa-fila-titulo">
+                    <ion-icon name="log-in"></ion-icon>
+                    Estoy en casa
+                  </span>
+                  <span class="pa-fila-dato">{{ estoyEnCasa() }}</span>
+                </div>
+              </div>
+            }
+
+            @if (p.salidasZona.salidas > 0) {
+              <div class="pa-fila" data-tipo="zonaSalida">
+                <div class="pa-fila-principal">
+                  <span class="pa-fila-titulo">
+                    <ion-icon name="warning"></ion-icon>
+                    Salió de la zona
+                  </span>
+                  <span class="pa-fila-cifra" data-tipo="zonaSalida">{{ p.salidasZona.salidas }}</span>
+                </div>
+              </div>
+            }
+          </div>
+          <!--
+            Un solo pie, no dos: los parrafos grises seguidos gastan mas alto del
+            que ahorran. Se queda solo con lo que el cuidador no puede deducir
+            mirando la tarjeta, que es de donde sale el numero, sobre cuantos
+            trayectos, y que una ida corta no se ve. El puntero al historial se
+            fue: el historial ya esta en el menu, y aqui solo ocupaba una linea.
+          -->
+          <p class="pa-pie">
+            La zona segura dice si el adulto está dentro o fuera de ella ahora.
+            El detalle de cada alerta está en el historial.
+          </p>
+        }
+      </div>
+
+      <!-- ============================================ -->
+      <!-- LUGARES                                     -->
+      <!-- ============================================ -->
+
+      <div class="pa-card">
+        <div class="pa-card-head">
+          <h2>Lugares</h2>
+          <span class="pa-card-sub">Horas de permanencia</span>
+        </div>
+
+        @if (!lugares().length) {
+          <p class="pa-sin-datos">
+            No se detectaron permanencias de 10 minutos o más en este período.
+          </p>
+        } @else {
+          <div class="pa-lista">
+            @for (l of lugares(); track l.lat + '-' + l.lon) {
+              <div class="pa-fila">
+                <div class="pa-fila-principal">
+                  <span class="pa-fila-titulo">
+                    @if (l.esCasa) { <ion-icon name="home"></ion-icon> }
+                    {{ l.nombre }}
+                  </span>
+                  <span class="pa-fila-cifra">{{ formatoHoras(l.horas) }}</span>
+                </div>
+                <div class="pa-fila-detalle">
+                  <span>{{ l.porcentaje }}% del tiempo medido</span>
+                  @if (!l.conNombre) {
+                    <span>·</span>
+                    <span>sin zona que lo nombre</span>
+                  }
+                </div>
+                <div class="pa-barra-fondo">
+                  <div class="pa-barra" [style.width.%]="anchoBarra(l.horas, lugares()[0].horas)"></div>
+                </div>
+              </div>
+            }
+          </div>
+          <p class="pa-pie">
+            El nombre viene de las zonas seguras configuradas. Donde no hay
+            ninguna que cubra el punto queda como "Lugar sin nombre", porque
+            inventar categorías sería mentir sobre lo que el dato sabe.
+          </p>
+        }
+      </div>
+
+      <!-- ============================================ -->
+      <!-- TRAYECTOS: UNO POR UNO, CON SUS NÚMEROS      -->
+      <!-- ============================================ -->
+
+      <div class="pa-card">
+        <div class="pa-card-head">
+          <!--
+            El botón de agrandar va junto al título y no flotando sobre el mapa:
+            encima del mapa tapaba una esquina del recorrido, que es justo lo que
+            se quiere ver. En el encabezado está siempre en el mismo sitio y no
+            se mueve nunca.
+          -->
+          <div class="pa-card-titular">
+            <h2>Trayectos</h2>
+            @if (trayectosConRuta().length && !mapaGrande()) {
+              <button
+                type="button"
+                class="pa-mapa-agrandar"
+                (click)="abrirMapa()"
+                aria-label="Ver las rutas en pantalla completa">
+                <ion-icon name="expand"></ion-icon>
+              </button>
+            }
+          </div>
+          <span class="pa-card-sub">{{ conteoTrayectos() }}</span>
+        </div>
+
+        @if (!trayectos().length) {
+          <p class="pa-sin-datos">No hay trayectos registrados en este período.</p>
+        } @else {
+          <!--
+            El mapa va antes que la lista porque responde la pregunta que el
+            cuidador se hace primero: no cuánto anduvo, sino por dónde pasó.
+          -->
+          @if (trayectosConRuta().length) {
+            <div class="pa-mapa-caja" [class.expandida]="mapaGrande()">
+
+              <!--
+                La barra y el selector de trayecto solo existen en pantalla
+                completa: en el mapa chico no caben y estorban.
+              -->
+              @if (mapaGrande()) {
+                <div class="pa-mapa-barra">
+                  <button
+                    type="button"
+                    class="pa-mapa-boton"
+                    (click)="cerrarMapa()"
+                    aria-label="Volver al panel">
+                    <ion-icon name="arrow-back"></ion-icon>
+                  </button>
+                  <span class="pa-mapa-titulo">
+                    Rutas · últimos {{ rango }} días
+                  </span>
+                  <button
+                    type="button"
+                    class="pa-mapa-boton"
+                    (click)="cerrarMapa()"
+                    aria-label="Cerrar el mapa">
+                    <ion-icon name="contract"></ion-icon>
+                  </button>
+                </div>
+              }
+
+              <div #mapaRuta class="pa-mapa" role="img"
+                   aria-label="Mapa con la ruta de los trayectos"></div>
+
+              <div class="pa-leyenda">
+                @if (rutaSeleccionada()) {
+                  <button type="button" class="pa-chip-boton" (click)="verTodasLasRutas()">
+                    Ver todas las rutas
+                  </button>
+                }
+                <span class="pa-chip"><i class="punto ruta"></i> Trayecto resaltado</span>
+                <span class="pa-chip"><i class="punto resto"></i> Otros trayectos</span>
+              </div>
+
+              <!--
+                En pantalla completa se elige el trayecto desde abajo, sin cerrar
+                el mapa. En la tarjeta ya se puede tocar la fila de cada trayecto.
+              -->
+              @if (mapaGrande()) {
+                <div class="pa-mapa-picks">
+                  <button
+                    type="button"
+                    class="pa-pick"
+                    [class.activo]="!rutaSeleccionada()"
+                    (click)="verTodasLasRutas()">
+                    Todas
+                  </button>
+                  @for (t of trayectos(); track t.id) {
+                    @if (t.ruta.length >= 2) {
+                      <button
+                        type="button"
+                        class="pa-pick"
+                        [class.activo]="rutaResaltada(t.id)"
+                        (click)="alternarRuta(t.id)">
+                        {{ fechaHora(t.inicio) }} · {{ formatoDistancia(t.distanciaM) }}
+                      </button>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="pa-nota pa-nota-menor">
+              <ion-icon name="information-circle"></ion-icon>
+              <p>
+                No hay puntos de GPS suficientes para dibujar la ruta: los
+                trayectos de este período guardan menos de dos puntos cada uno.
+                Las distancias de abajo vienen del campo que escribió el
+                teléfono, pero no hay línea que mostrar.
+              </p>
+            </div>
+          }
+
+          @if (trayectosSinRuta() > 0) {
+            <p class="pa-aviso-suelto">
+              {{ trayectosSinRuta() }} de {{ trayectos().length }} trayectos no
+              salen en el mapa por tener menos de dos puntos de GPS.
+            </p>
+          }
+
+          <div class="pa-lista">
+            @for (t of trayectos(); track t.id) {
+              <div class="pa-fila" [class.abierto]="t.abierto" [class.resaltada]="rutaResaltada(t.id)">
+                <button
+                  type="button"
+                  class="pa-fila-principal pa-fila-boton"
+                  [disabled]="t.ruta.length < 2"
+                  (click)="alternarRuta(t.id)"
+                  [attr.aria-pressed]="rutaResaltada(t.id)">
+                  <span class="pa-fila-titulo">
+                    {{ fechaHora(t.inicio) }}
+                    @if (t.abierto) {
+                      <em class="pa-insignia">en curso</em>
+                    }
+                  </span>
+                  <span class="pa-fila-cifra">{{ formatoDistancia(t.distanciaM) }}</span>
+                </button>
+
+                <div class="pa-datos">
+                  <div class="pa-dato">
+                    <span class="pa-dato-valor">{{ duracion(t) }}</span>
+                    <span class="pa-dato-label">Duración</span>
+                  </div>
+                  <div class="pa-dato">
+                    <span class="pa-dato-valor">{{ velocidad(t) }}</span>
+                    <span class="pa-dato-label">Velocidad media</span>
+                  </div>
+                  <div class="pa-dato">
+                    <span class="pa-dato-valor">{{ pctQuieto(t) }}</span>
+                    <span class="pa-dato-label">Tiempo quieto</span>
+                  </div>
+                  <div class="pa-dato">
+                    <span class="pa-dato-valor">{{ puntos(t) }}</span>
+                    <span class="pa-dato-label">Muestras GPS</span>
+                  </div>
+                </div>
+
+                @if (t.fin) {
+                  <div class="pa-fila-detalle">
+                    <span>Terminó {{ fechaHora(t.fin) }}</span>
+                  </div>
+                }
+
+                @if (t.abierto) {
+                  <div class="pa-fila-detalle">
+                    <span>Sin cerrar: el GPS seguía corriendo cuando se consultó.</span>
+                  </div>
+                }
+
+                @if (incoherencia(t); as aviso) {
+                  <div class="pa-fila-detalle">
+                    <span class="pa-aviso">{{ aviso }}</span>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+          <p class="pa-pie">
+            La distancia y la duración las escribió el teléfono. El tiempo quieto
+            sale de comparar los puntos: dos a menos de 60 m y separados menos de
+            15 minutos cuentan como quieto. Un hueco mayor no cuenta, porque no
+            se distingue de un GPS apagado.
+          </p>
+          <p class="pa-pie">
+            En el mapa están todas las rutas en gris y la del trayecto que tocas
+            en azul, con su salida y su llegada. Toca el mismo trayecto otra vez
+            para volver a verlas todas. La línea va de punto a punto: dibuja lo
+            que registró el GPS, no calles.
+          </p>
+        }
+      </div>
+
+      <!-- ============================================ -->
+      <!-- FICHA                                       -->
+      <!-- ============================================ -->
+
+      <!--
+        La ficha ya no lleva "Días con registro": ese dato subió arriba del todo,
+        en la franja de registro, porque condiciona la lectura de todo lo demás.
+        Y si no hay nada fuera de la zona, la tarjeta entera desaparece: una
+        tarjeta vacía con un texto tranquilizador es ruido, no información.
+      -->
+      @if (p.zona?.fuera) {
+        <div class="pa-card pa-ficha">
+          <div class="pa-ficha-fila alerta">
+            <span>Fuera de la zona segura desde</span>
+            <strong>{{ tiempoRelativo(p.zona.primeraAlerta) }}</strong>
+          </div>
+        </div>
+      }
+
+    }
+
+  </div>
+</ion-content>

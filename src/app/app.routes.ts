@@ -133,6 +133,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'panel-actividad',
+    loadComponent: () => import('./pages/cuidadores/panel-actividad/panel-actividad.page').then( m => m.PanelActividadPage),
+    canActivate: [authGuard]
+  },
+  {
     path: 'ajustes',
     loadComponent: () => import('./pages/ajustes/ajustes.page').then( m => m.AjustesPage),
     canActivate: [authGuard]
