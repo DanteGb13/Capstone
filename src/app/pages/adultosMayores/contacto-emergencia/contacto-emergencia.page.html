@@ -32,19 +32,28 @@
         </div>
       </div>
 
-      <div class="grid-publicos">
+      <div class="lista-publicos">
         @for (pub of contactosPublicos; track pub.telefono) {
-          <div class="card-publico" (click)="llamar(pub.telefono)">
-            <div class="card-icono" [style.background]="pub.color">
+          <div class="fila-publico" (click)="llamar(pub.telefono)">
+            <div class="fila-icono" [style.background]="pub.color">
               <ion-icon [name]="pub.icono"></ion-icon>
             </div>
-            <strong class="card-nombre">{{ pub.nombre }}</strong>
-            <span class="card-numero" [style.color]="pub.color">{{ pub.telefono }}</span>
-            <span class="card-desc">{{ pub.descripcion }}</span>
-            <span class="card-llamar" [style.background]="pub.color">
+
+            <div class="fila-dato">
+              <strong>{{ pub.nombre }}</strong>
+              <span class="fila-desc">{{ pub.descripcion }}</span>
+            </div>
+
+            <span class="fila-numero" [style.color]="pub.color">{{ pub.telefono }}</span>
+
+            <button
+              type="button"
+              class="fila-llamar"
+              [style.background]="pub.color"
+              [attr.aria-label]="'Llamar a ' + pub.nombre"
+              (click)="llamar(pub.telefono); $event.stopPropagation()">
               <ion-icon name="call"></ion-icon>
-              Llamar
-            </span>
+            </button>
           </div>
         }
       </div>
@@ -178,112 +187,165 @@
   <!-- FORMULARIO: AÑADIR CONTACTO (IGUAL QUE EL TELÉFONO) -->
   <!-- ================================================= -->
 
-  <ion-modal [isOpen]="mostrarFormulario" (didDismiss)="cerrarFormulario()">
+  <ion-modal class="modal-contacto" [isOpen]="mostrarFormulario" (didDismiss)="cerrarFormulario()">
 
     <ng-template>
 
       <ion-header class="ion-no-border">
-        <ion-toolbar>
+        <ion-toolbar class="toolbar-formulario">
           <div class="encabezado-formulario">
-            <span class="titulo-modal">Nuevo contacto</span>
-            <span class="subtitulo-modal">{{ formSubtitulo }}</span>
+            <div class="titulo-icono">
+              <ion-icon name="person-add-outline"></ion-icon>
+            </div>
+            <div class="titulo-texto">
+              <span class="titulo-modal">Nuevo contacto</span>
+              <span class="subtitulo-modal">{{ formSubtitulo }}</span>
+            </div>
           </div>
           <ion-buttons slot="end">
-            <ion-button (click)="cerrarFormulario()">
-              <ion-icon name="close"></ion-icon>
+            <ion-button fill="clear" aria-label="Cerrar" (click)="cerrarFormulario()">
+              <ion-icon name="close" slot="icon-only"></ion-icon>
             </ion-button>
           </ion-buttons>
         </ion-toolbar>
       </ion-header>
 
-      <ion-content>
+      <ion-content class="contenido-formulario">
 
         <div class="formulario">
 
           <label class="campo" [class.invalido]="formErrorNombre">
-            <span>Nombre *</span>
+            <span class="etiqueta">
+              <ion-icon name="person-outline"></ion-icon>
+              Nombre <b>*</b>
+            </span>
             <ion-input
               type="text"
               placeholder="Ej. María"
+              autocomplete="given-name"
               [(ngModel)]="form.nombre"
               (ionInput)="formErrorNombre = false">
             </ion-input>
           </label>
 
           @if (formErrorNombre) {
-            <p class="campo-error">Escribe el nombre del contacto.</p>
+            <p class="campo-error">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              Escribe el nombre del contacto.
+            </p>
           }
 
-        <div class="fila-campos">
+          <div class="fila-campos">
 
-          <label class="campo">
-            <span>Apellido paterno</span>
-            <ion-input
-              type="text"
-              placeholder="González"
-              [(ngModel)]="form.apellidopa">
-            </ion-input>
-          </label>
+            <label class="campo">
+              <span class="etiqueta">Apellido paterno</span>
+              <ion-input
+                type="text"
+                placeholder="González"
+                autocomplete="family-name"
+                [(ngModel)]="form.apellidopa">
+              </ion-input>
+            </label>
 
-          <label class="campo">
-            <span>Apellido materno</span>
-            <ion-input
-              type="text"
-              placeholder="Rojas"
-              [(ngModel)]="form.apellidoma">
-            </ion-input>
-          </label>
+            <label class="campo">
+              <span class="etiqueta">Apellido materno</span>
+              <ion-input
+                type="text"
+                placeholder="Rojas"
+                [(ngModel)]="form.apellidoma">
+              </ion-input>
+            </label>
 
-        </div>
+          </div>
 
           <label class="campo" [class.invalido]="formErrorTelefono">
-            <span>Teléfono *</span>
+            <span class="etiqueta">
+              <ion-icon name="call-outline"></ion-icon>
+              Teléfono <b>*</b>
+            </span>
             <ion-input
               type="tel"
+              inputmode="tel"
               placeholder="Ej. +56 9 1234 5678"
+              autocomplete="tel"
               [(ngModel)]="form.telefono"
               (ionInput)="formErrorTelefono = false">
             </ion-input>
           </label>
 
           @if (formErrorTelefono) {
-            <p class="campo-error">Escribe un teléfono válido.</p>
+            <p class="campo-error">
+              <ion-icon name="alert-circle-outline"></ion-icon>
+              Escribe un teléfono válido.
+            </p>
           }
 
           <label class="campo">
-            <span>Correo</span>
+            <span class="etiqueta">
+              <ion-icon name="mail-outline"></ion-icon>
+              Correo
+            </span>
             <ion-input
               type="email"
               placeholder="Ej. maria@correo.cl"
+              autocomplete="email"
               [(ngModel)]="form.correo">
             </ion-input>
           </label>
 
           <label class="campo">
-            <span>Parentesco</span>
-            <ion-input
-              type="text"
-              placeholder="Ej. Madre, hija, vecina…"
+            <span class="etiqueta">
+              <ion-icon name="people-outline"></ion-icon>
+              Parentesco
+            </span>
+            <ion-select
+              interface="popover"
+              placeholder="Elige una opción"
               [(ngModel)]="form.parentesco">
-            </ion-input>
+              @for (rel of relaciones; track rel.id) {
+                <ion-select-option [value]="rel.nombre">{{ rel.nombre }}</ion-select-option>
+              }
+              <ion-select-option [value]="otroParentesco">Otro (escribirlo)</ion-select-option>
+            </ion-select>
           </label>
 
-          <ion-button
-            expand="block"
-            class="btn-primario"
+          @if (form.parentesco === otroParentesco) {
+            <label class="campo">
+              <span class="etiqueta">
+                <ion-icon name="person-outline"></ion-icon>
+                Escribe el parentesco
+              </span>
+              <ion-input
+                type="text"
+                placeholder="Ej. Vecina, nieto, cuidadora…"
+                [(ngModel)]="form.parentescoLibre">
+              </ion-input>
+            </label>
+          }
+
+        </div>
+
+        <div class="acciones-formulario">
+          <button
+            type="button"
+            class="btn-form btn-guardar"
             [disabled]="guardando"
             (click)="guardarFormulario()">
-            {{ guardando ? 'Guardando…' : 'Guardar contacto' }}
-          </ion-button>
+            @if (guardando) {
+              <ion-spinner name="crescent"></ion-spinner>
+            } @else {
+              <ion-icon name="checkmark-outline"></ion-icon>
+            }
+            <span>{{ guardando ? 'Guardando…' : 'Guardar contacto' }}</span>
+          </button>
 
-          <ion-button
-            expand="block"
-            fill="outline"
-            class="btn-cancelar"
+          <button
+            type="button"
+            class="btn-form btn-cancelar"
+            [disabled]="guardando"
             (click)="cerrarFormulario()">
             Cancelar
-          </ion-button>
-
+          </button>
         </div>
 
       </ion-content>

@@ -13,6 +13,8 @@ import {
   IonModal,
   IonButton,
   IonInput,
+  IonSelect,
+  IonSelectOption,
   IonRefresher,
   IonRefresherContent,
   AlertController,
@@ -24,10 +26,14 @@ import {
   add,
   alertCircleOutline,
   call,
+  callOutline,
+  checkmarkOutline,
   close,
+  mailOutline,
   people,
   peopleOutline,
   personAddOutline,
+  personOutline,
   refreshOutline,
   trashOutline,
   warning
@@ -42,6 +48,7 @@ import {
   ContactoPublico,
   Relacion,
   CONTACTOS_PUBLICOS,
+  OTRO_PARENTESCO,
   telefonoParaMarcar,
   nombreCompleto
 } from '../../../services/Backend/contactos-emergencia/contactos-emergencia';
@@ -64,6 +71,8 @@ import { PermisosExtra } from '../../../services/Backend/permisos-extra/permisos
     IonModal,
     IonButton,
     IonInput,
+    IonSelect,
+    IonSelectOption,
     IonRefresher,
     IonRefresherContent,
     CommonModule,
@@ -91,6 +100,12 @@ export class ContactoEmergenciaPage {
   /** Id -> nombre, para mostrar el parentesco junto a cada contacto. */
   mapaRelaciones: Record<string, string> = {};
 
+  /** Parentescos del diccionario global, para el desplegable del formulario. */
+  relaciones: Relacion[] = [];
+
+  /** Valor del desplegable que habilita el campo para escribir un parentesco nuevo. */
+  readonly otroParentesco = OTRO_PARENTESCO;
+
   mostrarFormulario: boolean = false;
 
   formErrorNombre: boolean = false;
@@ -106,7 +121,8 @@ export class ContactoEmergenciaPage {
     apellidoma: '',
     telefono: '',
     correo: '',
-    parentesco: ''
+    parentesco: '',
+    parentescoLibre: ''
   };
 
   /** Visible en la plantilla: muestra el estado "sin sesión" si no hay uno. */
@@ -130,9 +146,13 @@ export class ContactoEmergenciaPage {
       add,
       'alert-circle-outline': alertCircleOutline,
       call,
+      'call-outline': callOutline,
+      'checkmark-outline': checkmarkOutline,
       close,
+      'mail-outline': mailOutline,
       people,
       'people-outline': peopleOutline,
+      'person-outline': personOutline,
       'person-add-outline': personAddOutline,
       'refresh-outline': refreshOutline,
       'trash-outline': trashOutline,
@@ -221,6 +241,7 @@ export class ContactoEmergenciaPage {
       mapa[rel.id] = rel.nombre;
     }
     this.mapaRelaciones = mapa;
+    this.relaciones = relaciones;
   }
 
   /** Nombre del parentesco de un contacto, vacío si no tiene o no se pudo leer. */
@@ -335,9 +356,25 @@ export class ContactoEmergenciaPage {
       const correo = String(resultado.correo || '').trim();
 
       if (!tel || tel.replace(/\D/g, '').length < 3) {
-        await this.toast('Ese contacto no tiene un número de teléfono válido.');
+        // No se frena la apertura: el formulario sale igual con los datos que
+        // sí trajo la agenda y el campo del teléfono queda marcado para que el
+        // usuario sólo tenga que completarlo y guardar.
+        this.esperandoPicker = false;
+        await this.abrirFormulario({
+          nombre: nombre || 'Contacto de emergencia',
+          apellidopa: apellido,
+          telefono: tel,
+          correo
+        });
+        this.formErrorTelefono = true;
+        await this.toast('Ese contacto no tiene un teléfono válido. Escríbelo para guardar.');
         return;
       }
+
+      // El aviso de "eligiendo contacto" se cierra ANTES de abrir el
+      // formulario: si quedaba encima, el modal se veía tapado por el spinner
+      // y daba la impresión de que no volvía a la ventana de rellenado.
+      this.esperandoPicker = false;
 
       // La agenda sólo trae lo que el teléfono tiene guardado: se abre el
       // mismo formulario de "añadir contacto" con esos datos ya escritos.
@@ -461,7 +498,8 @@ export class ContactoEmergenciaPage {
       apellidoma: String(semilla.apellidoma || '').trim(),
       telefono: String(semilla.telefono || '').trim(),
       correo: String(semilla.correo || '').trim(),
-      parentesco: ''
+      parentesco: '',
+      parentescoLibre: ''
     };
     this.formErrorNombre = false;
     this.formErrorTelefono = false;
@@ -502,8 +540,12 @@ export class ContactoEmergenciaPage {
     this.guardando = true;
     try {
       // El parentesco vive en otra tabla: primero se consigue su id y después
-      // se guarda el contacto apuntando a él.
-      const parentesco = this.form.parentesco.trim();
+      // se guarda el contacto apuntando a él. Viene del desplegable o, si se
+      // eligió "Otro", del campo de texto que se despliega debajo.
+      const parentesco = this.form.parentesco === this.otroParentesco
+        ? this.form.parentescoLibre.trim()
+        : this.form.parentesco.trim();
+
       let idRelacion: string | undefined;
       let falloRelacion = '';
 
@@ -522,20 +564,34 @@ export class ContactoEmergenciaPage {
         id_relacion: idRelacion
       });
 
-      if (!creado) {
-        await this.toast(this.mensajeFallo(this.servicio.ultimoError || 'error desconocido', 'guardar'));
+      // Si la base devolvió un error REAL no se guarda nada y se corta. Cuando
+      // el insert entró pero no devolvió la fila (políticas RLS que no traen el
+      // registro), ultimoError queda vacío: antes eso se reportaba como
+      // "error desconocido" aunque el contacto se hubiese guardado.
+      if (!creado && this.servicio.ultimoError) {
+        await this.toast(this.mensajeFallo(this.servicio.ultimoError, 'guardar'));
         return;
       }
 
       // El contacto insertado ya viene completo: se suma a la lista en vez de
       // consultarla de nuevo, así aparece al instante
-      this.contactos = this.ordenar([...this.contactos, creado]);
+      if (creado) {
+        this.contactos = this.ordenar([...this.contactos, creado]);
+      }
 
       if (idRelacion && parentesco) {
         this.mapaRelaciones[idRelacion] = parentesco;
+        if (!this.relaciones.some((rel) => rel.id === idRelacion)) {
+          this.relaciones = [...this.relaciones, { id: idRelacion, nombre: parentesco }]
+            .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+        }
       }
 
       this.mostrarFormulario = false;
+
+      // La vista se refresca SIEMPRE desde la base al añadir: así la lista
+      // nunca queda vieja aunque el insert no haya devuelto la fila.
+      await this.cargarContactos();
 
       if (parentesco && !idRelacion) {
         console.warn('Contacto guardado sin parentesco:', falloRelacion);

@@ -333,6 +333,15 @@ export class ContactosEmergenciaService {
         return null;
       }
 
+      // Se agrega al caché recién consultado: si no, el desplegable del
+      // formulario seguía sin mostrar el parentesco que se acaba de crear.
+      if (data?.id && this.cacheRelaciones) {
+        this.cacheRelaciones = [
+          ...this.cacheRelaciones,
+          { id: data.id, nombre: buscado }
+        ].sort((a, b) => (a.nombre || '').localeCompare(b.nombre || '', 'es'));
+      }
+
       return data?.id ?? null;
     } catch (e: any) {
       this.ultimoError = e?.message || 'Error inesperado';
