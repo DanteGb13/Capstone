@@ -108,6 +108,114 @@ ion-app {
 }
 
 /* =====================================================
+   Alerta de opciones de una persona a tu cuidado
+   (Estilos globales porque el alert es un overlay)
+   ===================================================== */
+.alerta-opciones-adulto {
+
+  --ion-color-primary: #7715c7;
+
+  .alert-wrapper {
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(119, 21, 199, 0.22);
+    overflow: hidden;
+  }
+
+  .alert-head {
+    padding-top: 22px;
+  }
+
+  .alert-title {
+    color: #7715c7;
+    font-weight: 800;
+    font-size: 19px;
+    text-align: center;
+  }
+
+  /* `pre-line` es lo que hace que los saltos de línea del mensaje se vean como
+     líneas. Sin esto, Ionic los junta en un solo párrafo. El texto llega plano
+     a propósito: esta app tiene `innerHTMLTemplatesEnabled` en false, así que
+     si se pasara un <br> se vería escrito en pantalla. */
+  .alert-message {
+    color: #555;
+    font-size: 14px;
+    line-height: 1.65;
+    white-space: pre-line;
+    text-align: center;
+  }
+
+  /* ----------------------------------------------------------------
+     Botones demarcados.
+
+     Ionic los apila como texto plano con el mismo peso, así que un dedo
+     que iba a "Llamar" podía terminar en "Desvincular", que es
+     irreversible. Ahora cada acción es una fila con fondo y borde propios,
+     separadas por líneas, y la acción destructiva queda resaltada y sola
+     en su bloque.
+     ---------------------------------------------------------------- */
+  .alert-button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px 14px;
+    /* El corte separa las acciones de los datos de arriba: sin esta línea,
+       el mensaje y los botones se leen como un solo bloque de texto. */
+    border-top: 1px solid #eceff3;
+  }
+
+  .alert-button {
+    min-height: 46px;
+    border-radius: 14px;
+    color: #1a1d26;
+    background: #f5f6f8;
+    font-weight: 700;
+    font-size: 15px;
+    text-align: center;
+    text-transform: none;
+    letter-spacing: 0;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Llamar: verde, se lee como la acción de todos los días. */
+  .alerta-btn-llamar {
+    background: #e7f6ea;
+    color: #2e7d32;
+    border: 1px solid #bfe3c6;
+  }
+
+  /* Desvincular: se separa del resto con una línea y tiene fondo y borde
+     propios. El espacio de más arriba y el color no son adorno: hacen que
+     el dedo tenga que recorrer más y que la fila no se confunda con una
+     acción cualquiera. */
+  .alert-button-role-destructive {
+    margin-top: 4px;
+    background: #fdecec;
+    color: #c62828;
+    border: 1px solid #f2bdbd;
+    font-weight: 800;
+  }
+
+  /* Cancelar: texto negro sobre blanco, con borde, y más alta que las otras.
+
+     Antes era un botón morado sólido con letras blancas. Con letras negras
+     queda como lo que es: la salida neutra. Sigue siendo la fila más alta y
+     la última, así que no se pierde como "opción secundaria": se reconoce
+     porque está sola, abajo y despegada del bloque rojo de arriba. */
+  .alert-button-role-cancel {
+    margin-top: 2px;
+    min-height: 50px;
+    background: #ffffff;
+    color: #000000;
+    font-weight: 800;
+    border: 1px solid #d4d7dd;
+    box-shadow: 0 2px 6px rgba(26, 29, 38, 0.06);
+  }
+}
+
+/* =====================================================
    Alerta de "Ir a mi casa" - elegir aplicación de mapas
    (Estilos globales porque el alert es un overlay)
    ===================================================== */

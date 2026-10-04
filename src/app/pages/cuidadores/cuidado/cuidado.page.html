@@ -20,8 +20,24 @@
 
     <!-- Header -->
     <div class="header">
-      <h1>Personas a tu cuidado</h1>
-      <p>Adultos mayores vinculados</p>
+      <div class="header-texto">
+        <h1>Personas a tu cuidado</h1>
+        <p>
+          @if (cargandoAdultos) {
+            Adultos mayores vinculados
+          } @else if (adultosACargo.length === 1) {
+            1 persona vinculada
+          } @else {
+            {{ adultosACargo.length }} personas vinculadas
+          }
+        </p>
+      </div>
+
+      @if (!cargandoAdultos && adultosACargo.length > 0) {
+        <div class="contador" [attr.aria-label]="adultosACargo.length + ' personas vinculadas'">
+          {{ adultosACargo.length }}
+        </div>
+      }
     </div>
 
     <!-- Lista -->
@@ -39,12 +55,16 @@
         @for (item of adultosACargo; track item.id) {
 
           <!-- Tocar la tarjeta abre el mapa de la persona (así se quitó el botón
-               de ubicación sin perder la función). -->
-          <div class="adulto-card" (click)="verUbicacion(item)">
+               de ubicación sin perder la función). Las personas sin conexión se
+               atenúan un poco: de un vistazo se nota quién está al alcance. -->
+          <div class="adulto-card"
+               [class.sin-conexion]="estaConectado(item) !== true"
+               (click)="verUbicacion(item)">
 
             <!-- El avatar ya no es un botón: no hay nada que descubrir por
-                 pulsar la foto. -->
-            <div class="adulto-avatar">
+                 pulsar la foto. El anillo verde es el mismo estado que muestra
+                 el badge de al lado. -->
+            <div class="adulto-avatar" [class.en-linea]="estaConectado(item) === true">
               <img *ngIf="item.adulto_mayor?.foto_url" [src]="item.adulto_mayor.foto_url" alt="Foto de perfil" class="avatar-img">
               <ion-icon *ngIf="!item.adulto_mayor?.foto_url" name="person-circle"></ion-icon>
             </div>
@@ -57,7 +77,7 @@
                   [ultimoVisto]="item.adulto_mayor?.ultimo_visto || null"
                   [refrescar]="true" />
                 @if (item.adulto_mayor?.direccion?.comuna) {
-                  <span class="meta-text">
+                  <span class="chip-lugar">
                     <ion-icon name="location-outline"></ion-icon>
                     {{ item.adulto_mayor.direccion.comuna }}
                   </span>
@@ -69,8 +89,8 @@
                  más un cuarto acceso escondido en el avatar, que no se veía
                  que fuera pulsable y encima lo abría al tocar la foto. Ahora
                  hay un solo control, y se ve que es un botón: borde, fondo y
-                 reacción al presionarlo. Abre el menú con llamar, desvincular
-                 y cancelar. -->
+                 reacción al presionarlo. Abre una alerta con los datos de la
+                 persona y las acciones: llamar, desvincular y cancelar. -->
             <button class="btn-opciones"
                     type="button"
                     (click)="abrirOpcionesAdulto(item); $event.stopPropagation()"

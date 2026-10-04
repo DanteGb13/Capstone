@@ -11,7 +11,6 @@ import {
   IonIcon,
   IonBackButton,
   AlertController,
-  ActionSheetController,
   ToastController,
   IonRefresher,
   IonRefresherContent
@@ -23,6 +22,7 @@ import { NavegacionRolService } from '../../../services/navegacion-rol/navegacio
 import { SupabaseService } from '../../../services/supabase/supabase';
 import { PermisosExtra } from '../../../services/Backend/permisos-extra/permisos-extra';
 import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
+import { estaEnLinea } from '../../../services/Backend/presencia/presencia';
 import { Capacitor } from '@capacitor/core';
 
 @Component({
@@ -58,7 +58,6 @@ export class CuidadoPage implements OnInit {
     private navRol: NavegacionRolService,
     private supabaseService: SupabaseService,
     private alertController: AlertController,
-    private actionSheetController: ActionSheetController,
     private toastController: ToastController
   ) {
     addIcons(icons);
@@ -122,25 +121,48 @@ export class CuidadoPage implements OnInit {
   /**
  * Menú de acciones de una persona a cargo.
  *
- * Antes este menú existía pero estaba escondido: se abría tocando el avatar,
- * que no tenía nada que indicara que fuera pulsable, y además conviveía con
- * tres botones al lado. Ahora es el único control de la tarjeta.
+ * Antes era una hoja de acciones escondida detrás del avatar, y el avatar no
+ * tenía nada que indicara que fuera pulsable. Ahora es un botón visible que
+ * abre una alerta: se lee mejor en pantalla chica, muestra de qué persona se
+ * trata y deja ordenada la información útil (estado, comuna y teléfono) antes
+ * de las acciones.
  *
- * "Llamar" aparece sólo si la persona tiene teléfono: ofrecer la opción y
- * que no pase nada sería peor que no ofrecerla.
+ * "Llamar" sólo aparece si la persona tiene teléfono: ofrecer la opción y que
+ * no pase nada sería peor que no ofrecerla.
  */
 async abrirOpcionesAdulto(item: any) {
     const nombre = item.adulto_mayor?.nombre || '';
     const apellido = item.adulto_mayor?.apellidopa || '';
-    const nombreCompleto = `${nombre} ${apellido}`.trim();
+    const nombreCompleto = `${nombre} ${apellido}`.trim() || 'Persona a tu cuidado';
     const telefono = item.adulto_mayor?.telefono;
+    const comuna = item.adulto_mayor?.direccion?.comuna;
+
+    // El mensaje va como texto plano a propósito. Esta app tiene
+    // `innerHTMLTemplatesEnabled` en false, así que cualquier etiqueta que se
+    // pase acá se vería literalmente escrita en pantalla ("<br>", "<strong>").
+    // Los saltos de línea los resuelve el CSS con `white-space: pre-line`.
+    const lineas: string[] = [];
+
+    const enLinea = this.estaConectado(item);
+    lineas.push(
+      enLinea === true ? 'En línea ahora' : enLinea === false ? 'Sin conexión' : 'Sin datos de conexión'
+    );
+
+    if (comuna) lineas.push(`Comuna: ${comuna}`);
+    if (telefono) lineas.push(`Teléfono: ${telefono}`);
+
+    // Lo que se pierde al desvincular, escrito aquí y no sólo en la pantalla
+    // siguiente: el dedo llega a estos botones mucho antes que a la
+    // confirmación, así que es el momento en que hay que leerlo.
+    lineas.push('');
+    lineas.push('⚠ Desvincular no se puede deshacer: dejarás de ver su ubicación y de recibir sus alertas.');
 
     const buttons: any[] = [];
 
     if (telefono) {
       buttons.push({
         text: 'Llamar',
-        icon: 'call-outline',
+        cssClass: 'alerta-btn-llamar',
         handler: () => {
           this.llamarAdulto(telefono);
         }
@@ -149,7 +171,6 @@ async abrirOpcionesAdulto(item: any) {
 
     buttons.push({
       text: 'Desvincular',
-      icon: 'trash-outline',
       role: 'destructive',
       handler: () => {
         this.confirmarDesvincular(item);
@@ -161,23 +182,42 @@ async abrirOpcionesAdulto(item: any) {
       role: 'cancel'
     });
 
-    const actionSheet = await this.actionSheetController.create({
+    const alert = await this.alertController.create({
       header: nombreCompleto,
+      cssClass: 'alerta-opciones-adulto',
+      message: lineas.join('\n'),
       buttons
     });
 
-    await actionSheet.present();
+    await alert.present();
   }
 
-  async confirmarDesvincular(item: any) {
+  /**
+   * Si la persona tiene la app con internet en este momento.
+   *
+   * Usa el mismo umbral que el badge de conexión para que el anillo del avatar
+   * y el texto "En línea / Sin conexión" nunca se contradigan.
+   */
+  estaConectado(item: any): boolean | null {
+    return estaEnLinea(item?.adulto_mayor?.ultimo_visto);
+  }
+
+  /**
+ * Confirmación final de la desvinculación.
+ *
+ * Pide el nombre completo en vez de un "¿Seguro?" genérico: la pregunta
+ * "¿Seguro que quieres desvincular?" no dice a quién, y con varias personas a
+ * cargo es fácil confirmar sobre la persona equivocada.
+ */
+async confirmarDesvincular(item: any) {
     const nombre = item.adulto_mayor?.nombre || 'esta persona';
     const apellido = item.adulto_mayor?.apellidopa || '';
     const nombreCompleto = `${nombre} ${apellido}`.trim();
 
     const alert = await this.alertController.create({
       header: 'Desvincular',
-      message: `¿Seguro que quieres desvincular a <strong>${nombreCompleto}</strong>?`,
-      cssClass: 'alerta-cerrar-sesion',
+      message: `Vas a dejar de cuidar a ${nombreCompleto}. Esta acción no se puede deshacer.`,
+      cssClass: 'alerta-opciones-adulto',
       buttons: [
         {
           text: 'Cancelar',

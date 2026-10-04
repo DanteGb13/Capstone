@@ -15,19 +15,46 @@ ion-content {
 }
 
 .header {
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+
+    .header-texto {
+        min-width: 0;
+    }
 
     h1 {
         margin: 0;
         font-size: 26px;
         font-weight: 800;
         color: var(--text-main);
+        letter-spacing: -0.4px;
     }
 
     p {
         margin: 4px 0 0;
         color: var(--text-muted);
         font-size: 14px;
+    }
+
+    /* Contador de personas. Antes el subtítulo decía siempre "Adultos mayores
+       vinculados", que no cambiaba nunca y no decía nada útil. */
+    .contador {
+        flex-shrink: 0;
+        min-width: 38px;
+        height: 38px;
+        padding: 0 12px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--primary), #9c3ded);
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(119, 21, 199, 0.28);
     }
 }
 
@@ -52,38 +79,60 @@ ion-content {
 .adultos-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .adulto-card {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     background: white;
-    border-radius: 16px;
-    padding: 12px 14px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    border-radius: 20px;
+    padding: 14px 14px 14px 16px;
+    box-shadow: 0 4px 16px rgba(26, 29, 38, 0.05);
+    border: 1px solid rgba(119, 21, 199, 0.06);
     cursor: pointer;
-    transition: transform 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 
     &:active {
-        transform: scale(0.98);
+        transform: scale(0.985);
+        box-shadow: 0 2px 8px rgba(26, 29, 38, 0.06);
+    }
+
+    /* Persona sin conexión: se atenúa un poco para que de un vistazo se note
+       quién está al alcance. No se oculta ni se atenúa el nombre: que el
+       cuidador sepa que la persona existe es justamente lo que importa. */
+    &.sin-conexion {
+        box-shadow: 0 2px 10px rgba(26, 29, 38, 0.03);
+        background: #fbfbfd;
+
+        .adulto-avatar {
+            opacity: 0.7;
+        }
     }
 
     .adulto-avatar {
+        position: relative;
         flex-shrink: 0;
-        width: 42px;
-        height: 42px;
+        width: 52px;
+        height: 52px;
         border-radius: 50%;
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
         background: #f0ecfa;
+        box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px #e3ddf3;
+
+        /* Anillo verde cuando la persona tiene la app con internet. Usa el
+           mismo umbral que el badge de al lado, así que no pueden
+           contradecirse. */
+        &.en-linea {
+            box-shadow: 0 0 0 2px #ffffff, 0 0 0 3.5px #43a047;
+        }
 
         ion-icon {
-            font-size: 42px;
+            font-size: 52px;
             color: var(--primary);
         }
 
@@ -100,7 +149,7 @@ ion-content {
 
         h3 {
             margin: 0;
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 700;
             color: var(--text-main);
             white-space: nowrap;
@@ -111,40 +160,30 @@ ion-content {
         .adulto-meta {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-top: 3px;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
 
-            .badge-activo {
-                display: inline-flex;
-                align-items: center;
-                gap: 4px;
-                font-size: 10px;
-                font-weight: 600;
-                color: #27ae60;
-                background: rgba(46, 204, 113, 0.12);
-                padding: 2px 8px;
-                border-radius: 8px;
-
-                .badge-dot {
-                    width: 6px;
-                    height: 6px;
-                    border-radius: 50%;
-                    background: #27ae60;
-                }
-            }
-
-            .meta-text {
+            /* La comuna pasó de texto suelto a chip, para que se lea como
+               información y no como parte del nombre. */
+            .chip-lugar {
                 display: inline-flex;
                 align-items: center;
                 gap: 3px;
-                font-size: 11px;
+                font-size: 11.5px;
+                font-weight: 600;
                 color: var(--text-muted);
+                background: #f1f1f4;
+                padding: 3px 9px;
+                border-radius: 999px;
                 white-space: nowrap;
+                max-width: 100%;
                 overflow: hidden;
                 text-overflow: ellipsis;
 
                 ion-icon {
                     font-size: 12px;
+                    flex-shrink: 0;
                 }
             }
         }
