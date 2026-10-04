@@ -47,6 +47,7 @@ import { SOSService, ResultadoSOS } from '../../../services/Backend/sos/sos';
 import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
+import { Haptics } from '@capacitor/haptics';
 import { FooterComponent } from '../../../components/footer/footer.component';
 import { AvisoPermisosComponent } from '../../../components/aviso-permisos/aviso-permisos.component';
 import { SupabaseService } from '../../../services/supabase/supabase';
@@ -57,6 +58,17 @@ import { PermisosService } from '../../../services/permisos/permisos.service';
 import { RealtimeService } from '../../../services/realtime/realtime.service';
 import { SaludSyncService } from '../../../services/Backend/salud/salud-sync';
 import { Salud, type ResumenSalud } from '../../../services/Backend/salud/salud';
+
+/**
+ * Cómo se ve el bloque de zona segura del panel del adulto.
+ *
+ * Antes era un booleano (`fueraDeZona`) y con eso sólo había dos estados: o
+ * verde o rojo. Pero el panel abre mucho antes de tener una posición sobre la
+ * que juzgar, y hay un caso que no era ni verde ni rojo: cuando el cuidador
+ * pausa los avisos porque la persona está de viaje. Con ese estado el bloque
+ * dice "viaje" en vez de gritarle que está fuera, que es lo que hacía antes.
+ */
+type ZonaPanel = 'comprobando' | 'sin-zona' | 'dentro' | 'fuera' | 'viaje';
 
 
 @Component({
@@ -178,15 +190,40 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   private escuchaAppPermisos: Promise<{ remove: () => Promise<void> }> | null = null;
 
-  // =====================================================
-  // ZONA SEGURA
-  // =====================================================
+// =====================================================
+// ZONA SEGURA
+// =====================================================
 
-  private zonaEstadoPrevio: boolean | null = null;
+zonaEstado: ZonaPanel = 'comprobando';
 
-  /** Estado demostrativo del botón "Zona Segura" del panel del adulto:
-   *  false = dentro de la zona (verde), true = fuera de la zona (rojo). */
-  fueraDeZona: boolean = false;
+/** Metros al centro de la zona más cercana, o `null` si todavía no se sabe. */
+zonaDistanciaM: number | null = null;
+
+zonaNombre: string | null = null;
+
+/** Si al salir de la zona se alcanzó a avisar a los cuidadores. */
+zonaCuidadorAvisado = false;
+
+/**
+ * Zona en la que estaba la persona en la última evaluación.
+ *
+ * Es lo que separa "recién salí" de "ya venía de antes": sin esto, abrir la app
+ * estando fuera volvía a vibrar y a mostrar el aviso, aunque ya se hubiera
+ * avisado en la sesión anterior.
+ */
+private zonaEstadoPrevio: 'dentro' | 'fuera' | null = null;
+
+/**
+ * Cada cuánto se vuelve a mirar la zona mientras el panel está a la vista.
+ *
+ * Antes el estado se calculaba una vez al abrir y quedaba congelado horas: el
+ * servicio de GPS de 30 s sí seguía evaluando la zona en el servidor, pero la
+ * pantalla no se enteraba. 60 s es lo suficiente para verse al salir de casa
+ * sin castigar la batería ni la red.
+ */
+private readonly INTERVALO_ZONA_MS = 60000;
+
+private timerZona: any = null;
 
 
   // =====================================================
@@ -666,12 +703,19 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     // la tarjeta seguía diciendo "Esperando datos de tu reloj" aunque el
     // teléfono ya hubiera subido los pasos hace rato.
     this.refrescarTarjetaSalud();
+
+    // Zona segura: se sigue mirando mientras el panel esté a la vista, para
+    // que el bloque de arriba refleje la salida en el momento y no se quedó
+    // con el estado del momento en que se abrió la app.
+    this.iniciarTimerZona();
+
     this.changeDetectorRef.detectChanges();
   }
 
   ionViewWillLeave() {
     this.detenerTimerSonando();
     this.detenerVigilanciaPermisos();
+    this.detenerTimerZona();
   }
 
   /**
@@ -709,6 +753,14 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       if (!this.desplazamientoRevisado) {
         this.desplazamientoRevisado = true;
         this.trackerDesplazamiento.revisarArranque(this.idUsuarioActual);
+      }
+
+      // Se parte del estado que quedó guardado, no de "no se sabe nada". Con
+      // esto, abrir la app estando fuera de la zona no vuelve a vibrar ni a
+      // mostrar el aviso: ya se avisó la vez anterior.
+      if (this.zonaEstadoPrevio === null) {
+        this.zonaEstadoPrevio =
+          this.zonaSeguraService.estadoPrevioConocido(this.idUsuarioActual);
       }
 
       try {
@@ -965,16 +1017,59 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
         longitud
       );
 
-      if (!estado) return;
+      // Sin zonas configuradas: se dice explícitamente en vez de mostrar
+      // "dentro" de una zona que no existe, que era lo que pasaba antes.
+      if (!estado) {
+        this.zonaEstado = 'sin-zona';
+        this.zonaDistanciaM = null;
+        this.zonaNombre = null;
+        this.zonaCuidadorAvisado = false;
+        this.zonaEstadoPrevio = null;
+        this.changeDetectorRef.detectChanges();
+        return;
+      }
 
-      this.zonaEstadoPrevio = estado.dentro;
+      const estadoAnterior = this.zonaEstado;
+      const yaEstabaFuera = antesDentro === 'fuera';
 
-      // El botón del panel sólo es indicador: cambia a "Fuera de zona" (rojo)
-      // al salirse y vuelve a su color normal al entrar de nuevo.
-      this.fueraDeZona = !estado.dentro;
+      this.zonaEstadoPrevio = estado.dentro ? 'dentro' : 'fuera';
+
+      // Fuera de zona pero con los avisos pausados por un viaje: no es una
+      // alarma, así que el bloque no se pone rojo ni avisa a nadie.
+      if (!estado.dentro && estado.viajeActivo) {
+        this.zonaEstado = 'viaje';
+      } else {
+        this.zonaEstado = estado.dentro ? 'dentro' : 'fuera';
+      }
+
+      this.zonaDistanciaM = estado.distancia;
+      this.zonaNombre =
+        estado.zonaDentro?.nombre ||
+        estado.zonaCercana?.nombre ||
+        estado.zonaCercana?.direccion_texto ||
+        null;
+      this.zonaCuidadorAvisado = estado.alertaEnviada;
+
+      // Al cruzarse el borde se vibra, aunque la persona esté mirando otra
+      // cosa: el color solo no basta y es el momento en que más importa
+      // enterarse.
+      if (this.zonaEstado === 'fuera' && !yaEstabaFuera && estadoAnterior !== 'fuera') {
+        this.vibrarAvisoZona();
+      }
+
       this.changeDetectorRef.detectChanges();
 
-      if (!estado.dentro && antesDentro !== false && this.zonaSeguraService.puedeAlertar(this.idUsuarioActual)) {
+      // El aviso con ventana y el registro de alerta se comparten, así que la
+      // condición es la misma para los dos. Y en modo viaje no hay nada que
+      // avisar: el cuidador pausó los avisos a propósito, y antes esta ventana
+      // salía igual diciendo que le habían avisado.
+      const correspondeAvisar =
+        !estado.dentro &&
+        !estado.viajeActivo &&
+        !yaEstabaFuera &&
+        this.zonaSeguraService.puedeAlertar(this.idUsuarioActual);
+
+      if (correspondeAvisar) {
         this.zonaSeguraService.registrarAlerta(this.idUsuarioActual);
 
         const zona = estado.zonaCercana;
@@ -995,6 +1090,142 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
 
   // =====================================================
+  // ZONA SEGURA: ESTADO MOSTRADO EN EL PANEL
+  // =====================================================
+
+  /** Título del bloque. Corto y en futuro: dice qué está pasando. */
+  get zonaTitulo(): string {
+    switch (this.zonaEstado) {
+      case 'comprobando':
+        return 'Buscando tu ubicación...';
+      case 'sin-zona':
+        return 'Aún no hay zona segura';
+      case 'fuera':
+        return '¡Estás fuera de tu zona segura!';
+      case 'viaje':
+        return 'Fuera de zona · viaje';
+      default:
+        return 'Estás en tu zona segura';
+    }
+  }
+
+  /** Segunda línea: el nombre de la zona y a cuántos metros está el centro. */
+  get zonaDetalle(): string {
+    switch (this.zonaEstado) {
+      case 'comprobando':
+        return 'Un momento';
+
+      case 'sin-zona':
+        return 'Tu cuidador puede crearla desde su app';
+
+      case 'fuera':
+        return `${this.zonaNombre ?? 'Tu zona'} · ${this.distanciaCorta()}` +
+          (this.zonaCuidadorAvisado ? ' · tu cuidador fue avisado' : '');
+
+      case 'viaje':
+        return `${this.zonaNombre ?? 'Tu zona'} · ${this.distanciaCorta()} · tu cuidador pausó los avisos`;
+
+      default:
+        return `${this.zonaNombre ?? 'Zona segura'} · ${this.distanciaCorta()}`;
+    }
+  }
+
+  /**
+   * Icono del bloque.
+   *
+   * Fuera de zona se usa `warning` y no un escudo tachado porque es el ícono
+   * que la persona ya conoce de la app (sale en la tarjeta de salir de zona
+   * del cuidador), y un ícono inventado no se entiende a la primera.
+   */
+  get zonaIcono(): string {
+    switch (this.zonaEstado) {
+      case 'comprobando':
+        return 'sync-outline';
+      case 'sin-zona':
+        return 'shield-outline';
+      case 'fuera':
+        return 'warning';
+      case 'viaje':
+        return 'airplane-outline';
+      default:
+        return 'shield-checkmark';
+    }
+  }
+
+  /** La distancia en metros, o en kilómetros cuando ya es larga. */
+  private distanciaCorta(): string {
+    const d = this.zonaDistanciaM;
+
+    if (d === null || d === undefined || isNaN(d)) {
+      return 'distancia desconocida';
+    }
+
+    if (d < 1000) return `a ${Math.round(d)} m`;
+
+    return `a ${(d / 1000).toFixed(1).replace('.', ',')} km`;
+  }
+
+  /**
+   * Revisa la zona cada `INTERVALO_ZONA_MS` mientras el panel esté visible.
+   *
+   * Pide la posición al GPS sin volver a guardarla en la base: la ubicación ya
+   * la reporta el servicio nativo, y repetir el guardado desde acá cada minuto
+   * sería escribir en Supabase por nada.
+   */
+  private iniciarTimerZona() {
+    this.detenerTimerZona();
+
+    this.timerZona = setInterval(() => {
+      if (!this.destruido) {
+        this.revisarZonaSeguraPeriodica();
+      }
+    }, this.INTERVALO_ZONA_MS);
+  }
+
+  private detenerTimerZona() {
+    if (this.timerZona) {
+      clearInterval(this.timerZona);
+      this.timerZona = null;
+    }
+  }
+
+  private async revisarZonaSeguraPeriodica(): Promise<void> {
+    if (!this.idUsuarioActual) return;
+
+    try {
+      const pos = await this.gpsService.obtenerUbicacionActualDispositivo();
+      if (!pos) return;
+
+      await this.verificarZonaSegura(pos.latitud, pos.longitud);
+    } catch (e) {
+      // Sin GPS no se cambia nada: el bloque sigue con el último estado
+      // conocido en vez de dar un salto que no ocurrió.
+      console.warn('No se pudo refrescar la zona segura:', e);
+    }
+  }
+
+  /** Un aviso al salir de la zona, que se siente aunque no se esté mirando. */
+  private async vibrarAvisoZona(): Promise<void> {
+    try {
+      await Haptics.vibrate({ duration: 600 });
+    } catch {
+      // Teléfono sin vibración o app corriendo en el navegador.
+    }
+  }
+
+  /**
+   * Abre la pantalla de zona segura.
+   *
+   * El adulto entra sólo para ver: en esa pantalla no hay forma de crear,
+   * editar ni eliminar zonas, porque eso lo hace el cuidador.
+   */
+  abrirZonaSegura() {
+    (document.activeElement as HTMLElement)?.blur();
+    this.router.navigate(['/zona-segura']);
+  }
+
+
+  // =====================================================
   // DESTRUCCIÓN
   // =====================================================
 
@@ -1006,6 +1237,8 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       clearInterval(this.solicitudesInterval);
 
     }
+
+    this.detenerTimerZona();
 
     // La suscripción de Realtime es compartida: se suelta la escucha de esta
     // pantalla, no el canal. El canal se cierra al cambiar de cuenta.

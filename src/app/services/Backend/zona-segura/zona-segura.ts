@@ -1027,6 +1027,17 @@ export class ZonaSeguraService {
     }
   }
 
+  /**
+   * En qué zona quedó la persona la última vez que se evaluó.
+   *
+   * Se expone para que quien muestre el estado no tenga que suponer "recién
+   * salí de la app" y vuelva a avisar de algo que ya se avisó en la sesión
+   * anterior: el estado está guardado, sólo hay que leerlo.
+   */
+  estadoPrevioConocido(idAdulto: string): 'dentro' | 'fuera' | null {
+    return this.estadoPrevio(idAdulto);
+  }
+
   private guardarEstadoPrevio(idAdulto: string, estado: 'dentro' | 'fuera'): void {
     try {
       localStorage.setItem(CLAVE_ESTADO + idAdulto, estado);

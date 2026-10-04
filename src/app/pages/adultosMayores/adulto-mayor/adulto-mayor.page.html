@@ -237,6 +237,35 @@
     <!-- Grid -->
     <div class="menu-grid">
 
+      <!-- Zona segura: es el único bloque del menú que ocupa las dos columnas,
+           y va primero. Es un estado y no un botón, y por eso necesita más
+           ancho que una tarjeta normal para que se lea de un vistazo. Con eso
+           el resto del grid queda en 6 tarjetas, o sea 3 filas parejas.
+
+           Al tocarlo se abre la pantalla de zona segura, pero ahí el adulto
+           sólo mira: crear, editar y eliminar los hace el cuidador.
+
+           Al cruzarse el borde el bloque entero se pone rojo y late, y además
+           vibra el teléfono. -->
+      <div class="zona-carta"
+           [class.comprobando]="zonaEstado === 'comprobando'"
+           [class.sin-zona]="zonaEstado === 'sin-zona'"
+           [class.fuera]="zonaEstado === 'fuera'"
+           [class.viaje]="zonaEstado === 'viaje'"
+           (click)="abrirZonaSegura()">
+
+        <div class="zona-icono-wrap">
+          <ion-icon [name]="zonaIcono"></ion-icon>
+        </div>
+
+        <div class="zona-texto">
+          <strong>{{ zonaTitulo }}</strong>
+          <span>{{ zonaDetalle }}</span>
+        </div>
+
+        <ion-icon name="chevron-forward-outline" class="zona-chevron"></ion-icon>
+
+      </div>
 
       <div class="menu-card ripple" (click)="abrirSOS()" style="
           background: linear-gradient(135deg, #ff4d4f, #ff7875);
@@ -297,22 +326,6 @@
 
         <h3>
           Recordatorios
-        </h3>
-
-      </div>
-
-      <!-- Indicador demostrativo de zona segura: no navega, sólo muestra
-           el estado (verde = dentro, rojo = fuera de la zona segura) -->
-      <div class="menu-card ripple" [class.fuera-de-zona]="fueraDeZona" [style.background]="fueraDeZona
-          ? 'linear-gradient(135deg, #ef5350, #e53935)'
-          : 'linear-gradient(135deg, #4caf50, #81c784)'" [style.box-shadow]="fueraDeZona
-          ? '0 10px 25px rgba(229, 57, 53, 0.45)'
-          : '0 10px 25px rgba(156, 39, 176, 0.35)'" style="border:none">
-
-        <ion-icon [name]="fueraDeZona ? 'warning' : 'shield-checkmark'"></ion-icon>
-
-        <h3>
-          {{ fueraDeZona ? 'Fuera de zona segura' : 'Zona Segura' }}
         </h3>
 
       </div>

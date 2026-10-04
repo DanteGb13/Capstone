@@ -522,8 +522,16 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     return this.esCuidador && this.adultosACargo.length > 1;
   }
 
-  /** Fila superior: selector del adulto y/o botón de añadir zona segura. */
+/**
+   * Fila superior: selector del adulto y/o botón de añadir zona segura.
+   *
+   * Es del cuidador y sólo suyo. El adulto no ve esta fila porque su zona la
+   * define el cuidador: si el botón "Añadir zona segura" apareciera, cualquiera
+   * podría cambiar el radio o mover el centro del lugar que avisa cuando se
+   * sale, y eso es una decisión de quien vigila, no de quien es vigilado.
+   */
   get mostrarFilaSuperior(): boolean {
+    if (!this.esCuidador) return false;
     return this.mostrarSelectorAdultos || (!this.modoFormulario && !this.cargando);
   }
 
@@ -1146,11 +1154,26 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     this.map.setView([this.ubicacion.latitud, this.ubicacion.longitud], 17);
   }
 
-  // =====================================================
+// =====================================================
   // ALTA / EDICION DE ZONAS
   // =====================================================
 
+  /**
+   * ¿Esta cuenta tiene permiso para modificar las zonas?
+   *
+   * Sólo el cuidador. El adulto mayor ve las zonas pero no las toca: él es
+   * quien está dentro o fuera de ellas, y si pudiera mover el centro, cambiar
+   * el radio o borrar la zona, se podría tapar a sí mismo del aviso. Por eso
+   * todos los métodos de escritura preguntan acá, y no sólo se esconden los
+   * botones: así ningún camino que los dispare salva el filtro.
+   */
+  private get puedeEditarZonas(): boolean {
+    return this.esCuidador;
+  }
+
   async iniciarNuevaZona() {
+    if (!this.puedeEditarZonas) return;
+
     if (!this.idAdulto) {
       await this.toast('No se pudo identificar a la persona. Cierra la pantalla y vuelve a entrar.');
       return;
@@ -1228,6 +1251,8 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   editarZona(zona: ZonaSegura) {
+    if (!this.puedeEditarZonas) return;
+
     (document.activeElement as HTMLElement)?.blur();
 
     this.editandoId = zona.id;
@@ -1643,6 +1668,8 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   async guardarZona() {
     if (this.guardando) return;
 
+    if (!this.puedeEditarZonas) return;
+
     if (!this.idAdulto) {
       await this.toast('No se pudo identificar a la persona. Cierra la pantalla y vuelve a entrar.');
       return;
@@ -1700,6 +1727,8 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async eliminarZona(zona: ZonaSegura) {
+    if (!this.puedeEditarZonas) return;
+
     const alert = await this.alertCtrl.create({
       header: 'Eliminar zona segura',
       message: `¿Quieres eliminar "${this.tituloZona(zona)}"?`,
@@ -1725,6 +1754,7 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async actualizarCasa(zona: ZonaSegura) {
+    if (!this.puedeEditarZonas) return;
     if (!this.idAdulto || this.actualizandoCasa) return;
 
     this.actualizandoCasa = true;

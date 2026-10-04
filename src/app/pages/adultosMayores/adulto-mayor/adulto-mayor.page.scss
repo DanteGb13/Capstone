@@ -379,6 +379,141 @@ ion-content {
     }
 }
 
+/* ===================================================== */
+/* ZONA SEGURA: BLOQUE ANCHO AL INICIO DEL MENÚ          */
+/* ===================================================== */
+
+/* Es más bajo que una tarjeta normal (84 px contra 130 px) para no ocupar más
+   espacio del que ocupaba antes, pero mantiene un ícono grande y un título de
+   17 px: eso es lo que lo hace legible a simple vista, y por eso no se hizo
+   como un chip de una línea ni como un renglón de texto suelto. */
+.zona-carta {
+    grid-column: 1 / -1;
+    min-height: 84px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 16px;
+    border-radius: 22px;
+    color: #ffffff;
+    background: linear-gradient(135deg, #2e7d32, #43a047);
+    box-shadow: 0 10px 25px rgba(46, 125, 50, 0.3);
+    transition: background 0.4s ease, box-shadow 0.4s ease;
+    cursor: pointer;
+
+    &:active {
+        transform: scale(0.98);
+    }
+
+    .zona-icono-wrap {
+        width: 46px;
+        height: 46px;
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.22);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+
+        ion-icon {
+            font-size: 26px;
+        }
+    }
+
+    .zona-texto {
+        flex: 1;
+        /* Sin esto el nombre largo de la zona parte la fila en dos en pantallas
+           chicas en vez de recortarse. */
+        min-width: 0;
+
+        strong {
+            display: block;
+            font-size: 17px;
+            font-weight: 700;
+            line-height: 1.15;
+        }
+
+        span {
+            display: block;
+            font-size: 12.5px;
+            line-height: 1.25;
+            opacity: 0.92;
+            margin-top: 2px;
+        }
+    }
+
+    .zona-chevron {
+        font-size: 20px;
+        opacity: 0.75;
+        flex-shrink: 0;
+    }
+
+    /* Fuera de zona: rojo y con latido. El latido llama la atención sin
+       obligar a la persona a estar mirando el bloque. */
+    &.fuera {
+        background: linear-gradient(135deg, #c62828, #e53935);
+        box-shadow: 0 10px 25px rgba(198, 40, 40, 0.4);
+        animation: zona-fuera-latido 1.6s ease-in-out infinite;
+    }
+
+    /* Modo viaje: el cuidador pausó los avisos, así que estar fuera no es una
+       alarma. Va en azul y quieto, nunca rojo. */
+    &.viaje {
+        background: linear-gradient(135deg, #1565c0, #1e88e5);
+        box-shadow: 0 10px 25px rgba(21, 101, 192, 0.3);
+    }
+
+    /* Sin zona creada, o todavía comprobando: gris y sin sombra. Ninguno de los
+       dos casos afirma que la persona esté segura, así que no se pinta de
+       verde. */
+    &.sin-zona,
+    &.comprobando {
+        background: #eceff1;
+        box-shadow: none;
+
+        .zona-icono-wrap {
+            background: #cfd8dc;
+
+            ion-icon {
+                color: #607d8b;
+            }
+        }
+
+        strong {
+            color: #37474f;
+        }
+
+        span {
+            color: #78909c;
+            opacity: 1;
+        }
+
+        .zona-chevron {
+            color: #90a4ae;
+            opacity: 1;
+        }
+    }
+
+    /* El punteado separa "todavía no hay zona" de "lo estoy buscando": la
+       primera es algo que falta para siempre hasta que el cuidador la cree, y
+       la segunda se resuelve sola en unos segundos. */
+    &.sin-zona {
+        border: 2px dashed #b0bec5;
+    }
+}
+
+@keyframes zona-fuera-latido {
+    0%,
+    100% {
+        box-shadow: 0 10px 25px rgba(198, 40, 40, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 10px 25px rgba(198, 40, 40, 0.4),
+            0 0 0 9px rgba(229, 57, 53, 0.18);
+    }
+}
+
 /* ALARMA SONANDO (RECORDATORIOS) */
 .alarma-sonando {
     display: flex;

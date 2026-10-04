@@ -240,7 +240,7 @@
         @if (esCuidador) {
           <p>Añade una zona segura para que puedas saber siempre si {{ nombreParaMostrar }} está en un lugar seguro.</p>
         } @else {
-          <p>La primera zona se crea con la dirección de tu casa. Puedes agregar más lugares que quieras mantener seguros.</p>
+          <p>Tu cuidador todavía no ha definido una zona segura para ti. Puede crearla desde su app.</p>
         }
       </div>
     } @else {
@@ -266,23 +266,29 @@
               <span class="zona-meta">Radio {{ zona.radio_metros }} m@if (distanciaA(zona)) { · {{ distanciaA(zona) }} }</span>
             </div>
 
-            <div class="zona-acciones">
-              <button type="button" (click)="editarZona(zona)" title="Editar zona">
-                <ion-icon name="create-outline"></ion-icon>
-              </button>
-              @if (zona.es_casa) {
-                <button
-                  type="button"
-                  (click)="actualizarCasa(zona)"
-                  [disabled]="actualizandoCasa"
-                  title="Actualizar con la dirección del perfil">
-                  <ion-icon name="refresh-outline"></ion-icon>
+            <!-- Editar / actualizar / eliminar son del cuidador. El adulto entra a esta
+           pantalla a ver si está dentro o fuera, nada más: la zona define
+           cuándo se avisa al cuidador, y si el propio vigilado pudiera
+           moverla o apagarla, el aviso dejaría de significar algo. -->
+            @if (esCuidador) {
+              <div class="zona-acciones">
+                <button type="button" (click)="editarZona(zona)" title="Editar zona">
+                  <ion-icon name="create-outline"></ion-icon>
                 </button>
-              }
-              <button type="button" class="peligro" (click)="eliminarZona(zona)" title="Eliminar zona">
-                <ion-icon name="trash-outline"></ion-icon>
-              </button>
-            </div>
+                @if (zona.es_casa) {
+                  <button
+                    type="button"
+                    (click)="actualizarCasa(zona)"
+                    [disabled]="actualizandoCasa"
+                    title="Actualizar con la dirección del perfil">
+                    <ion-icon name="refresh-outline"></ion-icon>
+                  </button>
+                }
+                <button type="button" class="peligro" (click)="eliminarZona(zona)" title="Eliminar zona">
+                  <ion-icon name="trash-outline"></ion-icon>
+                </button>
+              </div>
+            }
           </div>
         }
       </div>
