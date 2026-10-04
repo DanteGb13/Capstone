@@ -17,6 +17,7 @@ export const RUTAS_CUIDADOR = [
   '/ubicacion',
   '/historial',
   '/adulto-cargo',
+  '/contactos-cuidador',
   '/estado'
 ];
 

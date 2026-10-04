@@ -1,0 +1,900 @@
+:host {
+  --primary: #7715c7;
+  --primary-light: rgba(119, 21, 199, 0.1);
+  --background: #f8f7fc;
+  --text-main: #1a1d26;
+  --text-muted: #8c92a4;
+  --success: #2ecc71;
+  --danger: #e53935;
+}
+
+ion-content {
+  --background: var(--background);
+}
+
+ion-toolbar {
+  --background: #ffffff;
+  --color: #1a1d26;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* En el celular ocupa todo el ancho; en pantallas más anchas el contenido
+   queda centrado y con un tope, igual que hace el footer (max-width 460px). */
+.contactos-container {
+  min-height: 100%;
+  background: var(--background);
+  padding: 16px 16px 32px;
+  max-width: 552px;
+  margin: 0 auto;
+}
+
+/* ===================================================== */
+/* BOTÓN APARTE: EMERGENCIAS PÚBLICAS / VOLVER           */
+/* ===================================================== */
+
+.btn-vista {
+  width: 100%;
+  border-radius: 18px;
+  padding: 14px 16px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: transform 0.15s ease;
+
+  ion-icon {
+    font-size: 20px;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  /* Dentro de la vista de persona: acceso a las emergencias públicas. */
+  &.vista-publicos {
+    background: #fef5f4;
+    border: 1px solid #fdecea;
+    color: #b3261e;
+  }
+
+  /* Dentro de la vista pública: vuelta a los contactos de la persona. */
+  &.vista-persona {
+    background: var(--primary-light);
+    border: 1px solid rgba(119, 21, 199, 0.16);
+    color: var(--primary);
+  }
+}
+
+/* ===================================================== */
+/* SELECTOR "CUIDANDO A" (CHIPS, IGUAL QUE HISTORIAL)    */
+/* ===================================================== */
+
+.selector {
+  margin-bottom: 16px;
+}
+
+.selector-label {
+  margin: 0 0 8px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--sc-ink-muted);
+}
+
+.selector-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.chip-adulto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  height: 44px;
+  padding: 0 14px 0 6px;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-surface);
+  color: var(--sc-ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+
+  .chip-nombre {
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &.activo {
+    border-color: var(--sc-primary);
+    background: var(--sc-primary-soft);
+    color: var(--sc-primary-dark);
+  }
+}
+
+.chip-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #f0ecfa;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .chip-iniciales {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--sc-primary);
+  }
+}
+
+.chip-adulto.activo .chip-avatar {
+  background: var(--sc-primary);
+
+  .chip-iniciales {
+    color: var(--sc-ink-invert);
+  }
+}
+
+/* ===================================================== */
+/* SECCIONES                                             */
+/* ===================================================== */
+
+.seccion {
+  margin-bottom: 26px;
+}
+
+/* ENCABEZADO DE CADA SECCIÓN */
+.encabezado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+
+  .encabezado-icono {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(229, 57, 53, 0.12);
+    color: var(--danger);
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 24px;
+    }
+
+    &.morado {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+  }
+}
+
+.titulo {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.subtitulo {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* ===================================================== */
+/* LISTA DE EMERGENCIAS PÚBLICAS                         */
+/* ===================================================== */
+
+.lista-publicos {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.fila-publico {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 12px 12px 12px 14px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  .fila-icono {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 24px;
+    }
+  }
+
+  .fila-dato {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+
+    strong {
+      font-size: 15px;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .fila-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  .fila-numero {
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.1;
+    flex-shrink: 0;
+  }
+
+  .fila-llamar {
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 22px;
+    }
+
+    &:active {
+      transform: scale(0.94);
+    }
+  }
+}
+
+/* ===================================================== */
+/* LISTA DE CONTACTOS DEL ADULTO ELEGIDO                 */
+/* ===================================================== */
+
+.estado {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 22px 16px;
+  color: var(--text-muted);
+  font-size: 14px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+
+  ion-spinner {
+    color: var(--primary);
+  }
+
+  &.vacio {
+    flex-direction: column;
+    text-align: center;
+
+    ion-icon {
+      font-size: 36px;
+      color: var(--primary);
+    }
+
+    span {
+      max-width: 260px;
+      line-height: 1.4;
+    }
+  }
+
+  /* Aviso de error que no desaparece: se queda hasta que se reintente. */
+  &.aviso-error {
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    text-align: left;
+    border: 1px solid #fdecea;
+    background: #fef5f4;
+    color: #b3261e;
+    font-weight: 600;
+    margin-bottom: 12px;
+
+    > ion-icon {
+      font-size: 24px;
+      color: var(--danger);
+      flex-shrink: 0;
+    }
+
+    > span {
+      flex: 1;
+      min-width: 160px;
+      font-size: 14px;
+      line-height: 1.35;
+      color: #b3261e;
+    }
+  }
+}
+
+/* "Ver personas a tu cuidado" del estado vacío. */
+.btn-cta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 16px;
+  margin-top: 4px;
+  background: var(--primary);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.btn-reintentar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 12px;
+  padding: 9px 14px;
+  background: var(--primary);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  ion-icon {
+    font-size: 16px;
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 12px 12px 12px 14px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+
+  .avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 16px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .dato {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+
+    strong {
+      font-size: 15px;
+      color: var(--text-main);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span {
+      font-size: 14px;
+      color: var(--text-muted);
+
+      .parentesco {
+        color: var(--primary);
+        font-weight: 700;
+      }
+    }
+  }
+
+  .btn-accion {
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 22px;
+    }
+
+    &.btn-llamar {
+      background: #e8f7ee;
+      color: #2e7d32;
+    }
+
+    &.btn-eliminar {
+      background: #fdecea;
+      color: var(--danger);
+    }
+
+    &:active {
+      transform: scale(0.94);
+    }
+  }
+}
+
+/* ===================================================== */
+/* BOTONES GRANDES                                        */
+/* ===================================================== */
+
+.btn-grande {
+  width: 100%;
+  border: none;
+  border-radius: 18px;
+  padding: 15px 16px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  ion-icon {
+    font-size: 22px;
+  }
+
+  ion-spinner {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+  }
+}
+
+.btn-agregar {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(119, 21, 199, 0.3);
+  margin-bottom: 10px;
+}
+
+.btn-manual {
+  background: #ffffff;
+  color: var(--primary);
+  border: 2px solid var(--primary-light);
+}
+
+/* ===================================================== */
+/* MODAL Y FORMULARIO DE NUEVO CONTACTO                  */
+/* ===================================================== */
+
+/* Hoja inferior con las esquinas de arriba redondeadas y cabecera en
+   degradado: se ve como una "mini ventana" y no como una página suelta. */
+ion-modal.modal-contacto {
+  --border-radius: 26px 26px 0 0;
+  --box-shadow: 0 -16px 44px rgba(26, 29, 38, 0.28);
+}
+
+ion-toolbar.toolbar-formulario {
+  --background: linear-gradient(135deg, #7715c7 0%, #9d4edd 100%);
+  --color: #ffffff;
+  font-weight: 400;
+  border-bottom: none;
+  padding-top: 18px;
+  padding-bottom: 16px;
+}
+
+ion-content.contenido-formulario {
+  --background: #f8f7fc;
+}
+
+.encabezado-formulario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  padding-right: 8px;
+  line-height: 1.25;
+
+  .titulo-icono {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 25px;
+    }
+  }
+
+  .titulo-texto {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .titulo-modal {
+    font-size: 18px;
+    font-weight: 800;
+    color: #ffffff;
+  }
+
+  .subtitulo-modal {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    margin-top: 3px;
+  }
+}
+
+.toolbar-formulario ion-button {
+  --padding-start: 8px;
+  --padding-end: 8px;
+
+  ion-icon {
+    font-size: 24px;
+    color: #ffffff;
+  }
+}
+
+.formulario {
+  padding: 18px 16px 4px;
+  display: flex;
+  flex-direction: column;
+
+  .campo {
+    display: block;
+    margin-bottom: 14px;
+
+    .etiqueta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 7px;
+
+      ion-icon {
+        font-size: 16px;
+        color: var(--primary);
+      }
+
+      b {
+        color: var(--danger);
+        font-weight: 800;
+      }
+    }
+
+    &.invalido .etiqueta {
+      color: #dc2626;
+    }
+  }
+
+  ion-input,
+  ion-select {
+    --background: #f1eefb;
+    --border-radius: 14px;
+    --padding-start: 14px;
+    --padding-end: 14px;
+    --color: var(--text-main);
+    --placeholder-color: #9ca3af;
+    --highlight-color: var(--primary);
+    --highlight-color-valid: var(--primary);
+    --highlight-color-invalid: var(--danger);
+    font-size: 16px;
+    width: 100%;
+    min-height: 52px;
+  }
+
+  .campo.invalido {
+    ion-input,
+    ion-select {
+      --background: #fdecea;
+      --highlight-color: var(--danger);
+    }
+  }
+
+  .campo-error {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: -6px 0 14px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #dc2626;
+
+    ion-icon {
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+  }
+
+  .fila-campos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 12px;
+  }
+}
+
+/* Los botones quedan pegados abajo del modal, siempre visibles. */
+.acciones-formulario {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
+  background: #ffffff;
+  box-shadow: 0 -10px 26px rgba(26, 29, 38, 0.08);
+}
+
+.btn-form {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 15px 16px;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+
+  ion-icon {
+    font-size: 20px;
+  }
+
+  ion-spinner {
+    width: 20px;
+    height: 20px;
+    color: currentColor;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.7;
+  }
+}
+
+.btn-guardar {
+  background: linear-gradient(135deg, #7715c7 0%, #9d4edd 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(119, 21, 199, 0.32);
+}
+
+.btn-cancelar {
+  background: #f1f0f7;
+  color: var(--text-main);
+}
+
+/* ===================================================== */
+/* ESQUELETO DE CARGA                                    */
+/* ===================================================== */
+
+.esqueleto {
+  .item-fantasma {
+    pointer-events: none;
+  }
+
+  .fantasma,
+  .linea {
+    background: linear-gradient(90deg, #ebe8f4 25%, #f7f5fc 37%, #ebe8f4 63%);
+    background-size: 400% 100%;
+    animation: brillo-esqueleto 1.4s ease infinite;
+  }
+
+  .linea {
+    display: block;
+    height: 12px;
+    border-radius: 6px;
+
+    &.ancha {
+      width: 64%;
+      margin-bottom: 9px;
+    }
+
+    &.corta {
+      width: 40%;
+    }
+  }
+}
+
+@keyframes brillo-esqueleto {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* ===================================================== */
+/* AVISO MIENTRAS SE ABRE LA AGENDA                       */
+/* ===================================================== */
+
+.overlay-picker {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 29, 38, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+}
+
+.overlay-card {
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 26px 22px;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+
+  ion-spinner {
+    color: var(--primary);
+    width: 34px;
+    height: 34px;
+  }
+
+  span {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-main);
+  }
+
+  button {
+    width: 100%;
+    border: none;
+    border-radius: 14px;
+    padding: 12px 0;
+    background: #f1f0f7;
+    color: var(--text-main);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+}
+
+/* RESPONSIVE */
+@media (max-width: 400px) {
+  .lista-publicos {
+    gap: 8px;
+  }
+
+  .fila-publico {
+    gap: 10px;
+    padding: 10px 10px 10px 12px;
+
+    .fila-icono {
+      width: 42px;
+      height: 42px;
+
+      ion-icon {
+        font-size: 22px;
+      }
+    }
+
+    .fila-dato strong {
+      font-size: 14px;
+    }
+
+    .fila-numero {
+      font-size: 18px;
+    }
+
+    .fila-llamar {
+      width: 42px;
+      height: 42px;
+    }
+  }
+
+  .titulo {
+    font-size: 16.5px;
+  }
+}

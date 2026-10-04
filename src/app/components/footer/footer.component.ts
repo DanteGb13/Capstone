@@ -24,16 +24,12 @@ export class FooterComponent {
     addIcons(icons);
   }
 
-  /** Los contactos de emergencia son solo del adulto mayor. */
-  get esAdultoMayor(): boolean {
-    return this.tipo === 'adulto-mayor';
-  }
-
+  /** Cada rol tiene su propia pantalla de contactos de emergencia. */
   irContactos() {
-    if (!this.esAdultoMayor) return;
-
     (document.activeElement as HTMLElement)?.blur();
-    this.router.navigate(['/contacto-emergencia']);
+    this.router.navigate([
+      this.tipo === 'adulto-mayor' ? '/contacto-emergencia' : '/contactos-cuidador'
+    ]);
   }
 
   async irInicio() {

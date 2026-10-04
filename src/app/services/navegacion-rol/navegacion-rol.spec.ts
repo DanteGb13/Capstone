@@ -38,6 +38,7 @@ describe('NavegacionRolService', () => {
 
   it('las listas mantienen las rutas propias de cada rol', () => {
     expect(RUTAS_CUIDADOR).toContain('/cuidador');
+    expect(RUTAS_CUIDADOR).toContain('/contactos-cuidador');
     expect(RUTAS_ADULTO_MAYOR).toContain('/adulto-mayor');
   });
 
@@ -48,6 +49,7 @@ describe('NavegacionRolService', () => {
     expect(service.verificarAccesoConRol('Familiar', '/cuidador')).toBeNull();
 
     expect(service.verificarAccesoConRol('Familiar', '/contacto-emergencia')).toBe('/cuidador');
+    expect(service.verificarAccesoConRol('Usuario', '/contactos-cuidador')).toBe('/adulto-mayor');
     expect(service.verificarAccesoConRol('Usuario', '/cuidador')).toBe('/adulto-mayor');
     expect(service.verificarAccesoConRol(null, '/cuidador')).toBeNull();
   });

@@ -347,13 +347,6 @@
           <button type="button" [class.seleccionado]="formRadio === 300" (click)="fijarRadio(300)">300 m</button>
           <button type="button" [class.seleccionado]="formRadio === 500" (click)="fijarRadio(500)">500 m</button>
         </div>
-        <ion-input
-          type="number"
-          [ngModel]="formRadio"
-          (ngModelChange)="onRadioChange($event)"
-          placeholder="500"
-          fill="outline">
-        </ion-input>
       </div>
 
       <div class="campo">

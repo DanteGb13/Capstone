@@ -22,6 +22,7 @@ import * as icons from 'ionicons/icons';
 import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
 import { PushNotificationService } from '../../../services/Backend/push-notification/push-notification';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
@@ -111,6 +112,15 @@ export class CuidadorPage implements OnInit, OnDestroy {
 
   avisoPermisosOculto = false;
 
+  /**
+   * Vigilancia del aviso: el permiso puede APAGARSE con la pantalla ya
+   * abierta (ajustes rápidos o Ajustes del sistema), y en ese caso el aviso
+   * tiene que aparecer solo, sin que la persona salga y vuelva a entrar.
+   */
+  private timerPermisos: any = null;
+
+  private escuchaAppPermisos: Promise<{ remove: () => Promise<void> }> | null = null;
+
 
   // =====================================================
   // MODAL DE VINCULACIÓN
@@ -171,6 +181,7 @@ export class CuidadorPage implements OnInit, OnDestroy {
     // Vinculaciones en vivo + aviso de permisos.
     await this.activarRealtime();
     await this.revisarPermisos();
+    this.iniciarVigilanciaPermisos();
 
     this.inicializado = true;
   }
@@ -292,6 +303,40 @@ export class CuidadorPage implements OnInit, OnDestroy {
     this.avisoPermisosOculto = false;
   }
 
+  /**
+   * Mantiene el aviso vivo mientras la pantalla está visible.
+   *
+   * Además de revisar al entrar, se releen los permisos cada 10 s y cada vez
+   * que la app vuelve al primer plano. Cubre los dos casos en los que un
+   * permiso se apaga con el panel abierto: desde los ajustes rápidos (sin
+   * salir de la app) y desde Ajustes del sistema (app en segundo plano, que
+   * sólo dispara `appStateChange`, no `ionViewWillEnter`). La consulta es
+   * local: va al sistema, no a la red.
+   */
+  private iniciarVigilanciaPermisos(): void {
+    this.detenerVigilanciaPermisos();
+
+    this.timerPermisos = setInterval(() => {
+      void this.revisarPermisos();
+    }, 10000);
+
+    if (Capacitor.isNativePlatform()) {
+      this.escuchaAppPermisos = App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) void this.revisarPermisos();
+      });
+    }
+  }
+
+  private detenerVigilanciaPermisos(): void {
+    if (this.timerPermisos) {
+      clearInterval(this.timerPermisos);
+      this.timerPermisos = null;
+    }
+    const escucha = this.escuchaAppPermisos;
+    this.escuchaAppPermisos = null;
+    if (escucha) void escucha.then((h) => h.remove()).catch(() => {});
+  }
+
   async cargarFotoPerfil() {
     try {
       const usuario = await this.cuidadoresService.cargarUsuario();
@@ -332,13 +377,21 @@ export class CuidadorPage implements OnInit, OnDestroy {
     await this.cargarPerfilRapido();
     await this.cargarAdultos();
     await this.revisarPermisos();
+    // Y mientras siga visible, que siga mirando: un permiso puede apagarse
+    // con el panel abierto y el aviso debe aparecer en ese momento.
+    this.iniciarVigilanciaPermisos();
     this.changeDetectorRef.detectChanges();
+  }
+
+  ionViewWillLeave() {
+    this.detenerVigilanciaPermisos();
   }
 
   ngOnDestroy() {
     if (this.refreshInterval) {
       clearInterval(this.refreshInterval);
     }
+    this.detenerVigilanciaPermisos();
     this.soltarRealtime?.();
   }
 

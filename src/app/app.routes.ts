@@ -43,6 +43,11 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'contactos-cuidador',
+    loadComponent: () => import('./pages/cuidadores/contactos-cuidador/contactos-cuidador.page').then( m => m.ContactosCuidadorPage),
+    canActivate: [authGuard]
+  },
+  {
     path: 'login',
     loadComponent: () => import('./auth/login/login.page').then( m => m.LoginPage),
     canActivate: [noAuthGuard]

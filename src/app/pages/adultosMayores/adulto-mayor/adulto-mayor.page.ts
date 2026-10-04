@@ -46,6 +46,7 @@ import { AlarmasService, AlarmaRecordatorio } from '../../../services/alarmas/al
 import { SOSService, ResultadoSOS } from '../../../services/Backend/sos/sos';
 import { SiempreCerca } from '../../../services/alarmas/siempre-cerca';
 import { Capacitor } from '@capacitor/core';
+import { App } from '@capacitor/app';
 import { FooterComponent } from '../../../components/footer/footer.component';
 import { AvisoPermisosComponent } from '../../../components/aviso-permisos/aviso-permisos.component';
 import { SupabaseService } from '../../../services/supabase/supabase';
@@ -159,6 +160,15 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   avisoPermisosOculto = false;
 
   corrigiendoPermisos = false;
+
+  /**
+   * Vigilancia del aviso: el permiso puede APAGARSE con la pantalla ya
+   * abierta (ajustes rápidos o Ajustes del sistema), y en ese caso el aviso
+   * tiene que aparecer solo, sin que la persona salga y vuelva a entrar.
+   */
+  private timerPermisos: any = null;
+
+  private escuchaAppPermisos: Promise<{ remove: () => Promise<void> }> | null = null;
 
   // =====================================================
   // ZONA SEGURA
@@ -378,6 +388,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     // 6. Vinculaciones en vivo + permiso + banner de permisos, en paralelo.
     this.activarRealtime();
     this.revisarPermisos();
+    this.iniciarVigilanciaPermisos();
 
   }
 
@@ -585,10 +596,47 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.avisoPermisosOculto = false;
   }
 
+  /**
+   * Mantiene el aviso vivo mientras la pantalla está visible.
+   *
+   * Además de revisar al entrar, se releen los permisos cada 10 s y cada vez
+   * que la app vuelve al primer plano. Cubre los dos casos en los que un
+   * permiso se apaga con el panel abierto: desde los ajustes rápidos (sin
+   * salir de la app) y desde Ajustes del sistema (app en segundo plano, que
+   * sólo dispara `appStateChange`, no `ionViewWillEnter`). La consulta es
+   * local: va al sistema, no a la red.
+   */
+  private iniciarVigilanciaPermisos(): void {
+    this.detenerVigilanciaPermisos();
+
+    this.timerPermisos = setInterval(() => {
+      void this.revisarPermisos();
+    }, 10000);
+
+    if (Capacitor.isNativePlatform()) {
+      this.escuchaAppPermisos = App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) void this.revisarPermisos();
+      });
+    }
+  }
+
+  private detenerVigilanciaPermisos(): void {
+    if (this.timerPermisos) {
+      clearInterval(this.timerPermisos);
+      this.timerPermisos = null;
+    }
+    const escucha = this.escuchaAppPermisos;
+    this.escuchaAppPermisos = null;
+    if (escucha) void escucha.then((h) => h.remove()).catch(() => {});
+  }
+
   async ionViewWillEnter() {
     await this.cargarFotoPerfil();
     // Al volver a la pantalla puede haber cambiado algo en Ajustes.
     await this.revisarPermisos();
+    // Y mientras siga visible, que siga mirando: un permiso puede apagarse
+    // con el panel abierto y el aviso debe aparecer en ese momento.
+    this.iniciarVigilanciaPermisos();
     // Al volver a la página, las alarmas que se apagaron en la barra de
     // notificaciones ya no deben seguir apareciendo.
     this.actualizarSonando();
@@ -603,6 +651,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   ionViewWillLeave() {
     this.detenerTimerSonando();
+    this.detenerVigilanciaPermisos();
   }
 
   /**
@@ -899,6 +948,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.alarmasService.desescuchar('adulto-mayor');
     this.suscripcionSonando?.unsubscribe();
     this.detenerTimerSonando();
+    this.detenerVigilanciaPermisos();
 
   }
 

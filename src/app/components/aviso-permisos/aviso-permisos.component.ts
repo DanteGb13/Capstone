@@ -7,8 +7,10 @@ import * as icons from 'ionicons/icons';
 /**
  * Aviso no bloqueante para el panel: "te falta activar algo".
  *
- * Nunca tapa la pantalla ni impide usar la app: sólo informa y ofrece un botón.
- * Aparece en vez de dejar que la persona descubra sola que el SOS no suena.
+ * Se muestra como tarjeta flotante fija arriba de todo (position: fixed),
+ * sin empujar el menú de abajo, y permanece visible hasta que el usuario
+ * active todos los permisos críticos. No impide usar la app: sólo informa
+ * y ofrece un botón.
  */
 @Component({
   selector: 'app-aviso-permisos',
@@ -32,17 +34,25 @@ import * as icons from 'ionicons/icons';
             <ion-button size="small" class="btn" (click)="corregir.emit()">Corregir</ion-button>
           }
         </div>
-
-        <button type="button" class="cerrar" (click)="cerrar()" aria-label="Cerrar aviso">
-          <ion-icon name="close"></ion-icon>
-        </button>
       </div>
     }
   `,
   styles: [`
     :host { display: block; }
 
+    /*
+     * Flotante fijo: no ocupa alto en el flujo, así el menú de abajo
+     * no se mueve. Queda por encima del contenido (z-index 1100 > 1000
+     * del footer) hasta que todos los permisos críticos estén activos.
+     */
     .aviso {
+      position: fixed;
+      top: calc(env(safe-area-inset-top, 0px) + 12px);
+      left: 16px;
+      right: 16px;
+      margin: 0 auto;
+      max-width: 480px;
+      z-index: 1100;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -50,7 +60,7 @@ import * as icons from 'ionicons/icons';
       border: 1px solid color-mix(in srgb, var(--sc-warn, #e07b00) 32%, transparent);
       border-radius: var(--sc-radius, 14px);
       padding: 10px 10px 10px 12px;
-      margin: 12px 16px 0;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
       animation: aparecer 0.28s ease;
     }
 
@@ -117,19 +127,6 @@ import * as icons from 'ionicons/icons';
       min-height: 30px;
       margin: 0;
     }
-
-    .cerrar {
-      flex-shrink: 0;
-      background: none;
-      border: none;
-      padding: 4px;
-      cursor: pointer;
-      color: var(--sc-ink-muted, #6b6480);
-      display: grid;
-      place-items: center;
-    }
-
-    .cerrar ion-icon { font-size: 16px; }
   `],
   imports: [CommonModule, IonIcon, IonButton, IonSpinner]
 })
