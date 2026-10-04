@@ -129,7 +129,15 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
    * iPhone o en el navegador no hay Health Connect, y eso no es lo mismo que
    * "todavía no autorizaste". Si se mezclaran, la tarjeta pediría un permiso
    * que no existe en ninguna parte.
+   *
+   * `saludComprobando` sirve para lo mismo que las otras dos pero al revés:
+   * mientras vale `true` todavía no se sabe nada, y la tarjeta tiene que
+   * decir "Buscando tu reloj" en vez de "No se puede leer el reloj en este
+   * teléfono". Sin esto, el primer pintado mentía durante los segundos que
+   * tarda la comprobación.
    */
+  saludComprobando = true;
+
   saludDisponible = false;
 
   saludAutorizada = false;
@@ -226,7 +234,13 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
 
   cuidadorFotoUrl: string | null = null;
 
-  cargandoCuidadores: boolean = false;
+  /**
+   * Empieza en `true` a propósito: la tarjeta del cuidador ahora se dibuja
+   * siempre, así que el primer pintado tiene que poder decir "Buscando..."
+   * en vez de "Sin cuidador asignado", que sería mentira durante los
+   * segundos que tarda la consulta.
+   */
+  cargandoCuidadores: boolean = true;
 
 
   // =====================================================
@@ -326,7 +340,21 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.changeDetectorRef.detectChanges();
 
 
-    // 3. Cargar en paralelo sólo lo esencial del panel (solicitudes + cuidadores)
+    // 3. Signos vitales: el adulto mayor no tiene que apretar nada. El
+    //    servicio de ubicación ya está vivo y cada 15 minutos avisa por aquí
+    //    para subir los datos del reloj a Supabase. Lo que sí necesita es una
+    //    sola autorización, y por eso se pide al abrir el panel: después
+    //    nunca más.
+    //
+    //    Arranca aquí y no después del `await` de abajo a propósito: la
+    //    comprobación va contra el sistema (Health Connect), pero igual se
+    //    encadenaba detrás de las consultas de red, y la tarjeta se quedaba
+    //    esperando segundos. Ahora va en paralelo, así que la tarjeta queda
+    //    desde el primer pintado.
+    void this.iniciarSyncSalud();
+
+
+    // 4. Cargar en paralelo sólo lo esencial del panel (solicitudes + cuidadores)
     await Promise.all([
       this.cargarSolicitudes(),
       this.cargarCuidadoresVinculados()
@@ -335,7 +363,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.changeDetectorRef.detectChanges();
 
 
-    // 4. Reportar ubicación en SEGUNDO PLANO (geolocalización + geocoding externo),
+    // 5. Reportar ubicación en SEGUNDO PLANO (geolocalización + geocoding externo),
     //    sin bloquear la visualización del panel.
     this.reportarUbicacion();
 
@@ -344,15 +372,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     this.iniciarMonitoreoSegundoPlano();
 
 
-    // 4b. Signos vitales: el adulto mayor no tiene que apretar nada. El
-    //     servicio de ubicación ya está vivo y cada 15 minutos avisa por aquí
-    //     para subir los datos del reloj a Supabase. Lo que sí necesita es una
-    //     sola autorización, y por eso se pide al abrir el panel: después
-    //     nunca más.
-    this.iniciarSyncSalud();
-
-
-    // 5. Recordatorios: repone las alarmas programadas y escucha el toque
+    // 6. Recordatorios: repone las alarmas programadas y escucha el toque
     //    en las notificaciones para abrir el panel de consolar con "Apagar".
     this.actualizarSonando();
 
@@ -756,7 +776,15 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   }
 
   private async iniciarSyncSalud(): Promise<void> {
-    if (!Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform()) {
+      // En el navegador no hay Health Connect. La tarjeta se queda puesta
+      // igual, diciendo que este teléfono no puede leer el reloj.
+      this.saludComprobando = false;
+      this.saludDisponible = false;
+      this.saludAutorizada = false;
+      this.saludProblema = 'Este teléfono no puede leer el reloj.';
+      return;
+    }
 
     await this.saludSyncService.iniciar();
 
@@ -765,6 +793,7 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       this.saludDisponible = false;
       this.saludAutorizada = false;
       this.saludProblema = disp.motivo;
+      this.saludComprobando = false;
       return;
     }
 
@@ -781,6 +810,10 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
       : 'Toca el reloj para autorizar el acceso a tus datos de salud.';
 
     await this.revisarPermisosFaltantes();
+
+    // Se apaga al final, no antes: hasta que no termine la comprobación la
+    // tarjeta dice "Buscando tu reloj..." en vez de afirmar que no hay reloj.
+    this.saludComprobando = false;
 
     this.changeDetectorRef.detectChanges();
   }
@@ -816,6 +849,18 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   get saludDetalle(): string {
     const r = this.saludResumen;
 
+    // Todavía no se ha preguntado al sistema: no se afirma nada.
+    if (this.saludComprobando) {
+      return 'Buscando tu reloj...';
+    }
+
+    // El teléfono no puede leer Health Connect (iPhone, navegador, Android
+    // viejo). Se dice claro para que la persona no ande buscando un reloj que
+    // no va a aparecer nunca.
+    if (!this.saludDisponible) {
+      return 'Este teléfono no puede leer el reloj';
+    }
+
     if (!this.saludAutorizada) {
       return 'Toca para conectar tu reloj';
     }
@@ -845,13 +890,38 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
     return 'Sincronizando con el reloj...';
   }
 
-  /** La tarjeta ofrece el diálogo de permisos si falta alguno. */
+  /**
+   * La tarjeta ofrece el diálogo de permisos si falta alguno.
+   *
+   * También cuando el teléfono no puede leer nada: en ese caso queda en gris
+   * y sin segunda línea que prometa datos, pero sigue siendo el mismo lugar
+   * donde el usuario espera ver su salud.
+   */
   get saludInvitaAAutorizar(): boolean {
-    return !this.saludAutorizada || this.saludFaltan.length > 0;
+    return (
+      !this.saludDisponible ||
+      !this.saludAutorizada ||
+      this.saludFaltan.length > 0
+    );
+  }
+
+  /**
+   * Icono de la tarjeta.
+   *
+   * `watch-outline` es el de "conecta tu reloj", así que no se usa cuando el
+   * teléfono no puede leer Health Connect: ahí sugeriría un reloj que no va a
+   * servir. En ese caso va el corazón, que es lo que la tarjeta representa.
+   */
+  get saludIcono(): string {
+    if (!this.saludDisponible) return 'heart-outline';
+    return this.saludInvitaAAutorizar ? 'watch-outline' : 'heart';
   }
 
   /** En rojo sólo si de verdad no hay forma de que lleguen datos. */
   get saludConProblema(): boolean {
+    // Mientras se comprueba no se marca nada: todavía no se sabe.
+    if (this.saludComprobando) return false;
+    if (!this.saludDisponible) return true;
     return this.saludAutorizada && !this.saludResumen && !!this.saludProblema;
   }
 
@@ -1186,11 +1256,6 @@ export class AdultoMayorPage implements OnInit, OnDestroy {
   abrirRecordatorios() {
     (document.activeElement as HTMLElement)?.blur();
     this.router.navigate(['/recordatorios']);
-  }
-
-  abrirContactos() {
-    (document.activeElement as HTMLElement)?.blur();
-    this.router.navigate(['/contacto-emergencia']);
   }
 
   abrirMiUbicacion() {

@@ -110,6 +110,7 @@ ion-content {
     gap: 14px;
     color: white;
     box-shadow: 0 10px 25px rgba(119, 21, 199, 0.25);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
     .cuidador-avatar-circle {
         width: 44px;
@@ -160,6 +161,46 @@ ion-content {
             display: block;
             font-size: 12px;
             opacity: 0.9;
+        }
+    }
+
+    /* Sin cuidador vinculado: la tarjeta sigue ahí, pero en gris y con borde
+       punteado para que se lea como "aquí falta algo" y no como la tarjeta
+       morada de una protección activa. Es además la única forma de abrir la
+       vinculación desde acá, así que se marca como pulsable. */
+    &.sin-cuidador {
+        background: #eceff1;
+        border: 2px dashed #b0bec5;
+        color: var(--text-muted);
+        box-shadow: none;
+        cursor: pointer;
+
+        .cuidador-avatar-circle {
+            background: #cfd8dc;
+
+            .icon-sin-foto {
+                color: #78909c;
+            }
+        }
+
+        .cuidador-activo-info {
+            small {
+                opacity: 1;
+                color: #78909c;
+            }
+
+            strong {
+                color: var(--text-main);
+            }
+
+            span {
+                opacity: 1;
+                color: var(--text-muted);
+            }
+        }
+
+        &:active {
+            transform: scale(0.97);
         }
     }
 }
