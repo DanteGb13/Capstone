@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -40,7 +40,6 @@ import {
 } from 'ionicons/icons';
 
 import { Capacitor } from '@capacitor/core';
-import { Contacts } from '@capacitor-community/contacts';
 
 import {
   ContactosEmergenciaService,
@@ -94,6 +93,13 @@ export class ContactoEmergenciaPage {
 
   esperandoPicker: boolean = false;
 
+  /**
+   * Qué se está intentando hacer mientras dura el aviso: sirve para que, si se
+   * queda cargando, se sepa en pantalla si se ha parado pidiendo el permiso o
+   * esperando a la agenda.
+   */
+  fasePicker: 'permiso' | 'selector' | '' = '';
+
   /** Aviso que se queda visible en "Mis contactos" (un toast se pierde en 2 s). */
   errorLista: string = '';
 
@@ -139,6 +145,8 @@ export class ContactoEmergenciaPage {
 
   private toastCtrl = inject(ToastController);
 
+  private cdr = inject(ChangeDetectorRef);
+
   constructor() {
     // Sólo los iconos que esta pantalla usa: registrar todos los de ionicons
     // (más de mil) en cada entrada a la página no aporta nada.
@@ -180,6 +188,7 @@ export class ContactoEmergenciaPage {
     if (!this.idUsuario) {
       this.cargando = false;
       this.errorLista = '';
+      this.refrescar();
       return;
     }
 
@@ -217,6 +226,10 @@ export class ContactoEmergenciaPage {
     }
 
     this.aplicarRelaciones(await parentescos);
+
+    // Sin este aviso, la lista y el estado de carga no se pintaban hasta que
+    // el usuario tocaba la pantalla (los contactos "no aparecían a la primera").
+    this.refrescar();
   }
 
   /** Botón "Reintentar" del aviso de error. */
@@ -323,43 +336,91 @@ export class ContactoEmergenciaPage {
       return;
     }
 
-    // 1) Permiso de la agenda: se pide SIEMPRE antes de abrir el selector.
-    //    Sin este paso Android a veces no muestra nada y la llamada se queda
-    //    esperando en silencio.
-    const permiso = await this.pedirPermisoAgenda();
-    if (permiso !== 'granted') {
-      await this.avisoPermisoAgenda();
-      return;
-    }
-
     const miPicker = ++this.pickerActivo;
+
+    // El aviso se enciende desde el primer instante: el permiso y el selector
+    // pueden tardar y antes no había ninguna señal de que la app hubiera
+    // registrado el toque (se veía como "no pasa nada").
     this.esperandoPicker = true;
+    this.fasePicker = 'permiso';
+
+    // Red de seguridad: pase lo que pase, a los 90 s el aviso se cierra y se
+    // avisa. Ningún paso debe poder dejar la pantalla girando para siempre.
+    const vigilante = setTimeout(() => {
+      if (this.pickerActivo === miPicker && this.esperandoPicker) {
+        this.pickerActivo++;
+        this.esperandoPicker = false;
+        this.fasePicker = '';
+        void this.toast('La agenda no está respondiendo. Vuelve a intentarlo.');
+      }
+    }, 90000);
 
     try {
+      // 1) Permiso de la agenda: se pide SIEMPRE antes de abrir el selector.
+      //    Sin este paso Android a veces no muestra nada y la llamada se queda
+      //    esperando en silencio.
+      const permiso = await this.pedirPermisoAgenda();
+
+      // El usuario tocó "Cancelar" en el aviso mientras se pedía el permiso.
+      if (this.pickerActivo !== miPicker) return;
+
+      if (!permiso.concedido) {
+        await this.avisoPermisoAgenda();
+        return;
+      }
+
+      // Si se acaba de mostrar el diálogo de permiso, se da un margen al
+      // sistema para terminar de cerrarlo antes de lanzar la siguiente
+      // actividad: el selector de la primera vez era el que no respondía.
+      if (permiso.pidioDialogo) {
+        await this.espera(300);
+        if (this.pickerActivo !== miPicker) return;
+      }
+
+      this.fasePicker = 'selector';
+      this.refrescar();
+
       // Selector nativo con tipo "contactos": Android va directo a la agenda
       // en vez de ofrecer el explorador de archivos y otras apps
       const promesa = PermisosExtra.pickContacto();
 
-      // Si el usuario cierra la agenda, la promesa puede quedarse sin
-      // responder: se espera a lo mucho 60 s y se cierra el aviso.
+      // Si Android no entrega el resultado de la actividad, la promesa se
+      // queda sin responder: se espera 30 s y se avisa, en vez de dejar el
+      // spinner girando para siempre.
       const resultado: any = await Promise.race([
         promesa,
-        new Promise<null>((resolver) => setTimeout(() => resolver(null), 60000))
+        new Promise<null>((resolver) => setTimeout(() => resolver(null), 30000))
       ]);
 
-      // Sin resultado = se cerró la agenda sin elegir a nadie
-      if (!resultado) return;
+      if (this.pickerActivo !== miPicker) return;
+
+      // Sin respuesta de la agenda: se explica y se puede reintentar.
+      if (!resultado) {
+        await this.toast('La agenda no respondió. Vuelve a intentarlo.');
+        return;
+      }
+
+      // Se cerró la agenda sin elegir a nadie: no se abre el formulario.
+      if (resultado.cancelado) return;
 
       const nombre = String(resultado.nombre || '').trim();
       const apellido = String(resultado.apellido || '').trim();
       const tel = String(resultado.telefono || '').trim();
       const correo = String(resultado.correo || '').trim();
 
+      // Respuesta vacía (lo que devolvía el plugin al cancelar): se trata como
+      // cancelación, no como un contacto a medio rellenar.
+      if (!nombre && !apellido && !tel && !correo) return;
+
+      // El aviso de "eligiendo contacto" se cierra ANTES de abrir el
+      // formulario: si quedaba encima, el modal se veía tapado por el spinner
+      // y daba la impresión de que no volvía a la ventana de rellenado.
+      this.esperandoPicker = false;
+
       if (!tel || tel.replace(/\D/g, '').length < 3) {
         // No se frena la apertura: el formulario sale igual con los datos que
         // sí trajo la agenda y el campo del teléfono queda marcado para que el
         // usuario sólo tenga que completarlo y guardar.
-        this.esperandoPicker = false;
         await this.abrirFormulario({
           nombre: nombre || 'Contacto de emergencia',
           apellidopa: apellido,
@@ -370,11 +431,6 @@ export class ContactoEmergenciaPage {
         await this.toast('Ese contacto no tiene un teléfono válido. Escríbelo para guardar.');
         return;
       }
-
-      // El aviso de "eligiendo contacto" se cierra ANTES de abrir el
-      // formulario: si quedaba encima, el modal se veía tapado por el spinner
-      // y daba la impresión de que no volvía a la ventana de rellenado.
-      this.esperandoPicker = false;
 
       // La agenda sólo trae lo que el teléfono tiene guardado: se abre el
       // mismo formulario de "añadir contacto" con esos datos ya escritos.
@@ -397,32 +453,74 @@ export class ContactoEmergenciaPage {
         await this.toast('No se pudo abrir la agenda de contactos.');
       }
     } finally {
+      clearTimeout(vigilante);
+      this.fasePicker = '';
       if (this.pickerActivo === miPicker) {
         this.esperandoPicker = false;
       }
+      // Pinta el cierre del aviso y la apertura del formulario: antes el
+      // usuario se quedaba viendo "Pidiendo permiso…" aunque el contacto ya
+      // venía elegido, hasta que tocaba Cancelar.
+      this.refrescar();
     }
   }
 
-  /** Pide permiso de contactos de forma explícita; devuelve su estado. */
-  private async pedirPermisoAgenda(): Promise<string> {
+  /**
+   * Pide permiso de contactos de forma explícita; devuelve su estado y si
+   * hubo que mostrar el diálogo del sistema (para dar un margen antes de
+   * lanzar el selector). Nada se queda colgado: cada paso tiene su tope.
+   *
+   * El diálogo se pide con el plugin propio (PermisosExtra): el de la comunidad
+   * devolvía respuestas que esta pantalla no llegaba a recibir y el flujo se
+   * quedaba esperando sin tope.
+   */
+  private async pedirPermisoAgenda(): Promise<{ concedido: boolean; pidioDialogo: boolean }> {
+    // 1) Comprobación directa: si ya está concedido no se toca el sistema.
     try {
-      const actual = await Contacts.checkPermissions();
-      if (actual.contacts === 'granted') return 'granted';
+      const estado = await this.conTiempo(PermisosExtra.verificarPermisos(), 5000);
+      if (estado?.contactos) return { concedido: true, pidioDialogo: false };
     } catch (e) {
       console.warn('No se pudo verificar el permiso de contactos:', e);
     }
 
+    // 2) Diálogo del sistema, con tope de tiempo: si no contesta, la app
+    //    avisa en vez de esperar para siempre (era lo que se veía como
+    //    "no se abre nada").
     try {
-      const pedido = await Contacts.requestPermissions();
-      if (pedido.contacts === 'granted') return 'granted';
-      console.warn('Permiso de contactos no concedido:', pedido.contacts);
-      return 'denied';
+      const pedido = await this.conTiempo(
+        PermisosExtra.solicitarContactos({ abrirAjustes: false }),
+        40000
+      );
+      if (pedido?.concedido) return { concedido: true, pidioDialogo: true };
+      console.warn('Permiso de contactos no concedido');
+      return { concedido: false, pidioDialogo: true };
     } catch (e) {
+      console.warn('El permiso de contactos no respondió:', e);
+
+      // Por si el diálogo sí se concedió pero la respuesta se perdió.
+      try {
+        const estado = await this.conTiempo(PermisosExtra.verificarPermisos(), 5000);
+        if (estado?.contactos) return { concedido: true, pidioDialogo: true };
+      } catch {
+        /* nada más que comprobar */
+      }
+
       // Antes se devolvía 'granted' y el error real (por ejemplo, un permiso
       // sin declarar en el manifiesto) quedaba escondido hasta fallar más abajo.
-      console.error('Error solicitando el permiso de contactos:', e);
-      return 'denied';
+      return { concedido: false, pidioDialogo: true };
     }
+  }
+
+  /** Corta una promesa que no conteste a tiempo. */
+  private conTiempo<T>(promesa: Promise<T>, ms: number): Promise<T> {
+    const tope = new Promise<never>((_, rechazar) => {
+      setTimeout(() => rechazar(new Error('Sin respuesta a tiempo')), ms);
+    });
+    return Promise.race([promesa, tope]);
+  }
+
+  private espera(ms: number): Promise<void> {
+    return new Promise((resolver) => setTimeout(() => resolver(), ms));
   }
 
   /** Ventana que explica que sin permiso no se puede leer la agenda. */
@@ -461,6 +559,7 @@ export class ContactoEmergenciaPage {
   cancelarPicker() {
     this.pickerActivo++;
     this.esperandoPicker = false;
+    this.refrescar();
   }
 
   // =====================================================
@@ -507,6 +606,7 @@ export class ContactoEmergenciaPage {
     // El parentesco es texto libre, así que el formulario NO espera a la base:
     // se abre al instante y los parentescos ya vinieron al entrar a la pantalla.
     this.mostrarFormulario = true;
+    this.refrescar();
   }
 
   /** Botón "Añadir manualmente": formulario vacío. */
@@ -516,6 +616,7 @@ export class ContactoEmergenciaPage {
 
   cerrarFormulario() {
     this.mostrarFormulario = false;
+    this.refrescar();
   }
 
   async guardarFormulario() {
@@ -524,6 +625,7 @@ export class ContactoEmergenciaPage {
 
     this.formErrorNombre = !nombre;
     this.formErrorTelefono = telefono.replace(/\D/g, '').length < 3;
+    this.refrescar();
 
     if (this.formErrorNombre) {
       await this.toast('Escribe el nombre del contacto.');
@@ -601,6 +703,7 @@ export class ContactoEmergenciaPage {
       }
     } finally {
       this.guardando = false;
+      this.refrescar();
     }
   }
 
@@ -643,6 +746,7 @@ export class ContactoEmergenciaPage {
     if (ok) {
       // Se quita de la lista en vez de recargarla
       this.contactos = this.contactos.filter((c) => c.id !== id);
+      this.refrescar();
       void this.toast('Contacto eliminado.');
     } else {
       await this.toast(this.mensajeFallo(this.servicio.ultimoError || 'error desconocido', 'eliminar'));
@@ -652,6 +756,15 @@ export class ContactoEmergenciaPage {
   // =====================================================
   // UTILIDAD
   // =====================================================
+
+  /**
+   * La app corre SIN zone.js (zoneless): actualizar una propiedad después de
+   * un await NO repinta la vista por sí solo, hasta que el usuario toca la
+   * pantalla. Este aviso fuerza el repintado de todo lo que cambió.
+   */
+  private refrescar() {
+    this.cdr.markForCheck();
+  }
 
   private async toast(mensaje: string) {
     try {

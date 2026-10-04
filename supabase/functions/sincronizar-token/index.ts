@@ -59,7 +59,13 @@ function usuarioDe(authorization: string | null): string | null {
   if (!authorization) return null;
   const jwt = authorization.replace(/^Bearer\s+/i, "").trim();
   try {
-    const payload = JSON.parse(atob(jwt.replace(/-/g, "+").replace(/_/g, "/")));
+    // atob recibe el payload (segunda parte del JWT), no el JWT entero:
+    // con el token completo atob lanza "Invalid character", usuarioDe
+    // devolvía null y la función contestaba 401 aunque la sesión fuera válida.
+    const payloadSegmento = jwt.split(".")[1] ?? "";
+    const payload = JSON.parse(
+      atob(payloadSegmento.replace(/-/g, "+").replace(/_/g, "/"))
+    );
     return payload?.sub ?? null;
   } catch {
     return null;

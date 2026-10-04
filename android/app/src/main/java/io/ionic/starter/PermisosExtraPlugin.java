@@ -44,6 +44,8 @@ public class PermisosExtraPlugin extends Plugin {
 
     private PluginCall pendingCall;
     private String permisoPendiente;
+    /** Guarda la llamada del selector por si Android entrega el resultado sin ella. */
+    private PluginCall pendingPickCall;
 
     // =====================================================
     // REALIZAR LLAMADA TELEFÓNICA
@@ -167,7 +169,11 @@ public class PermisosExtraPlugin extends Plugin {
             // Se ofrece la pantalla de ajustes, pero la llamada se resuelve con
             // el estado real. Antes se resolvía con abrirAjustes(), que no
             // incluye "concedido" y por eso la app siempre decía que fallaba.
-            abrirPantallaAjustes();
+            // La pantalla de contacto pide "abrirAjustes: false" porque allí se
+            // muestra su propio aviso con botón de ajustes.
+            if (call.getBoolean("abrirAjustes", true)) {
+                abrirPantallaAjustes();
+            }
             JSObject ret = new JSObject();
             ret.put("concedido", false);
             call.resolve(ret);
@@ -203,7 +209,8 @@ public class PermisosExtraPlugin extends Plugin {
      */
     @PluginMethod
     public void pickContacto(PluginCall call) {
-        if (!tienePermisoContactos()) {
+        // Elegir un contacto sólo LEE la agenda: basta con READ_CONTACTS.
+        if (!tieneLecturaContactos()) {
             call.reject("Falta el permiso de contactos", "PERMISO_CONTACTOS");
             return;
         }
@@ -211,28 +218,50 @@ public class PermisosExtraPlugin extends Plugin {
         try {
             Intent intent = new Intent(Intent.ACTION_PICK, ContactsContract.Contacts.CONTENT_URI);
             intent.setType(ContactsContract.Contacts.CONTENT_TYPE);
+            pendingPickCall = call;
             startActivityForResult(call, intent, "callbackPickContacto");
         } catch (Exception e) {
+            pendingPickCall = null;
             call.reject("No se pudo abrir la agenda de contactos", e);
         }
     }
 
+    /** Sólo lectura: es lo que exige ACTION_PICK. */
+    private boolean tieneLecturaContactos() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            return true;
+        }
+        return getContext().checkSelfPermission(android.Manifest.permission.READ_CONTACTS)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
     @ActivityCallback
     private void callbackPickContacto(PluginCall call, ActivityResult resultado) {
-        if (call == null || resultado == null) return;
+        // A veces el resultado llega sin la llamada original (p. ej. tras
+        // recrearse la actividad). Devolviendo sin resolver, la app se quedaba
+        // esperando una promesa que nunca contestaba y el primer contacto
+        // "no hacía nada": se usa la llamada guardada al abrir la agenda.
+        PluginCall efectiva = call != null ? call : pendingPickCall;
+        pendingPickCall = null;
+        if (efectiva == null) return;
 
-        Uri uri = resultado.getData() != null ? resultado.getData().getData() : null;
+        Uri uri = resultado != null && resultado.getData() != null
+                ? resultado.getData().getData()
+                : null;
 
-        if (resultado.getResultCode() != Activity.RESULT_OK || uri == null) {
-            // Se cerró la agenda sin elegir a nadie: no es un error
-            call.resolve(new JSObject());
+        if (resultado == null || resultado.getResultCode() != Activity.RESULT_OK || uri == null) {
+            // Se cerró la agenda sin elegir a nadie: no es un error, pero se
+            // marca para que la app sepa que no vino ningún contacto.
+            JSObject ret = new JSObject();
+            ret.put("cancelado", true);
+            efectiva.resolve(ret);
             return;
         }
 
         try {
-            call.resolve(leerContacto(uri));
+            efectiva.resolve(leerContacto(uri));
         } catch (Exception e) {
-            call.reject("No se pudo leer el contacto elegido", e);
+            efectiva.reject("No se pudo leer el contacto elegido", e);
         }
     }
 

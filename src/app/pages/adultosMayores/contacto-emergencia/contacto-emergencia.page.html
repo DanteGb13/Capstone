@@ -150,7 +150,7 @@
       <button
         type="button"
         class="btn-grande btn-agregar"
-        [disabled]="guardando"
+        [disabled]="guardando || esperandoPicker"
         (click)="agregarDeTelefono()">
         <ion-icon name="person-add-outline"></ion-icon>
         <span>{{ guardando ? 'Guardando…' : 'Añadir de mi teléfono' }}</span>
@@ -177,7 +177,11 @@
     <div class="overlay-picker">
       <div class="overlay-card">
         <ion-spinner name="crescent"></ion-spinner>
-        <span>Elige un contacto de tu teléfono…</span>
+        <span>
+          {{ fasePicker === 'permiso'
+            ? 'Pidiendo permiso de contactos…'
+            : 'Elige un contacto de tu teléfono…' }}
+        </span>
         <button type="button" (click)="cancelarPicker()">Cancelar</button>
       </div>
     </div>

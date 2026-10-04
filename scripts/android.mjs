@@ -20,11 +20,32 @@ const modo = process.argv[2] === 'apk' ? 'apk' : 'run';
 const extra = process.argv.slice(3);
 
 // Los plugins de Capacitor 8 compilan con Java 21.
+const tieneJava = (dir) =>
+  existsSync(join(dir, 'bin', 'java')) || existsSync(join(dir, 'bin', 'java.exe'));
+
 const jdkPortable = join(homedir(), '.local', 'jdk-21');
-if (existsSync(join(jdkPortable, 'bin', 'java'))) {
+if (!process.env.JAVA_HOME && tieneJava(jdkPortable)) {
   process.env.JAVA_HOME = jdkPortable;
-} else if (existsSync('/usr/lib/jvm/java-21-openjdk')) {
+} else if (!process.env.JAVA_HOME && tieneJava('/usr/lib/jvm/java-21-openjdk')) {
   process.env.JAVA_HOME = '/usr/lib/jvm/java-21-openjdk';
+} else if (
+  !process.env.JAVA_HOME &&
+  !win &&
+  tieneJava('/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home')
+) {
+  process.env.JAVA_HOME = '/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home';
+}
+
+// Gradle no puede compilar con Java 23 o superior: su Groovy lee las clases del
+// JDK y revienta con "Unsupported class file major version" sin decir cuál. Como
+// el JDK que trae Android Studio suele ser el mas nuevo, se avisa aqui para no
+// perder tiempo descifrando ese error.
+if (!process.env.JAVA_HOME) {
+  console.warn(
+    '\nAVISO: no se encontro un JDK 21, asi que Gradle usara el del sistema y puede fallar\n' +
+      `       con "Unsupported class file major version". Descarga uno en ${jdkPortable}\n` +
+      '       (Eclipse Temurin 21) o exporta JAVA_HOME antes de correr este script.\n'
+  );
 }
 
 // Android SDK: se respeta el que ya esté configurado en el sistema.
