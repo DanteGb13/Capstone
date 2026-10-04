@@ -282,8 +282,12 @@ export class PanelActividadPage implements OnDestroy {
           dragging: true,
           tap: false
         });
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Host único (HTTP/2) y no {s}.subdominio: el `preconnect` de index.html
+        // apunta a `https://tile.openstreetmap.org`, así que con `{s}` había que
+        // resolver y abrir conexión a `a.tile.openstreetmap.org` aparte.
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
+          updateWhenZooming: false,
           attribution: '© OpenStreetMap'
         }).addTo(this.mapa);
       }

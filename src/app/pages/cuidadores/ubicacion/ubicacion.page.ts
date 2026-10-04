@@ -88,6 +88,25 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
 
   private accuracyCircle: any = null;
 
+  /**
+   * Persona que se pidió abrir por la URL (`?id=`), todavía sin aplicar.
+   *
+   * Antes la URL disparaba su propia actualización de ubicación y la lista
+   * disparaba otra, así que entrar a la pantalla costaba 3 o 4 viajes a la red
+   * encadenados. Ahora la URL sólo anota qué se quiere y hay un solo lugar
+   * que decide a quién mostrar.
+   */
+  private idSolicitadoUrl: string | null = null;
+
+  /**
+   * Hay una lectura de ubicación en curso.
+   *
+   * Sirve para no encadenar dos: el botón de refrescar y la carga inicial
+   * pueden coincidir, y con la red lenta la segunda encuentra a la primera a
+   * medio camino y las dos se pisan.
+   */
+  private ubicacionEnCurso = false;
+
 
   // =====================================================
   // TIMERS
@@ -118,18 +137,24 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
   // =====================================================
 
   async ngOnInit() {
-    await this.cargarAdultosACargo();
+    // La lista se carga sin esperar: el mapa no depende de ella y se dibuja
+    // igual. Antes se esperaba aquí, y como el mapa se creaba recién al
+    // terminar esta llamada, la pantalla se quedaba 1-2 segundos en blanco
+    // antes de existir siquiera un mapa.
+    void this.cargarAdultosACargo();
 
     this.route.queryParams.subscribe((params) => {
-      if (params['id'] && this.adultosACargo.length > 0) {
-        const encontrado = this.adultosACargo.find(
-          (item) => item.id === params['id'] || item.adulto_mayor?.id === params['id'] || item.id_usuario === params['id']
-        );
-        if (encontrado) {
-          this.adultoSeleccionado = encontrado;
-          this.actualizarUbicacion(true);
-        }
+      const id = params['id'];
+
+      // Si no hay id, o es el mismo adulto que ya está seleccionado, no se hace
+      // nada: releer la ubicación para mostrar lo mismo es lo que multiplicaba
+      // los viajes de red.
+      if (!id || (this.adultoSeleccionado && this.idDeAdulto(this.adultoSeleccionado) === id)) {
+        return;
       }
+
+      this.idSolicitadoUrl = id;
+      void this.aplicarAdultoSolicitado();
     });
 
     this.iniciarTemporizadorAutoRefresh();
@@ -138,12 +163,62 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.inicializarMapa();
-      if (this.adultoSeleccionado) {
-        this.actualizarUbicacion(false);
-      }
-    }, 400);
+    // El mapa se crea ya, sin esperar. Puede que el contenedor mida 0 porque la
+    // transición de entrada de Ionic sigue corriendo; eso lo corrige
+    // `ionViewDidEnter`, no una espera a ciegas.
+    this.inicializarMapa();
+  }
+
+  /**
+   * Cuando la animación de entrada termina, el contenedor tiene su tamaño real
+   * y Leaflet necesita enterarse para pintar los tiles.
+   */
+  ionViewDidEnter() {
+    this.ajustarTamanoMapa();
+  }
+
+  private ajustarTamanoMapa() {
+    if (!this.map) return;
+    try {
+      this.map.invalidateSize({ animate: false });
+    } catch {
+      /* el mapa todavía no está listo */
+    }
+  }
+
+  /** Id del adulto en cualquiera de las formas que trae la lista. */
+  private idDeAdulto(adulto: any): string {
+    return adulto?.adulto_mayor?.id || adulto?.id_usuario || '';
+  }
+
+  /**
+   * Aplica la persona que pedía la URL, si ya está en la lista.
+   *
+   * Se llama desde los dos lados (URL y lista) porque cualquiera de las dos
+   * puede llegar primero, y sólo una gana: si la URL se aplica primero, la
+   * lista ya no vuelve a sobrescribir.
+   */
+  private async aplicarAdultoSolicitado(): Promise<void> {
+    if (this.cargandoLista || !this.idSolicitadoUrl || this.adultosACargo.length === 0) {
+      return;
+    }
+
+    const encontrado = this.adultosACargo.find(
+      (item) =>
+        item.id === this.idSolicitadoUrl ||
+        item.adulto_mayor?.id === this.idSolicitadoUrl ||
+        item.id_usuario === this.idSolicitadoUrl
+    );
+
+    if (!encontrado) return;
+
+    const idActual = this.adultoSeleccionado ? this.idDeAdulto(this.adultoSeleccionado) : '';
+    if (idActual === this.idSolicitadoUrl) return;
+
+    this.adultoSeleccionado = encontrado;
+    this.idSolicitadoUrl = null;
+
+    await this.actualizarUbicacion(true);
   }
 
   async ionViewWillEnter() {
@@ -219,15 +294,18 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
       this.cargandoLista = false;
       this.changeDetectorRef.detectChanges();
 
-      // Inicializar mapa luego de renderizar la vista con los adultos
-      if (this.adultosACargo.length > 0) {
-        setTimeout(() => {
-          this.inicializarMapa();
-          if (this.adultoSeleccionado) {
-            this.actualizarUbicacion(true);
-          }
-        }, 200);
+      // Una sola lectura de ubicación por entrada. Antes se pedía desde acá
+      // (tras 200 ms de espera), otra vez en ngAfterViewInit (tras 400 ms) y
+      // otra más si venía `?id=`: tres o cuatro viajes encadenados, cada uno con
+      // su propio geocodificado. Con la red lenta eso son 5 a 10 segundos.
+      //
+      // Ahora el mapa ya existe desde ngAfterViewInit: sólo falta pintarle el
+      // punto cuando llegue la posición.
+      if (this.adultoSeleccionado && !this.idSolicitadoUrl) {
+        void this.actualizarUbicacion(true);
       }
+
+      void this.aplicarAdultoSolicitado();
     }
   }
 
@@ -241,7 +319,8 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     const encontrado = this.adultosACargo.find(item => item.id === id || item.adulto_mayor?.id === id);
     if (encontrado) {
       this.adultoSeleccionado = encontrado;
-      this.actualizarUbicacion(true);
+      this.idSolicitadoUrl = null;
+      void this.actualizarUbicacion(true);
     }
   }
 
@@ -271,9 +350,15 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
         zoomControl: false
       });
 
-      // Capa de mosaicos OpenStreetMap
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // Host único (HTTP/2) en vez de subdominios {s}: con {s} el navegador
+      // resuelve a.tile.openstreetmap.org, y ese dominio NO es el del
+      // `preconnect` de index.html, así que había que hacer DNS y handshake TLS
+      // desde cero y los tiles llegaban 2-3 segundos más tarde.
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        // No pedir tiles de zooms intermedios durante un zoom animado: sólo
+        // se descarga el nivel final.
+        updateWhenZooming: false,
         attribution: '© OpenStreetMap contributors'
       }).addTo(this.map);
 
@@ -297,6 +382,13 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
+    // Si ya hay una lectura en curso se devuelve: encadenar dos sobre la misma
+    // persona sólo produce dos pinchazos superpuestos y el doble de espera.
+    if (this.ubicacionEnCurso) {
+      return;
+    }
+
+    this.ubicacionEnCurso = true;
     this.cargandoUbicacion = true;
     this.changeDetectorRef.detectChanges();
 
@@ -304,7 +396,19 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     const direccionFallback = this.adultoSeleccionado.adulto_mayor?.direccion;
 
     try {
-      const info = await this.gpsService.obtenerUbicacionAdulto(idUsuario, direccionFallback);
+      // El pin se dibuja apenas llegan las coordenadas. La dirección en texto
+      // llega después, por el callback, porque el mapa no la necesita para
+      // mostrar dónde está el adulto.
+      const info = await this.gpsService.obtenerUbicacionAdulto(
+        idUsuario,
+        direccionFallback,
+        (conDireccion) => {
+          this.ubicacionActual = conDireccion;
+          this.renderizarEnMapa(conDireccion, false);
+          this.changeDetectorRef.detectChanges();
+        }
+      );
+
       this.ubicacionActual = info;
 
       const ahora = new Date();
@@ -314,19 +418,13 @@ export class UbicacionPage implements OnInit, AfterViewInit, OnDestroy {
       this.tiempoRestanteSegundos = 300;
       this.actualizarTextoContador();
 
-      // Asegurar inicialización de mapa
-      if (!this.map) {
-        this.changeDetectorRef.detectChanges();
-        setTimeout(() => {
-          this.inicializarMapa();
-          this.renderizarEnMapa(info, centrarEnMapa);
-        }, 150);
-      } else {
-        this.renderizarEnMapa(info, centrarEnMapa);
-      }
+      // El mapa se crea en ngAfterViewInit; si aun así no está (el contenedor
+      // puede no existir todavía), renderizarEnMapa lo inicializa.
+      this.renderizarEnMapa(info, centrarEnMapa);
     } catch (error: any) {
       console.error('Error obteniendo ubicación:', error);
     } finally {
+      this.ubicacionEnCurso = false;
       this.cargandoUbicacion = false;
       this.changeDetectorRef.detectChanges();
     }

@@ -19,10 +19,11 @@ import { Share } from '@capacitor/share';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { AlertController } from '@ionic/angular';
-import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
+import { PerfilCacheService } from '../../../services/perfil-cache/perfil-cache.service';
+import { SupabaseService } from '../../../services/supabase/supabase';
 import { AbrirUrl } from '../../../services/Backend/abrir-url/abrir-url';
 
-declare const L: any; // Leaflet (cargado globalmente en index.html)
+declare const L: any; // Leaflet (empaquetado en src/main.ts, expuesto en window.L)
 
 @Component({
   selector: 'app-mi-ubicacion',
@@ -142,7 +143,8 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
   constructor(
     private changeDetectorRef: ChangeDetectorRef,
     private alertCtrl: AlertController,
-    private cuidadoresService: CuidadoresService
+    private perfilCache: PerfilCacheService,
+    private supabaseService: SupabaseService
   ) {
     addIcons(icons);
   }
@@ -156,7 +158,10 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     // guardada de antes, asi el tiempo que se ve en pantalla es el real del GPS.
     this.iniciarWatch();
     this.iniciarVigilanciaGps();
-    await this.cargarDireccionPerfil();
+
+    // La direccion de casa NO bloquea la pantalla: se pinta cuando llegue, y el
+    // mapa y el GPS ya estan funcionando para entonces.
+    void this.cargarDireccionPerfil();
   }
 
   /**
@@ -195,14 +200,35 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
-    setTimeout(() => {
-      this.inicializarMapa();
-      // Si el GPS ya fijó posición antes de inicializarse el mapa, pintarla
-      if (this.map && this.lat != null && this.lon != null) {
-        this.renderizarEnMapa(this.lat, this.lon, this.precision || 30);
-      }
-      this.changeDetectorRef.detectChanges();
-    }, 300);
+    // El mapa se crea de inmediato, sin esperar 300 ms a ciegas como antes.
+    // Puede que el contenedor mida 0 porque la transición de entrada de Ionic
+    // sigue corriendo; `ionViewDidEnter` le pasa el tamaño real después.
+    this.inicializarMapa();
+
+    // Si el GPS ya fijó posición antes de que existiera el mapa, pintarla.
+    if (this.map && this.lat != null && this.lon != null) {
+      this.renderizarEnMapa(this.lat, this.lon, this.precision || 30);
+    }
+
+    this.changeDetectorRef.detectChanges();
+  }
+
+  /**
+   * Cuando termina la animación de entrada, el contenedor ya tiene su tamaño
+   * real. Leaflet no lo sabe solo: sin esto los tiles se piden con un tamaño
+   * equivocado y el mapa sale cortado o en blanco.
+   */
+  ionViewDidEnter() {
+    this.ajustarTamanoMapa();
+  }
+
+  private ajustarTamanoMapa() {
+    if (!this.map) return;
+    try {
+      this.map.invalidateSize({ animate: false });
+    } catch {
+      /* el mapa todavía no está listo */
+    }
   }
 
   ngOnDestroy() {
@@ -222,26 +248,85 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  // =====================================================
-  // DIRECCIÓN DEL PERFIL
-  // =====================================================
+// =====================================================
+// DIRECCIÓN DEL PERFIL
+// =====================================================
 
+private readonly CLAVE_DIR_CACHE = 'sc_dir_casa';
+
+  private direccionCargada = false;
+
+  /**
+   * Dirección de casa para el botón "Ir a casa" y la caja de texto.
+   *
+   * Antes pasaba por `CuidadoresService.cargarUsuario()`, que hace DOS viajes a
+   * la red: un `auth.getUser()` (que revalida contra el servidor aunque la
+   * sesión esté en el teléfono) y después un select con tres relaciones
+   * unidadas. Todo eso para mostrar una línea de texto.
+   *
+   * Ahora:
+   *  - el id sale de la sesión local (`getSession()`), que es instantáneo;
+   *  - se consulta sólo la dirección, una vez;
+   *  - queda cacheada en el teléfono, así la segunda vez que se entra la caja
+   *    aparece de inmediato sin tocar la red.
+   *
+   * Igual que antes, si algo falla no se rompe la pantalla: sólo queda la
+   * dirección sin mostrar y el botón "Ir a casa" avisa que falta la dirección.
+   */
   private async cargarDireccionPerfil() {
-    try {
-      const usuario = await this.cuidadoresService.cargarUsuario();
-      if (!usuario) return;
+    if (this.direccionCargada) return;
+    this.direccionCargada = true;
 
-      const dir = (usuario as any).direccion;
-      if (dir) {
-        this.calle = dir.calle || '';
-        this.numero = (dir.numero ?? '').toString();
-        this.comuna = dir.comuna || '';
-        this.region = dir.region || '';
-        this.tieneDireccion = !!(this.calle.trim() || this.numero.trim());
+    // 1. Lo que haya cacheado se pinta ya, sin esperar nada.
+    try {
+      const cacheado = localStorage.getItem(this.CLAVE_DIR_CACHE);
+      if (cacheado) {
+        this.aplicarDireccion(JSON.parse(cacheado));
+      }
+    } catch {
+      /* sin persistencia */
+    }
+
+    try {
+      const id = await this.perfilCache.idUsuario();
+      if (!id) return;
+
+      const supabase = this.supabaseService.getClient();
+
+      const { data, error } = await supabase
+        .from('direccion')
+        .select('region, comuna, calle, numero')
+        .eq('id_usuario', id)
+        .maybeSingle();
+
+      if (error || !data) return;
+
+      this.aplicarDireccion(data);
+
+      try {
+        localStorage.setItem(this.CLAVE_DIR_CACHE, JSON.stringify(data));
+      } catch {
+        /* sin persistencia */
       }
     } catch (e) {
       console.error('Error cargando dirección del perfil:', e);
     }
+  }
+
+  private aplicarDireccion(dir: any): void {
+    if (!dir) return;
+
+    // Supabase devuelve la relación 1 a 1 como arreglo a veces.
+    const d = Array.isArray(dir) ? dir[0] : dir;
+    if (!d) return;
+
+    this.calle = d.calle || '';
+    this.numero = (d.numero ?? '').toString();
+    this.comuna = d.comuna || '';
+    this.region = d.region || '';
+    this.tieneDireccion = !!(this.calle.trim() || this.numero.trim());
+
+    this.changeDetectorRef.detectChanges();
   }
 
   // =====================================================
@@ -281,13 +366,16 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     try {
-      // Lectura inmediata para obtener la primera posición lo antes posible
-      // (no hay que esperar el primer callback del watch)
+      // Primera lectura RÁPIDA: se acepta la del caché del sistema y sin pedir
+      // precisión máxima al chip. Es lo que hace que el punto aparezca en vez
+      // de 5 a 20 segundos. Con `enableHighAccuracy: true` y
+      // `maximumAge: 0` el GPS tiene que arrancar en frío, y en interiores eso
+      // tarda o vence a los 8 s dejando el mapa vacío.
       try {
         const posicionRapida = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 8000,
-          maximumAge: 0
+          enableHighAccuracy: false,
+          maximumAge: 15000,
+          timeout: 4000
         });
         if (posicionRapida?.coords) {
           this.procesarPosicion(posicionRapida.coords as any);
@@ -296,8 +384,11 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
         console.warn('Sin lectura inmediata, esperando el watch:', e?.message || e);
       }
 
+      // Después sí, alta precisión: el watcher afina la posición y la va
+      // actualizando mientras la persona se mueve. Se deja un margen de 5 s
+      // para no provocar un fix nuevo en cada lectura si la persona está quieta.
       this.watchId = await Geolocation.watchPosition(
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
         (pos: Position | null, err: any) => {
           if (err) {
             this.manejarErrorGps(err?.message || 'Error GPS');
@@ -324,17 +415,18 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // Lectura inmediata (fallback web)
+    // Lectura inmediata (fallback web): primero la rápida, con la misma
+    // intención que en el camino nativo.
     navigator.geolocation.getCurrentPosition(
       (pos) => this.procesarPosicion(pos.coords),
       () => {},
-      { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
+      { enableHighAccuracy: false, maximumAge: 15000, timeout: 4000 }
     );
 
     this.webWatchId = navigator.geolocation.watchPosition(
       (pos) => this.procesarPosicion(pos.coords),
       (err) => this.manejarErrorGps(err?.message || 'Error GPS'),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
     );
   }
 
@@ -509,8 +601,15 @@ export class MiUbicacionPage implements OnInit, AfterViewInit, OnDestroy {
         zoomControl: false
       });
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      // Host único (HTTP/2) y no {s}.subdominio: el `preconnect` de index.html
+      // apunta a `https://tile.openstreetmap.org`, así que con `{s}` el
+      // navegador tenía que resolver y abrir conexión a `a.tile.openstreetmap.org`
+      // por su cuenta y los primeros tiles llegaban 2-3 segundos más tarde.
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
+        // Durante un zoom animado no se piden los niveles intermedios: sólo
+        // se descarga el nivel al que se llega.
+        updateWhenZooming: false,
         attribution: '© OpenStreetMap contributors'
       }).addTo(this.map);
 

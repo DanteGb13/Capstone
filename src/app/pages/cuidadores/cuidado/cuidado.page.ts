@@ -119,7 +119,17 @@ export class CuidadoPage implements OnInit {
     );
   }
 
-  async abrirOpcionesAdulto(item: any) {
+  /**
+ * Menú de acciones de una persona a cargo.
+ *
+ * Antes este menú existía pero estaba escondido: se abría tocando el avatar,
+ * que no tenía nada que indicara que fuera pulsable, y además conviveía con
+ * tres botones al lado. Ahora es el único control de la tarjeta.
+ *
+ * "Llamar" aparece sólo si la persona tiene teléfono: ofrecer la opción y
+ * que no pase nada sería peor que no ofrecerla.
+ */
+async abrirOpcionesAdulto(item: any) {
     const nombre = item.adulto_mayor?.nombre || '';
     const apellido = item.adulto_mayor?.apellidopa || '';
     const nombreCompleto = `${nombre} ${apellido}`.trim();
@@ -243,15 +253,6 @@ export class CuidadoPage implements OnInit {
       await PermisosExtra.realizarLlamada({ telefono: telLimpio });
     } else {
       window.location.href = `tel:${telLimpio}`;
-    }
-  }
-
-  verHistorial(item?: any) {
-    const id = item?.adulto_mayor?.id || item?.id_usuario || item?.id;
-    if (id) {
-      this.router.navigate(['/historial'], { queryParams: { id } });
-    } else {
-      this.router.navigate(['/historial']);
     }
   }
 

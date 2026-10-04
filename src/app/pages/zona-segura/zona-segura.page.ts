@@ -37,12 +37,12 @@ import {
 import { Gps, UbicacionInfo } from '../../services/Backend/gps/gps';
 import { DesplazamientoTracker } from '../../services/Backend/desplazamiento-tracker/desplazamiento-tracker';
 import { Vinculacion } from '../../services/Backend/vinculacion/vinculacion';
-import { CuidadoresService } from '../../services/Backend/cuidadores/cuidadores';
+import { PerfilCacheService } from '../../services/perfil-cache/perfil-cache.service';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
 import { PresenciaService, estaEnLinea } from '../../services/Backend/presencia/presencia';
 import { EstadoConexionComponent } from '../../components/estado-conexion/estado-conexion.component';
 
-declare const L: any; // Leaflet (cargado globalmente en index.html)
+declare const L: any; // Leaflet (empaquetado en src/main.ts, expuesto en window.L)
 
 const INTERVALO_CUIDADOR_MS = 30000;
 
@@ -82,6 +82,15 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   nombreAdulto: string = '';
 
   direccionPerfil: string = '';
+
+  /**
+   * Dirección del adulto en crudo, tal como la devuelve la base.
+   *
+   * Se guarda para no volver a pedirla cada 30 s: `actualizarUbicacionAdulto`
+   * la usaba como respaldo y con eso hacía un viaje extra a la red en cada
+   * refresco del mapa, sin agregar nada (la del adulto sale de otro lado).
+   */
+  private direccionAdulto: any = null;
 
   zonas: ZonaSegura[] = [];
 
@@ -188,6 +197,15 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
 
   private observerTamano: ResizeObserver | null = null;
 
+  /**
+   * Ajuste de tamaño pendiente para cuando la vista entre a pantalla.
+   *
+   * Se guarda la función en vez de programarla con un `setTimeout`: se ejecuta
+   * en `ionViewDidEnter`, que es el momento en que el contenedor ya mide lo que
+   * tiene que medir.
+   */
+  private ajustarAlEntrar: (() => void) | null = null;
+
   private destruido: boolean = false;
 
   private inicializado: boolean = false;
@@ -209,7 +227,7 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     private zonaService: ZonaSeguraService,
     private gpsService: Gps,
     private vinculacionService: Vinculacion,
-    private cuidadoresService: CuidadoresService,
+    private perfilCache: PerfilCacheService,
     private navRol: NavegacionRolService,
     private alertCtrl: AlertController,
     private toastCtrl: ToastController,
@@ -225,22 +243,38 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   // =====================================================
 
   async ngOnInit() {
-    const rol = await this.navRol.obtenerRol();
+    // Rol, id y nombre salen de la caché del perfil, que es local si otra
+    // pantalla ya la llenó.
+    //
+    // Antes esta pantalla gastaba TRES viajes solo en conocerse: uno para
+    // obtenerRol(), y dos dentro de cargarUsuario() (un auth.getUser(), que
+    // revalida contra el servidor aunque la sesión esté en el teléfono, más un
+    // select con tres relaciones) para usar de todo eso nada más el id y el
+    // nombre. Con red lenta, esos 3 segundos iban antes de que apareciera el
+    // mapa.
+    const perfil = await this.perfilCache.perfil();
+
+    // El rol viene dentro del perfil. Sólo si el perfil no está se pregunta
+    // aparte, como antes.
+    const rol = perfil?.rol ?? (await this.navRol.obtenerRol());
     this.esCuidador = rol === 'Familiar';
 
     if (this.esCuidador) {
+      // cargaAdultos() deja lista la dirección del perfil y asegura la zona
+      // inicial del adulto elegido.
       await this.cargarAdultos();
     } else {
-      const usuario = await this.cuidadoresService.cargarUsuario();
-      this.idAdulto = usuario?.id || '';
-      this.nombreAdulto = usuario
-        ? `${usuario.nombre || ''} ${usuario.apellidopa || ''} ${usuario.apellidoma || ''}`.trim()
-        : 'Tú';
+      this.idAdulto = perfil?.id || (await this.perfilCache.idUsuario()) || '';
+      this.nombreAdulto = perfil?.nombreCompleto || 'Tú';
 
-      // Zona predeterminada: la dirección de casa guardada en el perfil (tabla direccion)
+      // Zona predeterminada: la dirección de casa guardada en el perfil
+      // (tabla direccion).
       await this.prepararZonaCasa();
     }
 
+    // Esto va DESPUÉS a propósito: `prepararZonaCasa()` puede crear la zona de
+    // casa, y listar antes de que exista mostraría una pantalla vacía que se
+    // rellenaría sola en la próxima entrada.
     await this.cargarZonas();
 
     this.cargando = false;
@@ -267,6 +301,15 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
 
   ngAfterViewInit() {
     void this.arrancarMapa();
+  }
+
+  /**
+   * Al terminar la transición de entrada el contenedor ya tiene su tamaño real.
+   * Leaflet lo necesita para calcular bien los tiles, así que se le avisa en
+   * vez de dormir medio segundo y rogarse que alcance.
+   */
+  ionViewDidEnter() {
+    this.ajustarAlEntrar?.();
   }
 
   ngOnDestroy() {
@@ -303,25 +346,38 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   // =====================================================
 
   /**
-   * Guarda la dirección del perfil y crea la zona "Mi casa" si todavía no hay zonas.
+   * Guarda la dirección del perfil y asegura que exista la zona "Mi casa".
+   *
+   * Las dos cosas van en paralelo: la dirección es sólo para prellenar el
+   * formulario y la zona se crea desde la dirección guardada, así que ninguna
+   * necesita el resultado de la otra. Encadenadas costaban un viaje extra de
+   * red en cada entrada a la pantalla.
    */
   private async prepararZonaCasa() {
     if (!this.idAdulto) return;
 
-    try {
-      const dir = await this.zonaService.obtenerDireccionUsuario(this.idAdulto);
-      this.direccionPerfil = dir && dir.calle.trim()
-        ? this.zonaService.formatearDireccion(dir)
-        : '';
-    } catch {
-      this.direccionPerfil = '';
-    }
+    await Promise.all([
+      (async () => {
+        try {
+          const dir = await this.zonaService.obtenerDireccionUsuario(this.idAdulto);
+          this.direccionAdulto = dir || null;
+          this.direccionPerfil = dir && dir.calle.trim()
+            ? this.zonaService.formatearDireccion(dir)
+            : '';
+        } catch {
+          this.direccionAdulto = null;
+          this.direccionPerfil = '';
+        }
+      })(),
 
-    try {
-      await this.zonaService.asegurarZonaInicial(this.idAdulto);
-    } catch {
-      /* sin zona inicial: se podrá crear manualmente */
-    }
+      (async () => {
+        try {
+          await this.zonaService.asegurarZonaInicial(this.idAdulto);
+        } catch {
+          /* sin zona inicial: el cuidador puede crearla a mano */
+        }
+      })(),
+    ]);
 
     this.changeDetectorRef.detectChanges();
   }
@@ -556,8 +612,19 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     this.changeDetectorRef.detectChanges();
 
     try {
-      const direccionFallback = await this.zonaService.obtenerDireccionUsuario(this.idAdulto);
-      const info = await this.gpsService.obtenerUbicacionAdulto(this.idAdulto, direccionFallback);
+      // La dirección del perfil sólo se usa como respaldo cuando el adulto no
+      // tiene ubicación registrada, y ya está en memoria desde
+      // prepararZonaCasa(): pedirla de nuevo en cada refresco era un viaje a la
+      // red cada 30 segundos sin ningún propósito.
+      if (!this.direccionAdulto) {
+        this.direccionAdulto =
+          (await this.zonaService.obtenerDireccionUsuario(this.idAdulto)) || null;
+      }
+
+      const info = await this.gpsService.obtenerUbicacionAdulto(
+        this.idAdulto,
+        this.direccionAdulto
+      );
 
       // Sólo la ubicación real del adulto (BD o su último dato guardado) mueve
       // el puntero y evalúa las zonas. La dirección de casa o el GPS de ESTE
@@ -613,11 +680,16 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     }
 
     try {
+      // Primera lectura RÁPIDA: se acepta la del caché del sistema y sin pedir
+      // precisión máxima. Es lo que hace que el mapa se centre en el segundo
+      // en lugar de 5 a 20 segundos. En interiores, con `enableHighAccuracy` y
+      // `maximumAge: 0` el chip GPS tiene que arrancar en frío y el fix o tarda
+      // o vence a los 8 s, dejando el mapa en blanco.
       try {
         const posicionRapida = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 8000,
-          maximumAge: 0
+          enableHighAccuracy: false,
+          maximumAge: 15000,
+          timeout: 4000
         });
         if (posicionRapida?.coords) {
           this.procesarPosicion(posicionRapida.coords as any);
@@ -626,8 +698,11 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
         console.warn('Sin lectura inmediata, esperando el watch:', e?.message || e);
       }
 
+      // Después sí, alta precisión: el watcher afina la posición y la sigue
+      // actualizando. Con 5 s de margen no se provoca un fix nuevo en cada
+      // lectura si la persona está quieta.
       this.watchId = await Geolocation.watchPosition(
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 },
         (pos: Position | null, err: any) => {
           if (err) return;
           if (pos) this.procesarPosicion(pos.coords as any);
@@ -644,13 +719,13 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     navigator.geolocation.getCurrentPosition(
       (pos) => this.procesarPosicion(pos.coords),
       () => {},
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      { enableHighAccuracy: false, maximumAge: 15000, timeout: 4000 }
     );
 
     this.webWatchId = navigator.geolocation.watchPosition(
       (pos) => this.procesarPosicion(pos.coords),
       () => {},
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
     );
   }
 
@@ -850,27 +925,17 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   // MAPA
   // =====================================================
 
-  /** Espera corta (máx. 800 ms) a zonas/ubicación para centrar bien desde el
-   *  primer tile; si no llegan, se arranca con el centro por defecto. */
-  private async esperarDatosIniciales(): Promise<void> {
-    const inicio = Date.now();
-
-    while (!this.destruido && !this.map && Date.now() - inicio < 800) {
-      if (!this.cargando || this.ubicacion || this.zonas.length > 0) return;
-      await new Promise<void>((resolver) => setTimeout(resolver, 80));
-    }
-  }
-
   /**
    * Arranca el mapa reintentando unas veces: el contenedor puede tardar en
    * estar listo. Si nunca arranca, queda el aviso visible sobre el área del mapa.
+   *
+   * Ya no se espera a que lleguen las zonas ni la ubicación antes de crearlo.
+   * Antes este método pausaba hasta 800 ms preguntando cada 80 ms si ya había
+   * datos, y durante esa espera no había ni mapa ni tiles en pantalla. Ahora el
+   * mapa nace de una y `ajustarVista()` recentra cuando la información llega,
+   * que es lo mismo que ya se hacía cuando los datos llegaban tarde.
    */
   private async arrancarMapa(intento = 0): Promise<void> {
-    if (this.destruido || this.map) return;
-
-    // Igual que "mi ubicación": si los datos ya llegaron, el mapa nace centrado
-    // donde tiene que estar y pide UN solo lote de tiles (sin saltos ni refetch).
-    if (intento === 0) await this.esperarDatosIniciales();
     if (this.destruido || this.map) return;
 
     const ok = await this.inicializarMapa();
@@ -918,6 +983,31 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     return typeof L !== 'undefined';
   }
 
+  /**
+   * Última posición que este teléfono reportó para el adulto en pantalla.
+   *
+   * La guarda `Gps.reportarUbicacionAdulto()` cada vez que el panel del adulto
+   * reporta su ubicación. Se lee sólo para elegir el centro inicial del mapa.
+   */
+  private ultimaPosicionGuardada(): { latitud: number; longitud: number } | null {
+    if (!this.idAdulto) return null;
+
+    try {
+      const guardado = localStorage.getItem(`gps_ubicacion_${this.idAdulto}`);
+      if (!guardado) return null;
+
+      const info = JSON.parse(guardado);
+      const lat = Number(info?.latitud);
+      const lng = Number(info?.longitud);
+
+      if (isNaN(lat) || isNaN(lng) || (lat === 0 && lng === 0)) return null;
+
+      return { latitud: lat, longitud: lng };
+    } catch {
+      return null;
+    }
+  }
+
   private async inicializarMapa(): Promise<boolean> {
     // Se usa el elemento de ESTA página (no document.getElementById, que puede
     // tomar el de otra página apilada en el navegador).
@@ -937,10 +1027,28 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
     if (this.map) return true;
 
     try {
-      // Prioridad de centro: ubicación conocida → primera zona → por defecto.
+      // Prioridad de centro: ubicación conocida → primera zona → última posición
+      // guardada en el teléfono → Santiago por defecto.
+      //
+      // Como el mapa ya no espera a los datos, ese tercer escalón evita el
+      // salto visible: sin él la pantalla abriría en Santiago y un segundo
+      // después se movería sola hasta donde está la persona. La última
+      // posición ya está en el teléfono (la guarda el reporte del panel), así
+      // que centrar con ella no cuesta ninguna red.
       const primeraZona = this.zonas[0];
-      const lat = this.ubicacion?.latitud ?? primeraZona?.latitud_centro ?? -33.4489;
-      const lng = this.ubicacion?.longitud ?? primeraZona?.longitud_centro ?? -70.6693;
+      const ultimaGuardada = this.ultimaPosicionGuardada();
+
+      const lat =
+        this.ubicacion?.latitud ??
+        primeraZona?.latitud_centro ??
+        ultimaGuardada?.latitud ??
+        -33.4489;
+      const lng =
+        this.ubicacion?.longitud ??
+        primeraZona?.longitud_centro ??
+        ultimaGuardada?.longitud ??
+        -70.6693;
+
       // Zoom 16 = el mismo al que ajustarVista() lleva una sola zona: evita refetch.
       const zoom = this.ubicacion || this.zonas.length > 0 ? 16 : 15;
 
@@ -987,8 +1095,11 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
       }
     };
 
-    // La transición de entrada de Ionic termina ~350-500 ms tras crear la vista.
-    setTimeout(ajustar, 400);
+    // El tamaño final llega con la entrada de la vista; con eso y el
+    // ResizeObserver de abajo sobra la espera fija de 400 ms que había antes.
+    // Esa espera congelaba el mapa medio segundo en cada entrada, y después de
+    // ella los tiles igual iban a tener que viajar por la red.
+    this.ajustarAlEntrar = ajustar;
 
     if (typeof ResizeObserver !== 'undefined' && !this.observerTamano) {
       this.observerTamano = new ResizeObserver(() => ajustar());

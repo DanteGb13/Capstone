@@ -150,44 +150,41 @@ ion-content {
         }
     }
 
-    .adulto-acciones {
-        display: flex;
-        gap: 6px;
+    /* Botón de opciones: reemplaza los tres botones pequeños (ubicación, teléfono
+   e historial) que tenía esta tarjeta.
+
+   Antes eran 34 px, sin borde y sin sombra, y el menú de opciones además estaba
+   escondido en el avatar: cuatro maneras de abrir acciones y ninguna se veía
+   claramente pulsable. Ahora es un solo control de 44 px (objetivo táctil
+   cómodo), con borde, fondo y hundido al presionarlo, para que se lea como lo
+   que es: un botón. */
+    .btn-opciones {
         flex-shrink: 0;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        border: 1px solid rgba(119, 21, 199, 0.18);
+        background: var(--primary-light);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(119, 21, 199, 0.12);
+        transition: transform 0.15s ease, background 0.15s ease;
 
-        .btn-mini {
-            width: 34px;
-            height: 34px;
-            border-radius: 10px;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: transform 0.15s ease;
-
-            ion-icon {
-                font-size: 16px;
-            }
-
-            &:active {
-                transform: scale(0.9);
-            }
+        ion-icon {
+            font-size: 20px;
         }
 
-        .btn-ubicacion {
-            background: rgba(33, 150, 243, 0.1);
-            color: #2196f3;
+        &:active {
+            transform: scale(0.9);
+            background: rgba(119, 21, 199, 0.18);
         }
 
-        .btn-llamar {
-            background: rgba(76, 175, 80, 0.1);
-            color: #4caf50;
-        }
-
-        .btn-historial {
-            background: rgba(255, 152, 0, 0.1);
-            color: #ff9800;
+        &:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
         }
     }
 }

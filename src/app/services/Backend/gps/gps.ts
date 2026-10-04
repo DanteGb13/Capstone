@@ -19,6 +19,23 @@ export interface UbicacionInfo {
   origen?: 'bd' | 'cache' | 'casa' | 'dispositivo';
 }
 
+/**
+ * Datos del servicio de geocodificación de OSM.
+ *
+ * Es un servicio comunitario y gratuito con una regla estricta: máximo una
+ * petición por segundo. Pasarse no da un error visible, da respuestas de 5 a
+ * 30 segundos. Por eso todo lo que se consulta aquí pasa por una caché y por
+ * un turno de turno, en vez de salir a la red cada vez que se necesita un
+ * texto.
+ */
+const NOMINATIM_MINIMO_MS = 1100;
+
+/** Tope de espera a Nominatim: si no contesta, se sigue sin dirección. */
+const NOMINATIM_TIMEOUT_MS = 4000;
+
+/** Radio de redondeo al cachear: ~11 m, suficiente y no ensucia la caché. */
+const PRECISION_CACHE_DIRECCION = 4;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -30,16 +47,42 @@ export class Gps {
     private supabaseService: SupabaseService
   ) { }
 
+  /**
+   * Direcciones ya resueltas, en memoria y en el teléfono.
+   *
+   * Vive aquí y no en cada pantalla porque el texto de una calle no cambia:
+   * si dos pantallas piden la dirección de la misma esquina, la segunda la
+   * tiene al instante y no le pega un latigazo a Nominatim.
+   */
+  private dirMemoria = new Map<string, string>();
+
+  /** Peticiones de dirección que ya están en curso, para no duplicarlas. */
+  private dirEnVuelo = new Map<string, Promise<string>>();
+
+  /** Cuándo se le preguntó a Nominatim por última vez. */
+  private ultimaConsultaDirMs = 0;
+
 
   // =====================================================
   // OBTENER UBICACIÓN ACTUAL DEL DISPOSITIVO
   // =====================================================
 
+  /**
+   * Posición del GPS de este teléfono.
+   *
+   * Va deliberadamente por lo rápido y no por lo exacto: `maximumAge` permite
+   * una lectura reciente del caché y sin `enableHighAccuracy` el chip no tiene
+   * que prenderse en frío. En interiores un fix de alta precisión puede tardar
+   * 5 a 20 segundos, y para saber DÓNDE está la persona no hace falta el
+   * último metro. Quien necesite precisión la pide después con el watcher,
+   * que sí la exige.
+   */
   async obtenerUbicacionActualDispositivo(): Promise<{ latitud: number; longitud: number; precision: number } | null> {
     try {
       const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000
+        enableHighAccuracy: false,
+        maximumAge: 15000,
+        timeout: 8000
       });
 
       return {
@@ -64,7 +107,7 @@ export class Gps {
               // Santiago por defecto y eso provocaba avisos falsos desde lejos.
               resolver(null);
             },
-            { enableHighAccuracy: true, timeout: 10000 }
+            { enableHighAccuracy: false, maximumAge: 15000, timeout: 8000 }
           );
         } else {
           resolver(null);
@@ -128,14 +171,18 @@ export class Gps {
     // 3. Cache local
     localStorage.setItem(`gps_ubicacion_${idUsuario}`, JSON.stringify(info));
 
-    // 4. Reverse geocoding
-    try {
-      const dir = await this.obtenerDireccionTexto(coords.latitud, coords.longitud);
-      info.direccionTexto = dir;
-      localStorage.setItem(`gps_ubicacion_${idUsuario}`, JSON.stringify(info));
-    } catch (e) {
-      // ignore
-    }
+    // 4. Reverse geocoding: en segundo plano. Esta pantalla ya tiene lo que
+    //    necesita (la posición se acaba de guardar arriba), y esperar a que
+    //    responda Nominatim sólo agregaría segundos a una tarea que se hace
+    //    al abrir el panel. La dirección queda cacheada para cuando el
+    //    cuidador la pida.
+    this.resolverDireccionEnSegundoPlano(coords.latitud, coords.longitud, info, (conDireccion) => {
+      try {
+        localStorage.setItem(`gps_ubicacion_${idUsuario}`, JSON.stringify(conDireccion));
+      } catch {
+        /* sin persistencia */
+      }
+    });
 
     return info;
   }
@@ -145,7 +192,20 @@ export class Gps {
   // OBTENER UBICACIÓN DE UN ADULTO MAYOR (PARA EL CUIDADOR)
   // =====================================================
 
-  async obtenerUbicacionAdulto(idUsuario: string, direccionFallback?: any): Promise<UbicacionInfo> {
+  /**
+   * Ubicación de un adulto mayor, para la pantalla del cuidador.
+   *
+   * `alObtenerDireccion` es opcional y es la razón por la que esta pantalla ya
+   * no se demora: la dirección se pide aparte y se avisa cuando llega. Antes
+   * el método esperaba a Nominatim y el pin no se dibujaba hasta que el
+   * servicio de OSM respondía, que son 1 a 3 segundos y hasta 30 si el
+   * servicio está saturado. El mapa necesita el punto, no la calle.
+   */
+  async obtenerUbicacionAdulto(
+    idUsuario: string,
+    direccionFallback?: any,
+    alObtenerDireccion?: (info: UbicacionInfo) => void
+  ): Promise<UbicacionInfo> {
     // 1. Buscar en la base de datos Supabase (tabla public.ubicacion)
     try {
       const { data: ubicacionBD, error: ubError } = await this.supabase
@@ -161,16 +221,17 @@ export class Gps {
         const lng = parseFloat(ubicacionBD.longitud);
 
         if (!isNaN(lat) && !isNaN(lng)) {
-          const dirTexto = await this.obtenerDireccionTexto(lat, lng);
           const info: UbicacionInfo = {
             latitud: lat,
             longitud: lng,
             precision: 15,
             fecha: ubicacionBD.fecha || new Date().toISOString(),
-            direccionTexto: dirTexto,
+            direccionTexto: this.direccionDeCache(lat, lng),
             enLinea: true,
             origen: 'bd'
           };
+
+          this.resolverDireccionEnSegundoPlano(lat, lng, info, alObtenerDireccion);
 
           // Sólo la ubicación real del adulto se guarda como última conocida
           localStorage.setItem(`gps_ubicacion_${idUsuario}`, JSON.stringify(info));
@@ -191,7 +252,13 @@ export class Gps {
         const parsed = JSON.parse(cached);
         if (parsed.latitud && parsed.longitud) {
           if (!parsed.direccionTexto) {
-            parsed.direccionTexto = await this.obtenerDireccionTexto(parsed.latitud, parsed.longitud);
+            parsed.direccionTexto = this.direccionDeCache(parsed.latitud, parsed.longitud);
+            this.resolverDireccionEnSegundoPlano(
+              parsed.latitud,
+              parsed.longitud,
+              parsed,
+              alObtenerDireccion
+            );
           }
           return { ...parsed, origen: parsed.origen || 'cache' } as UbicacionInfo;
         }
@@ -234,34 +301,126 @@ export class Gps {
       origen: 'dispositivo'
     };
 
-    try {
-      info.direccionTexto = await this.obtenerDireccionTexto(devicePos.latitud, devicePos.longitud);
-    } catch (e) {
-      // ignore
-    }
+    this.resolverDireccionEnSegundoPlano(
+      devicePos.latitud,
+      devicePos.longitud,
+      info,
+      alObtenerDireccion
+    );
 
     return info;
   }
 
 
-  // =====================================================
-  // REVERSE GEOCODING (COORDENADAS -> DIRECCIÓN TEXTO)
-  // =====================================================
+// =====================================================
+// REVERSE GEOCODING (COORDENADAS -> DIRECCIÓN TEXTO)
+// =====================================================
+
+/**
+ * Dirección que ya se conoce de una coordenada, sin tocar la red.
+ *
+ * Es la que se usa para pintar el mapa: si el texto no está cacheado todavía,
+ * se devuelve vacío y la pantalla muestra la posición igual, sin esperar.
+ */
+private direccionDeCache(lat: number, lng: number): string {
+    const clave = this.claveDireccion(lat, lng);
+
+    const enMemoria = this.dirMemoria.get(clave);
+    if (enMemoria) return enMemoria;
+
+    try {
+      const guardado = localStorage.getItem(clave);
+      if (guardado) {
+        this.dirMemoria.set(clave, guardado);
+        return guardado;
+      }
+    } catch {
+      /* sin persistencia */
+    }
+
+    return '';
+  }
+
+  private claveDireccion(lat: number, lng: number): string {
+    const f = 10 ** PRECISION_CACHE_DIRECCION;
+    return `gps_dir_${Math.round(lat * f)}_${Math.round(lng * f)}`;
+  }
+
+  private guardarDireccionEnCache(lat: number, lng: number, texto: string): void {
+    if (!texto) return;
+
+    this.dirMemoria.set(this.claveDireccion(lat, lng), texto);
+
+    try {
+      localStorage.setItem(this.claveDireccion(lat, lng), texto);
+    } catch {
+      /* sin persistencia */
+    }
+  }
+
+  /**
+   * Espera a que le toque el turno a Nominatim.
+   *
+   * Su política es de una consulta por segundo. Saltársela produce respuestas
+   * de 5 a 30 s, así que el retraso de un segundo es mucho más barato que la
+   * espera que genera saltársela.
+   */
+  private async esperarTurnoNominatim(): Promise<void> {
+    const desde = Date.now() - this.ultimaConsultaDirMs;
+    const falta = NOMINATIM_MINIMO_MS - desde;
+
+    if (falta > 0) {
+      await new Promise((resolver) => setTimeout(resolver, falta));
+    }
+
+    this.ultimaConsultaDirMs = Date.now();
+  }
 
   async obtenerDireccionTexto(lat: number, lng: number): Promise<string> {
+    // 1. Si ya se sabe, no se pregunta. Es el caso más común y el que hace
+    //    que entrar a la pantalla sea instantáneo la segunda vez.
+    const cacheada = this.direccionDeCache(lat, lng);
+    if (cacheada) return cacheada;
+
+// 2. Si esa misma consulta ya está en curso, se espera a esa y no se abre
+    //    otra: si dos pantallas piden la misma esquina a la vez, se le pregunta
+    //    dos veces por duplicado y las dos respuestas se hacen lentas.
+    const clave = this.claveDireccion(lat, lng);
+    const enVuelo = this.dirEnVuelo.get(clave);
+    if (enVuelo) return enVuelo;
+
+    const consulta = this.consultarDireccion(lat, lng).finally(() => {
+      this.dirEnVuelo.delete(clave);
+    });
+
+    this.dirEnVuelo.set(clave, consulta);
+    return consulta;
+  }
+
+  private async consultarDireccion(lat: number, lng: number): Promise<string> {
+    await this.esperarTurnoNominatim();
+
+    // El `fetch` necesita AbortController: sin esto, si Nominatim se queda
+    // colgado la promesa no se resuelve nunca y la pantalla queda esperando.
+    const controlador = new AbortController();
+    const corte = setTimeout(() => controlador.abort(), NOMINATIM_TIMEOUT_MS);
+
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
         {
+          signal: controlador.signal,
           headers: {
             'Accept-Language': 'es'
           }
         }
       );
 
-      if (!response.ok) return 'Ubicación identificada';
+      if (!response.ok) return '';
 
       const data = await response.json();
+      let texto = '';
+
       if (data && data.display_name) {
         const road = data.address?.road || data.address?.pedestrian || '';
         const houseNumber = data.address?.house_number || '';
@@ -269,16 +428,51 @@ export class Gps {
         const city = data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
 
         if (road && city) {
-          return `${road} ${houseNumber ? houseNumber + ', ' : ''}${suburb ? suburb + ', ' : ''}${city}`.trim();
+          texto = `${road} ${houseNumber ? houseNumber + ', ' : ''}${suburb ? suburb + ', ' : ''}${city}`.trim();
+        } else {
+          texto = data.display_name.split(',').slice(0, 3).join(', ');
         }
-
-        return data.display_name.split(',').slice(0, 3).join(', ');
       }
-    } catch (error) {
-      console.warn('Error reverse geocoding:', error);
-    }
 
-    return 'Ubicación identificada';
+      this.guardarDireccionEnCache(lat, lng, texto);
+      return texto;
+    } catch (error) {
+      // Sin abortar por error se traga la consola; con timeout tampoco hay
+      // nada que hacer: se sigue sin dirección, que es texto cosmético.
+      console.warn('Error reverse geocoding:', error);
+      return '';
+    } finally {
+      clearTimeout(corte);
+    }
+  }
+
+  /**
+   * Pide la dirección sin esperarla.
+   *
+   * El mapa no necesita la calle para mostrar un punto, así que la posición se
+   * devuelve de inmediato y el texto llega después por el callback. Cuando el
+   * texto no se puede resolver nunca, la posición sigue siendo correcta: lo
+   * único que se pierde es el nombre de la calle.
+   */
+  private resolverDireccionEnSegundoPlano(
+    lat: number,
+    lng: number,
+    info: UbicacionInfo,
+    alObtener?: (info: UbicacionInfo) => void
+  ): void {
+    // Ya hay dirección (o ya se pidió): no hay nada que hacer.
+    if (info.direccionTexto) return;
+
+    void this.obtenerDireccionTexto(lat, lng)
+      .then((texto) => {
+        if (!texto) return;
+
+        info.direccionTexto = texto;
+        alObtener?.(info);
+      })
+      .catch(() => {
+        /* el texto es cosmético: si falla, se sigue con la posición */
+      });
   }
 
 

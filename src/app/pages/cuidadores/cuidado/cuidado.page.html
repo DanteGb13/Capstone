@@ -38,9 +38,13 @@
 
         @for (item of adultosACargo; track item.id) {
 
+          <!-- Tocar la tarjeta abre el mapa de la persona (así se quitó el botón
+               de ubicación sin perder la función). -->
           <div class="adulto-card" (click)="verUbicacion(item)">
 
-            <div class="adulto-avatar" (click)="abrirOpcionesAdulto(item); $event.stopPropagation()">
+            <!-- El avatar ya no es un botón: no hay nada que descubrir por
+                 pulsar la foto. -->
+            <div class="adulto-avatar">
               <img *ngIf="item.adulto_mayor?.foto_url" [src]="item.adulto_mayor.foto_url" alt="Foto de perfil" class="avatar-img">
               <ion-icon *ngIf="!item.adulto_mayor?.foto_url" name="person-circle"></ion-icon>
             </div>
@@ -61,19 +65,18 @@
               </div>
             </div>
 
-            <div class="adulto-acciones">
-              <button class="btn-mini btn-ubicacion" type="button" (click)="verUbicacion(item); $event.stopPropagation()">
-                <ion-icon name="location-outline"></ion-icon>
-              </button>
-              @if (item.adulto_mayor?.telefono) {
-                <button class="btn-mini btn-llamar" type="button" (click)="llamarAdulto(item.adulto_mayor.telefono); $event.stopPropagation()">
-                  <ion-icon name="call-outline"></ion-icon>
-                </button>
-              }
-              <button class="btn-mini btn-historial" type="button" (click)="verHistorial(item); $event.stopPropagation()">
-                <ion-icon name="time-outline"></ion-icon>
-              </button>
-            </div>
+            <!-- Antes había tres botones aquí (ubicación, teléfono e historial)
+                 más un cuarto acceso escondido en el avatar, que no se veía
+                 que fuera pulsable y encima lo abría al tocar la foto. Ahora
+                 hay un solo control, y se ve que es un botón: borde, fondo y
+                 reacción al presionarlo. Abre el menú con llamar, desvincular
+                 y cancelar. -->
+            <button class="btn-opciones"
+                    type="button"
+                    (click)="abrirOpcionesAdulto(item); $event.stopPropagation()"
+                    [attr.aria-label]="'Opciones de ' + (item.adulto_mayor?.nombre || 'esta persona')">
+              <ion-icon name="ellipsis-vertical"></ion-icon>
+            </button>
 
           </div>
 
