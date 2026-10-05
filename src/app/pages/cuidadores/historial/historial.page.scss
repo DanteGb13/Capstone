@@ -627,3 +627,14 @@ ion-content {
   --tipo-fondo: var(--sc-primary-soft);
   --tipo-tinta: var(--sc-primary);
 }
+
+/* "Marcó: Estoy en casa" / "Marcó: Salí de casa".
+
+   Este estilo queda listo para cuando se amplíe el CHECK de `historial_evento`
+   y estos eventos guarden su propio tipo; hasta entonces se guardan como
+   `manual` y se ven con el ícono genérico. El texto del título ("Marcó: ...")
+   los deja identificables igual. */
+.evento.tipo-estado_casa {
+  --tipo-fondo: var(--sc-ok-soft);
+  --tipo-tinta: var(--sc-ok);
+}

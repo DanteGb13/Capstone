@@ -130,6 +130,18 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
+    <!-- Permisos de salud (Health Connect)
+
+         ACTIVITY_RECOGNITION es el permiso que desbloquea los PASOS y la
+         DISTANCIA: en Android 10+ cualquier dato derivado del sensor de pasos
+         lo exige, y tiene que estar declarado aquí antes de poder pedirlo en
+         runtime. Sin esta línea el sistema nunca lo concede y Health Connect
+         devuelve vacío para esos dos datos, sin error visible.
+
+         Antes faltaba y por eso llegaban el sueño, el oxígeno y las calorías
+         (que no dependen del sensor de pasos) pero los pasos nunca. -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
     <!-- Permisos de teléfono -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.CALL_PHONE" />

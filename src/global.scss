@@ -216,6 +216,46 @@ ion-app {
 }
 
 /* =====================================================
+   Alerta de detalle de un evento del historial
+   (Estilos globales porque el alert es un overlay)
+   ===================================================== */
+.alerta-detalle-historial {
+
+  --ion-color-primary: #7715c7;
+
+  .alert-wrapper {
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(119, 21, 199, 0.2);
+  }
+
+  .alert-title {
+    color: #7715c7;
+    font-weight: 800;
+    font-size: 18px;
+  }
+
+  /* El mensaje llega como texto plano con \n: sin esto los saltos de línea se
+     juntan en un solo párrafo. */
+  .alert-message {
+    color: #555;
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-line;
+  }
+
+  .alert-button {
+    color: #7715c7;
+    font-weight: 700;
+    text-transform: none;
+  }
+
+  .alert-button-role-cancel {
+    color: #1a1d26;
+    font-weight: 700;
+  }
+}
+
+/* =====================================================
    Alerta de "Ir a mi casa" - elegir aplicación de mapas
    (Estilos globales porque el alert es un overlay)
    ===================================================== */

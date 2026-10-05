@@ -58,6 +58,7 @@ import { PermisosService } from '../../../services/permisos/permisos.service';
 import { RealtimeService } from '../../../services/realtime/realtime.service';
 import { SaludSyncService } from '../../../services/Backend/salud/salud-sync';
 import { Salud, type ResumenSalud } from '../../../services/Backend/salud/salud';
+import { HistorialEventos } from '../../../services/Backend/historial-eventos/historial-eventos';
 
 /**
  * Cómo se ve el bloque de zona segura del panel del adulto.
@@ -343,6 +344,7 @@ private timerZona: any = null;
     private alertCtrl: AlertController,
 
     private perfilCache: PerfilCacheService,
+    private historialService: HistorialEventos,
 
     private permisosService: PermisosService,
 
@@ -1408,6 +1410,11 @@ private timerZona: any = null;
     this.mostrarModalEstoyAqui = false;
     this.estadoEstoyAqui = 'Estoy en casa';
     console.log('Estado: Estoy en casa');
+
+    // Se guarda en el historial antes de avisar. Si el push falla, el cuidador
+    // al menos ve que la persona lo marcó, así que el orden importa: primero
+    // el registro, después el aviso.
+    this.registrarEstadoCasa(true);
     await this.notificarEstadoCasa('Estoy en casa');
   }
 
@@ -1415,7 +1422,28 @@ private timerZona: any = null;
     this.mostrarModalEstoyAqui = false;
     this.estadoEstoyAqui = 'Salí de casa';
     console.log('Estado: Salí de casa');
+
+    this.registrarEstadoCasa(false);
     await this.notificarEstadoCasa('Salí de casa');
+  }
+
+  /**
+   * Anota en el historial que el adulto avisó que está en casa o que salió.
+   *
+   * Va en segundo plano y sin molestar: si la persona ya pidió el permiso de
+   * ubicación y está, el registro sólo sirve de respaldo cuando la zona segura
+   * no está configurada. Si no hay dónde guardarlo (nunca se supo el id de
+   * usuario, o la tabla no deja insertar), no pasa nada: el aviso por push
+   * sigue saliendo igual.
+   */
+  private registrarEstadoCasa(enCasa: boolean): void {
+    if (!this.idUsuarioActual) return;
+
+    void this.historialService
+      .registrarEstadoCasa(this.idUsuarioActual, enCasa)
+      .catch(() => {
+        /* sin historial, pero el push ya se mandó */
+      });
   }
 
   private async notificarEstadoCasa(estado: 'Estoy en casa' | 'Salí de casa') {

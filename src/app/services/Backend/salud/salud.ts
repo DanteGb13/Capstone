@@ -2,6 +2,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Health, type HealthDataType } from '@capgo/capacitor-health';
 import { SupabaseService } from '../../supabase/supabase';
+import { PermisosExtra } from '../permisos-extra/permisos-extra';
 
 /**
  * Datos que la app pide leer de Health Connect.
@@ -156,15 +157,22 @@ export class Salud {
     }
   }
 
-  /**
+/**
    * Pide los permisos. Sólo hay que llamarlo una vez: después el estado se
    * consulta con `tienePermisos()`, que no vuelve a molestar al usuario.
    */
-  async solicitarPermisos(): Promise<{ autorizado: boolean; denegados: HealthDataType[] }> {
+async solicitarPermisos(): Promise<{ autorizado: boolean; denegados: HealthDataType[] }> {
     const disp = await this.disponibilidad();
     if (!disp.disponible) {
       return { autorizado: false, denegados: [...TIPOS_SALUD] };
     }
+
+    // El permiso de actividad va PRIMERO y aparte del diálogo de Health Connect.
+    // Son dos cosas distintas: uno es un permiso normal de Android y el otro son
+    // los permisos de Health Connect. Si sólo se abre el segundo, el usuario
+    // autoriza los pasos en la pantalla de Google y los pasos siguen sin llegar,
+    // porque el sistema nunca concedió ACTIVITY_RECOGNITION.
+    await this.solicitarPermisoActividad();
 
     try {
       const estado = await Health.requestAuthorization({ read: TIPOS_SALUD, write: [] });
@@ -175,6 +183,50 @@ export class Salud {
     } catch (e) {
       console.warn('No se pudieron pedir los permisos de salud:', e);
       return { autorizado: false, denegados: [...TIPOS_SALUD] };
+    }
+  }
+
+  /**
+   * Pide `ACTIVITY_RECOGNITION`, el permiso que desbloquea pasos y distancia.
+   *
+   * Va separado porque en Android 10+ cualquier dato derivado del sensor de
+   * pasos lo exige, y el plugin de Health Connect no lo declara: lo declara la
+   * app. Sin esto, los pasos y la distancia nunca llegan y no hay error visible
+   * en ninguna parte.
+   *
+   * Un fallo aquí no se propaga: si el permiso no se puede pedir (teléfono
+   * viejo, navegador), la app sigue funcionando con el resto de los datos.
+   */
+  private async solicitarPermisoActividad(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+
+    try {
+      const { concedido } = await PermisosExtra.solicitarActividad();
+      return !!concedido;
+    } catch (e) {
+      console.warn('No se pudo pedir el permiso de actividad física:', e);
+      return false;
+    }
+  }
+
+  /**
+   * Si el teléfono puede leer pasos.
+   *
+   * Se consulta aparte de los permisos de Health Connect porque son
+   * independientes: el usuario puede haber autorizado los pasos en Health
+   * Connect y que Android nunca haya concedido la actividad. En ese caso
+   * `tienePermisos()` da true y los pasos igual llegan vacíos, que es
+   * exactamente la falla que_costó entender.
+   */
+  async tienePermisoActividad(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) return false;
+
+    try {
+      const { concedido } = await PermisosExtra.verificarActividad();
+      return !!concedido;
+    } catch (e) {
+      console.warn('No se pudo verificar el permiso de actividad física:', e);
+      return false;
     }
   }
 
@@ -216,9 +268,22 @@ export class Salud {
     const disp = await this.disponibilidad();
     if (!disp.disponible) return [];
 
+    // Si falta el permiso de actividad, se agrega a la lista de faltantes
+    // aunque Health Connect diga que "steps" está autorizado. Así el panel
+    // puede decir "Falta autorizar: los pasos" en vez de quedarse mudo
+    // esperando datos que no van a llegar nunca.
+    const faltaActividad = !(await this.tienePermisoActividad());
+
     try {
       const estado = await Health.checkAuthorization({ read: TIPOS_SALUD, write: [] });
       const denegados = new Set<string>(estado.readDenied as string[]);
+
+      if (faltaActividad) {
+        // Sólo tiene sentido señalarlo cuando el usuario decidió leer pasos.
+        denegados.add('steps');
+        denegados.add('distance');
+      }
+
       return TIPOS_SALUD.filter((t) => denegados.has(t));
     } catch (e) {
       console.warn('No se pudo revisar los permisos por tipo:', e);

@@ -23,6 +23,7 @@ import { SupabaseService } from '../../../services/supabase/supabase';
 import { PermisosExtra } from '../../../services/Backend/permisos-extra/permisos-extra';
 import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
 import { estaEnLinea } from '../../../services/Backend/presencia/presencia';
+import { HistorialEventos } from '../../../services/Backend/historial-eventos/historial-eventos';
 import { Capacitor } from '@capacitor/core';
 
 @Component({
@@ -58,6 +59,7 @@ export class CuidadoPage implements OnInit {
     private navRol: NavegacionRolService,
     private supabaseService: SupabaseService,
     private alertController: AlertController,
+    private historialService: HistorialEventos,
     private toastController: ToastController
   ) {
     addIcons(icons);
@@ -164,7 +166,7 @@ async abrirOpcionesAdulto(item: any) {
         text: 'Llamar',
         cssClass: 'alerta-btn-llamar',
         handler: () => {
-          this.llamarAdulto(telefono);
+          this.llamarAdulto(telefono, item);
         }
       });
     }
@@ -286,8 +288,43 @@ async confirmarDesvincular(item: any) {
     }
   }
 
-  async llamarAdulto(telefono: string) {
+  /**
+   * Marca una llamada al historial de esa persona.
+   *
+   * Es el único evento de esta pantalla que no tiene tabla propia: no hay
+   * `llamada` en la base, así que hay que escribirlo en `historial_evento`.
+   * Sin esto, el cuidador puede llamar veinte veces y el historial no muestra
+   * ninguna.
+   *
+   * Se registra aunque el sistema no confirme que la llamada se haya
+   * establishing: lo que se guarda es la intención de llamar, que es lo que el
+   * cuidador hizo. Y se falla en silencio a propósito: que no se pueda anotar
+   * una llamada no puede impedir que se llame.
+   */
+  private registrarLlamada(item: any, telefono: string): void {
+    const nombre = item?.adulto_mayor?.nombre || '';
+    const apellido = item?.adulto_mayor?.apellidopa || '';
+    const nombreCompleto = `${nombre} ${apellido}`.trim() || 'la persona a cargo';
+
+    void this.historialService
+      .registrarEvento({
+        id_usuario: item?.adulto_mayor?.id || item?.id_usuario || item?.id || '',
+        tipo: 'llamada',
+        titulo: `Llamaste a ${nombreCompleto}`.slice(0, 120),
+        detalle: telefono.slice(0, 500)
+      })
+      .catch(() => {
+        /* la llamada ya se hizo: no hinders nada que no se anote */
+      });
+  }
+
+  async llamarAdulto(telefono: string, item?: any) {
     if (!telefono) return;
+
+    if (item) {
+      this.registrarLlamada(item, telefono);
+    }
+
     const telLimpio = telefono.replace(/[\s\-\(\)\+]/g, '');
     if (Capacitor.isNativePlatform()) {
       await PermisosExtra.realizarLlamada({ telefono: telLimpio });

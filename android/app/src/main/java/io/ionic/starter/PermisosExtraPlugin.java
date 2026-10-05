@@ -37,6 +37,12 @@ import com.getcapacitor.annotation.PermissionCallback;
                 android.Manifest.permission.READ_CONTACTS,
                 android.Manifest.permission.WRITE_CONTACTS
             }
+        ),
+        @Permission(
+            alias = "Actividad",
+            strings = {
+                android.Manifest.permission.ACTIVITY_RECOGNITION
+            }
         )
     }
 )
@@ -46,6 +52,59 @@ public class PermisosExtraPlugin extends Plugin {
     private String permisoPendiente;
     /** Guarda la llamada del selector por si Android entrega el resultado sin ella. */
     private PluginCall pendingPickCall;
+
+    // =====================================================
+    // PERMISO DE ACTIVIDAD (PASOS Y DISTANCIA)
+    // =====================================================
+
+    /**
+     * Permiso de reconocimiento de actividad física.
+     *
+     * Es lo que habilita la lectura de PASOS y DISTANCIA desde Health Connect
+     * en Android 10 y superior. El plugin de salud declara los permisos propios
+     * de Health Connect (READ_STEPS y compañía) pero NO éste, que es un permiso
+     * normal de Android: tiene que declararlo la app en el manifiesto y
+     * pedirse en runtime.
+     *
+     * Antes de esto la app leía el sueño, el oxígeno y las calorías (que no
+     * dependen del sensor de pasos) pero los pasos nunca llegaban, en silencio:
+     * Health Connect devolvía vacío y la app no tenía forma de saber por qué.
+     */
+    @PluginMethod
+    public void verificarActividad(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("concedido", tienePermisoActividad());
+        call.resolve(ret);
+    }
+
+    @PluginMethod
+    public void solicitarActividad(PluginCall call) {
+        if (tienePermisoActividad()) {
+            JSObject ret = new JSObject();
+            ret.put("concedido", true);
+            call.resolve(ret);
+            return;
+        }
+
+        requestPermissionForAlias("Actividad", call, "callbackActividad");
+    }
+
+    @PermissionCallback
+    private void callbackActividad(PluginCall call) {
+        JSObject ret = new JSObject();
+        ret.put("concedido", tienePermisoActividad());
+        call.resolve(ret);
+    }
+
+    private boolean tienePermisoActividad() {
+        // Antes de Android 10 este permiso no existe y el sensor de pasos es de
+        // libre acceso, así que se da por concedido.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            return true;
+        }
+        return getContext().checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION)
+                == PackageManager.PERMISSION_GRANTED;
+    }
 
     // =====================================================
     // REALIZAR LLAMADA TELEFÓNICA

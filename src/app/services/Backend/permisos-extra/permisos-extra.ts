@@ -18,6 +18,16 @@ export interface PermisosExtraPlugin {
    */
   solicitarContactos(opciones?: { abrirAjustes?: boolean }): Promise<{ concedido: boolean }>;
   verificarPermisos(): Promise<{ telefono: boolean; contactos: boolean }>;
+  /**
+   * Permiso de reconocimiento de actividad (ACTIVITY_RECOGNITION).
+   *
+   * Sin él, Android 10+ no deja leer PASOS ni DISTANCIA desde Health Connect.
+   * El plugin de salud declara los permisos de Health Connect pero no éste, que
+   * es un permiso normal de Android.
+   */
+  verificarActividad(): Promise<{ concedido: boolean }>;
+  /** Pide el permiso con el diálogo del sistema. { concedido: false } si el usuario dice que no. */
+  solicitarActividad(): Promise<{ concedido: boolean }>;
   abrirAjustes(): Promise<void>;
   realizarLlamada(options: { telefono: string }): Promise<{ llamada: boolean }>;
   enviarSMS(options: { telefono: string; mensaje: string }): Promise<{ sms: boolean }>;

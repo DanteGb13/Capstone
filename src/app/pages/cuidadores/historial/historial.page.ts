@@ -68,6 +68,7 @@ const ICONOS_TIPO: Record<TipoEvento, string> = {
   manual: 'document-text-outline',
   llamada: 'call-outline',
   nota: 'chatbubble-outline',
+  estado_casa: 'home-outline',
   ubicacion: 'location-outline'
 };
 
@@ -400,23 +401,28 @@ export class HistorialPage implements OnInit {
   // DETALLE DEL EVENTO
   // =====================================================
 
+  /**
+   * Abre el detalle de un evento.
+   *
+   * El mensaje va como texto plano con saltos de línea, no como HTML: esta app
+   * tiene `innerHTMLTemplatesEnabled` en false, así que un `<strong>` o un
+   * `<br>` se verían escritos literalmente en pantalla. Por eso no se usan
+   * etiquetas acá.
+   */
   async abrirEvento(evento: EventoHistorial) {
-    if (evento.tipo === 'ubicacion') {
-      await this.verUbicacion(evento);
-      return;
-    }
-
     const detalle = evento.detalle || 'Sin detalle adicional';
+
+    const lineas = [
+      detalle,
+      '',
+      this.nombreSeleccionado(),
+      `${this.etiquetaDeFecha(evento.fecha)} · ${this.hora(evento.fecha)}`
+    ];
 
     const alert = await this.alertController.create({
       header: evento.titulo,
-      message: `
-        <strong>${detalle}</strong>
-        <br><br>
-        ${this.nombreSeleccionado()}
-        <br>
-        ${this.etiquetaDeFecha(evento.fecha)} · ${this.hora(evento.fecha)}
-      `,
+      cssClass: 'alerta-detalle-historial',
+      message: lineas.join('\n'),
       buttons: ['Cerrar']
     });
 
@@ -424,45 +430,86 @@ export class HistorialPage implements OnInit {
   }
 
 
+  /**
+   * Abre el mapa en la posición donde se registró el evento.
+   *
+   * Antes esta función mostraría coordenadas fijas de Santiago
+   * (-33.3669, -70.6784) con un comentario que decía "posteriormente vendrán
+   * desde el GPS". Se quitó: un número inventado es peor que no mostrar nada,
+   * porque el cuidador lo toma por real.
+   *
+   * Ahora la posición sale de la última lectura guardada del adulto, que es
+   * dato real, y se aclara en el texto que es esa y no el lugar del evento.
+   */
   async verUbicacion(evento: EventoHistorial) {
+    const idUsuario = evento.idAdulto;
 
-    // Coordenadas de prueba
-    // Posteriormente vendrán desde el GPS
-    // y la base de datos.
+    const info = await this.ultimaUbicacion(idUsuario);
 
-    const latitud = -33.3669;
+    if (!info) {
+      const alert = await this.alertController.create({
+        header: 'Ubicación',
+        cssClass: 'alerta-detalle-historial',
+        message: 'No hay ninguna posición guardada de esta persona todavía.',
+        buttons: ['Cerrar']
+      });
+      await alert.present();
+      return;
+    }
 
-    const longitud = -70.6784;
+    const when = info.fecha
+      ? `${new Date(info.fecha).toLocaleString('es-CL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`
+      : 'sin fecha conocida';
+
+    const lineas = [
+      'Esta es la última posición guardada, no el lugar exacto del evento.',
+      '',
+      `Coordenadas: ${info.latitud}, ${info.longitud}`,
+      `Registrada: ${when}`
+    ];
 
     const alert = await this.alertController.create({
-      header: 'Ubicación registrada',
-      message: `
-        <strong>${evento.detalle}</strong>
-        <br><br>
-
-        <strong>Latitud:</strong>
-        ${latitud}
-
-        <br>
-
-        <strong>Longitud:</strong>
-        ${longitud}
-      `,
+      header: 'Última ubicación registrada',
+      cssClass: 'alerta-detalle-historial',
+      message: lineas.join('\n'),
       buttons: [
-        {
-          text: 'Cerrar',
-          role: 'cancel'
-        },
+        { text: 'Cerrar', role: 'cancel' },
         {
           text: 'Abrir mapa',
-          handler: () => {
-            this.abrirMapa(latitud, longitud);
-          }
+          handler: () => this.abrirMapa(info.latitud, info.longitud)
         }
       ]
     });
 
     await alert.present();
+  }
+
+
+  /** Última posición guardada del adulto, o `null` si nunca hubo. */
+  private async ultimaUbicacion(idUsuario: string) {
+    if (!idUsuario) return null;
+
+    try {
+      const supabase = this.supabaseService.getClient();
+
+      const { data, error } = await supabase
+        .from('ubicacion')
+        .select('latitud, longitud, fecha')
+        .eq('id_usuario', idUsuario)
+        .order('fecha', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data?.latitud || !data?.longitud) return null;
+
+      const lat = parseFloat(data.latitud);
+      const lng = parseFloat(data.longitud);
+      if (isNaN(lat) || isNaN(lng)) return null;
+
+      return { latitud: lat, longitud: lng, fecha: data.fecha as string };
+    } catch {
+      return null;
+    }
   }
 
 
