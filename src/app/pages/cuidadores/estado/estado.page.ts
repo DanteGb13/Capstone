@@ -272,6 +272,13 @@ export class EstadoPage implements OnInit, OnDestroy {
     return `${v}${sufijo}`;
   }
 
+  /**
+   * Hay alguna fila en la base, aunque sea de una medida que no se enseña.
+   *
+   * Se mira el resumen entero a propósito, no sólo los campos visibles: un
+   * reloj que sólo mide pulso sí tiene datos, y decir "no ha registrado nada"
+   * sería mentira.
+   */
   tieneAlgunDato(a: AdultoConSalud): boolean {
     const s = a.salud;
     if (!s) return false;
@@ -279,6 +286,21 @@ export class EstadoPage implements OnInit, OnDestroy {
       s.pasos, s.distancia_metros, s.calorias, s.fc_media, s.fc_reposo,
       s.spo2, s.respiracion, s.sueno_minutos
     ].some((v) => v !== null && v !== undefined);
+  }
+
+  /**
+   * Al menos uno de los datos que esta pantalla sí muestra.
+   *
+   * No es lo mismo que `tieneAlgunDato`. Tras quitar el bloque del pulso, un
+   * reloj que sólo sabe medir eso deja de tener dónde mostrar un número: sin
+   * esta comprobación, esa persona se veía una fila entera de guiones sin una
+   * sola palabra que lo explicara.
+   */
+  tieneMetricasVisibles(a: AdultoConSalud): boolean {
+    const s = a.salud;
+    if (!s) return false;
+    return [s.pasos, s.calorias, s.spo2, s.sueno_minutos]
+      .some((v) => v !== null && v !== undefined);
   }
 
   /** Sin fila en la base: el adulto todavía no ha sincronizado nunca. */
@@ -345,38 +367,6 @@ export class EstadoPage implements OnInit, OnDestroy {
     if (h === 0) return `${m} min`;
     if (m === 0) return `${h} h`;
     return `${h} h ${m} min`;
-  }
-
-  /**
-   * Cuánto tiene el dato, o null si no hay fecha conocida.
-   *
-   * La fecha de la lectura se guarda aparte del valor a propósito: "93 ppm"
-   * sin fecha parece una medición de ahora, y con un reloj que solo mide a
-   * mano puede ser de hace dos meses. Para un cuidador esa diferencia decide
-   * si se preocupa o no.
-   */
-  antiguedadLectura(iso: string | null | undefined): string | null {
-    if (!iso) return null;
-
-    const fecha = new Date(iso);
-    if (isNaN(fecha.getTime())) return null;
-
-    const minutos = Math.round((Date.now() - fecha.getTime()) / 60000);
-    if (minutos < 0) return null;
-
-    if (minutos < 60) return `hace ${Math.max(1, minutos)} min`;
-    if (minutos < 60 * 24) return `hace ${Math.floor(minutos / 60)} h`;
-
-    const dias = Math.floor(minutos / (60 * 24));
-    return `hace ${dias} ${dias === 1 ? 'día' : 'días'}`;
-  }
-
-  /** Más de un día sin medir: el dato no describe la situación actual. */
-  lecturaVieja(iso: string | null | undefined): boolean {
-    if (!iso) return false;
-    const fecha = new Date(iso);
-    if (isNaN(fecha.getTime())) return false;
-    return Date.now() - fecha.getTime() > 24 * 60 * 60 * 1000;
   }
 
   async volver() {

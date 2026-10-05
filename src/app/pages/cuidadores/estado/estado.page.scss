@@ -1,34 +1,136 @@
+// =============================================================================
+// ESTADO DE SALUD (cuidador)
+// =============================================================================
+// Los colores viven todos en `:host`, con prefijo `es-` para no pisar los de las
+// páginas vecinas (cada una tiene los suyos). Abajo no hay ni un color suelto:
+// si hay que cambiar el morado o el ámbar, se cambia en un solo lugar.
+//
+// Se quitaron de este archivo los bloques `.banner-mensaje` y `.btn-pedir`
+// (botón "Pedir datos frescos", retirado a propósito) y `.nota-linea`, que sólo
+// existían para la fecha de la lectura del pulso. Quedaban como CSS muerto que
+// hacía creer que esas partes seguían en la pantalla.
+// =============================================================================
+
 :host {
-    --primary: #7715c7;
-    --primary-light: rgba(119, 21, 199, 0.1);
-    --background: #f8f7fc;
-    --text-main: #1a1d26;
-    --text-muted: #8c92a4;
-    --alerta: #e67e22;
+    // MARCA
+    --es-primary: #7715c7;
+    --es-primary-ink: #5a0f96;
+    --es-primary-soft: #f4f0fd;
+    --es-primary-linea: rgba(119, 21, 199, 0.16);
+
+    // SUPERFICIES
+    --es-fondo: #f8f7fc;
+    --es-superficie: #ffffff;
+    --es-superficie-alt: #faf9fd;
+    --es-linea: rgba(26, 29, 38, 0.07);
+
+    // TEXTO
+    // Antes todo el texto terciario usaba #8c92a4, que sobre las cajas claras
+    // de esta pantalla daba ~3:1 y quedaba por debajo del mínimo de 4.5:1.
+    --es-ink: #1a1d26;
+    --es-ink-2: #4a4f5e;
+    --es-ink-muted: #6b6480;
+
+    // AVISO
+    // El ámbar viejo (#e67e22) marcaba el texto de "dato rancio" en ~2.9:1.
+    // Se oscurece el tono, no el significado: sigue siendo ámbar, no rojo,
+    // porque un retraso del reloj no es una emergencia.
+    --es-alerta: #b45309;
+    --es-alerta-soft: rgba(230, 126, 34, 0.12);
+
+    // RADIOS Y SOMBRA
+    --es-r-md: 10px;
+    --es-r-lg: 14px;
+    --es-r-xl: 20px;
+    --es-sombra: 0 1px 2px rgba(26, 29, 38, 0.04), 0 6px 18px rgba(26, 29, 38, 0.05);
 }
 
 ion-content {
-    --background: var(--background);
+    --background: var(--es-fondo);
 }
 
+// =============================================================================
+// ESTRUCTURA
+// =============================================================================
+
+// El ancho máximo evita que en tablet las tarjetas se estiren a lo ancho de la
+// pantalla y las cifras queden perdidas en medio de un mar de blanco.
 .page-container {
-    padding: 36px 18px 100px;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px 16px 96px;
 }
 
 .header {
-    margin-bottom: 24px;
+    margin-bottom: 18px;
 
     h1 {
         margin: 0;
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 800;
-        color: var(--text-main);
+        letter-spacing: -0.02em;
+        color: var(--es-ink);
     }
 
     p {
-        margin: 4px 0 0;
-        color: var(--text-muted);
-        font-size: 14px;
+        margin: 5px 0 0;
+        font-size: 13.5px;
+        line-height: 1.4;
+        color: var(--es-ink-muted);
+    }
+}
+
+.adultos-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+// =============================================================================
+// ACTUALIZAR
+// =============================================================================
+
+.btn-refrescar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    // 44px es el mínimo comfortable para un dedo; con el padding viejo la caja
+    // se quedaba en ~38px y era el control más difícil de acertar de la página.
+    min-height: 46px;
+    margin-bottom: 20px;
+    padding: 10px 14px;
+    border: 1px solid var(--es-primary-linea);
+    border-radius: var(--es-r-lg);
+    background: var(--es-superficie);
+    color: var(--es-primary);
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    &:active {
+        background: var(--es-primary-soft);
+        border-color: var(--es-primary);
+    }
+
+    // Sólo con teclado: en el dedo sale el brillo del :active y basta.
+    &:focus-visible {
+        outline: 2px solid var(--es-primary);
+        outline-offset: 2px;
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: default;
+    }
+
+    ion-icon {
+        font-size: 17px;
+        flex-shrink: 0;
     }
 }
 
@@ -38,10 +140,11 @@ ion-content {
     align-items: center;
     gap: 10px;
     padding: 60px 0;
-    color: var(--text-muted);
+    color: var(--es-ink-muted);
 
     .spin-icon {
         font-size: 28px;
+        color: var(--es-primary);
         animation: spin 1s linear infinite;
     }
 }
@@ -50,115 +153,25 @@ ion-content {
     to { transform: rotate(360deg); }
 }
 
-.btn-refrescar {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    width: 100%;
-    margin-bottom: 18px;
-    padding: 11px 14px;
-    border: 1px solid rgba(119, 21, 199, 0.2);
-    border-radius: 12px;
-    background: white;
-    color: var(--primary);
-    font-size: 13.5px;
-    font-weight: 600;
-    font-family: inherit;
-    cursor: pointer;
-    transition: background 0.15s ease;
-
-    &:active {
-        background: var(--primary-light);
-    }
-
-    &:disabled {
-        opacity: 0.55;
-        cursor: default;
-    }
-
-    ion-icon {
-        font-size: 16px;
-    }
-
-    .girando {
-        animation: spin 1s linear infinite;
+// El texto del botón ya dice "Consultando...", así que el giro se puede quitar
+// sin que se pierda la señal de que algo está pasando.
+@media (prefers-reduced-motion: reduce) {
+    .spin-icon,
+    .btn-refrescar .girando {
+        animation: none;
     }
 }
 
-.banner-mensaje {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 11px 13px;
-    border-radius: 12px;
-    background: var(--primary-light);
-    font-size: 12.5px;
-    line-height: 1.45;
-    color: var(--primary);
-
-    ion-icon {
-        font-size: 16px;
-        flex-shrink: 0;
-        margin-top: 1px;
-    }
-}
-
-.btn-pedir {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    width: 100%;
-    margin-top: 14px;
-    padding: 10px 14px;
-    border: 1px solid rgba(119, 21, 199, 0.25);
-    border-radius: 12px;
-    background: white;
-    color: var(--primary);
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s ease;
-
-    ion-icon {
-        font-size: 16px;
-    }
-
-    &:active {
-        background: var(--primary-light);
-    }
-
-    &:disabled {
-        cursor: default;
-    }
-
-    // Ya se pidió y el adulto mayor aún no manda nada: se apaga para que no
-    // se pueda pedir diez veces seguidas.
-    &.pedido {
-        border-color: rgba(140, 146, 164, 0.25);
-        background: #f4f2fa;
-        color: var(--text-muted);
-    }
-}
-
-.adultos-list {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-// =====================================================
+// =============================================================================
 // TARJETA POR PERSONA
-// =====================================================
+// =============================================================================
 
 .salud-card {
-    background: white;
-    border-radius: 20px;
     padding: 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
-    border: 1px solid rgba(0, 0, 0, 0.03);
+    border: 1px solid var(--es-linea);
+    border-radius: var(--es-xl);
+    background: var(--es-superficie);
+    box-shadow: var(--es-sombra);
 }
 
 .salud-cabecera {
@@ -175,7 +188,7 @@ ion-content {
         display: flex;
         align-items: center;
         justify-content: center;
-        background: #f0ecfa;
+        background: var(--es-primary-soft);
 
         .avatar-img {
             width: 100%;
@@ -186,11 +199,13 @@ ion-content {
         .avatar-iniciales {
             font-size: 17px;
             font-weight: 800;
-            color: var(--primary);
+            color: var(--es-primary);
         }
     }
 
     .identidad {
+        // min-width: 0 + esto es lo que deja que el nombre se recorte con
+        // puntos suspensivos en vez de empujar la fila hacia afuera.
         flex: 1;
         min-width: 0;
 
@@ -198,7 +213,7 @@ ion-content {
             margin: 0;
             font-size: 16px;
             font-weight: 700;
-            color: var(--text-main);
+            color: var(--es-ink);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -207,41 +222,46 @@ ion-content {
         .meta {
             display: flex;
             align-items: center;
-            gap: 8px;
-            margin-top: 3px;
+            flex-wrap: wrap;
+            gap: 6px 10px;
+            margin-top: 4px;
 
             .meta-text {
                 display: inline-flex;
                 align-items: center;
                 gap: 3px;
-                font-size: 11px;
-                color: var(--text-muted);
+                // min-width: 0 otra vez: sin esto un municipio largo rompe la
+                // línea en lugar de recortarse.
+                min-width: 0;
+                font-size: 11.5px;
+                color: var(--es-ink-muted);
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
 
                 ion-icon {
                     font-size: 12px;
+                    flex-shrink: 0;
                 }
             }
         }
     }
 }
 
-// =====================================================
+// =============================================================================
 // FRESCURA DEL DATO
-// =====================================================
+// =============================================================================
 
 .aviso-frescura {
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-top: 12px;
-    padding: 7px 10px;
-    border-radius: 10px;
-    background: #f4f2fa;
-    font-size: 11px;
-    color: var(--text-muted);
+    margin-top: 14px;
+    padding: 8px 11px;
+    border-radius: var(--es-r-md);
+    background: var(--es-superficie-alt);
+    font-size: 11.5px;
+    color: var(--es-ink-muted);
 
     ion-icon {
         font-size: 13px;
@@ -251,8 +271,8 @@ ion-content {
     // Rancio no es una alarma: es el retraso normal de un reloj que sólo
     // vuelca datos cuando su app sincroniza. Por eso va en ámbar y no en rojo.
     &.rancio {
-        background: rgba(230, 126, 34, 0.09);
-        color: var(--alerta);
+        background: var(--es-alerta-soft);
+        color: var(--es-alerta);
     }
 
     .origen {
@@ -266,23 +286,23 @@ ion-content {
     }
 }
 
-// =====================================================
-// ESTADO SIN DATOS
-// =====================================================
+// =============================================================================
+// ESTADOS SIN DATOS
+// =============================================================================
 
 .sin-datos {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    margin-top: 12px;
+    margin-top: 14px;
     padding: 14px;
-    border-radius: 12px;
-    background: #faf9fd;
-    border: 1px dashed rgba(119, 21, 199, 0.18);
+    border: 1px dashed var(--es-primary-linea);
+    border-radius: var(--es-r-lg);
+    background: var(--es-superficie-alt);
 
     ion-icon {
         font-size: 18px;
-        color: var(--primary);
+        color: var(--es-primary);
         flex-shrink: 0;
         margin-top: 1px;
     }
@@ -291,42 +311,51 @@ ion-content {
         margin: 0;
         font-size: 12.5px;
         line-height: 1.5;
-        color: var(--text-muted);
+        color: var(--es-ink-2);
     }
 
     strong {
-        color: var(--text-main);
+        color: var(--es-ink);
     }
 }
 
-// =====================================================
+// =============================================================================
 // MÉTRICAS
-// =====================================================
+// =============================================================================
 
 .grupo {
-    margin-top: 16px;
+    margin-top: 18px;
+
+    // Separador entre secciones en vez de confiar sólo en el margen: con dos
+    // grupos pegados el ojo no sabía dónde terminaba uno y empezaba el otro.
+    & + .grupo {
+        padding-top: 18px;
+        border-top: 1px solid var(--es-linea);
+    }
 
     h4 {
-        margin: 0 0 8px;
+        margin: 0 0 10px;
         font-size: 11px;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.6px;
-        color: var(--text-muted);
+        letter-spacing: 0.7px;
+        color: var(--es-ink-muted);
     }
 }
 
 .metricas {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    // minmax(0, 1fr) y no 1fr a secas: sin el 0 el contenido mínimo de la caja
+    // puede desbordar el track en pantallas angostas.
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 10px;
 }
 
 // Dos columnas para las tarjetas con menos métricas: con tres, la caja de
-// "pasos" quedaba ancha y la de "kcal" se veía disproportionada al quedar
-// la fila a medio llenar.
+// "pasos" quedaba ancha y la de "kcal" se veía desproporcionada al quedar la
+// fila a medio llenar.
 .metricas-2 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .metrica {
@@ -334,66 +363,59 @@ ion-content {
     flex-direction: column;
     align-items: center;
     gap: 2px;
-    padding: 10px 6px;
-    border-radius: 12px;
-    background: #faf9fd;
+    padding: 12px 8px 13px;
+    border: 1px solid var(--es-linea);
+    border-radius: var(--es-r-lg);
+    background: var(--es-superficie-alt);
     text-align: center;
 
     ion-icon {
+        // El ícono deja de ser un glifo suelto y pasa a ser una ficha
+        // circular: es lo que le da jerarquía a la caja sin subir el borde.
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        margin-bottom: 6px;
+        border-radius: 50%;
+        background: var(--es-primary-soft);
+        color: var(--es-primary);
         font-size: 16px;
-        color: var(--primary);
-        margin-bottom: 2px;
-    }
-
-    .metrica-valor {
-        font-size: 15px;
-        font-weight: 800;
-        color: var(--text-main);
-        line-height: 1.2;
-    }
-
-    .metrica-unidad {
-        font-size: 10px;
-        color: var(--text-muted);
-        line-height: 1.2;
-    }
-}
-
-.nota-linea {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    margin: 8px 0 0;
-    font-size: 11.5px;
-    color: var(--text-muted);
-
-    ion-icon {
-        font-size: 12px;
         flex-shrink: 0;
     }
 
-    strong {
-        color: var(--text-main);
+    .metrica-valor {
+        font-size: 19px;
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        color: var(--es-ink);
+        // Cifras de ancho fijo: la pantalla se refresca sola cada minuto y sin
+        // esto los números bailan de lado cada vez que cambia un dígito.
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
     }
 
-    // Más de un día sin medir. Ámbar y no rojo: el dato viejo no es una
-    // emergencia, es información que hay que leer con calma.
-    &.nota-vieja {
-        color: var(--alerta);
+    .metrica-unidad {
+        font-size: 10.5px;
+        line-height: 1.3;
+        color: var(--es-ink-2);
     }
 }
 
 .nota-retraso {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
-    margin-top: 14px;
-    padding: 10px 12px;
-    border-radius: 10px;
-    background: rgba(230, 126, 34, 0.08);
+    gap: 9px;
+    margin-top: 16px;
+    padding: 11px 13px;
+    border-left: 3px solid var(--es-alerta);
+    border-radius: var(--es-r-md);
+    background: var(--es-alerta-soft);
     font-size: 11.5px;
     line-height: 1.45;
-    color: var(--alerta);
+    color: var(--es-alerta);
 
     ion-icon {
         font-size: 15px;
@@ -402,20 +424,20 @@ ion-content {
     }
 }
 
-// =====================================================
+// =============================================================================
 // PIE
-// =====================================================
+// =============================================================================
 
 .pie-aviso {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    margin: 22px 10px 0;
+    margin: 26px 10px 0;
     font-size: 11px;
-    line-height: 1.4;
+    line-height: 1.45;
     text-align: center;
-    color: var(--text-muted);
+    color: var(--es-ink-muted);
 
     ion-icon {
         font-size: 14px;
@@ -423,30 +445,31 @@ ion-content {
     }
 }
 
-// =====================================================
+// =============================================================================
 // SIN PERSONAS VINCULADAS
-// =====================================================
+// =============================================================================
 
 .empty-card {
-    background: white;
-    border-radius: 20px;
-    padding: 50px 30px;
+    padding: 48px 30px;
+    border: 1px solid var(--es-linea);
+    border-radius: var(--es-xl);
+    background: var(--es-superficie);
+    box-shadow: var(--es-sombra);
     text-align: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
 
     .empty-icon {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
-        background: var(--primary-light);
         display: flex;
         align-items: center;
         justify-content: center;
+        width: 60px;
+        height: 60px;
         margin: 0 auto 16px;
+        border-radius: 50%;
+        background: var(--es-primary-soft);
 
         ion-icon {
             font-size: 28px;
-            color: var(--primary);
+            color: var(--es-primary);
         }
     }
 
@@ -454,13 +477,31 @@ ion-content {
         margin: 0 0 8px;
         font-size: 17px;
         font-weight: 700;
-        color: var(--text-main);
+        color: var(--es-ink);
     }
 
     p {
         margin: 0;
         font-size: 13px;
-        color: var(--text-muted);
         line-height: 1.5;
+        color: var(--es-ink-muted);
+    }
+}
+
+// =============================================================================
+// PANTALLAS ANCHAS
+// =============================================================================
+
+@media (min-width: 640px) {
+    .page-container {
+        padding: 28px 24px 110px;
+    }
+
+    .metrica {
+        padding: 14px 12px 15px;
+
+        .metrica-valor {
+            font-size: 21px;
+        }
     }
 }

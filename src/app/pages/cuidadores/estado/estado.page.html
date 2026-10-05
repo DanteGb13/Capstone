@@ -107,17 +107,30 @@
               <ion-icon name="pulse-outline"></ion-icon>
               <p>El reloj todavía no ha registrado datos de salud.</p>
             </div>
+          } @else if (!tieneMetricasVisibles(adulto)) {
+            <!--
+              Tiene fila en la base, pero de medidas que esta pantalla ya no
+              enseña. Antes esto caía en el "@else" de abajo y se veía como
+              cuatro guiones sin explicación.
+            -->
+            <div class="sin-datos">
+              <ion-icon name="eye-off-outline"></ion-icon>
+              <p>
+                <strong>{{ nombreAdulto(adulto) }}</strong> sólo ha enviado datos que esta
+                pantalla no muestra. Prueba a abrir la app del reloj para verlos.
+              </p>
+            </div>
           } @else {
 
             <!--
               Solo se muestra lo que el reloj entrega de forma confiable con
-              esta integración: pasos, calorías, pulso promedio, oxígeno y
-              sueño.
+              esta integración: pasos, calorías, oxígeno y sueño.
 
-              Se quitaron la distancia, la mínima/máxima de pulso y la
-              frecuencia respiratoria porque salían vacías. No se Borran de la
-              base: si algún día el reloj empieza a mandarlos, basta con
-              volver a poner la casilla.
+              El bloque "Corazón" (pulso promedio y pulso en reposo) se quitó de
+              esta pantalla: el dato llegaba casi siempre vacío y, cuando
+              llegaba, no decía nada del estado actual del adulto mayor. Todo
+              sigue en la base y en `Salud`: si algún día se quiere volver a
+              mostrar, basta con poner la casilla otra vez.
             -->
             <div class="grupo">
               <h4>Actividad de hoy</h4>
@@ -133,30 +146,6 @@
                   <span class="metrica-unidad">kcal</span>
                 </div>
               </div>
-            </div>
-
-            <div class="grupo">
-              <h4>Corazón</h4>
-              <div class="metricas metricas-2">
-                <div class="metrica">
-                  <ion-icon name="heart-outline"></ion-icon>
-                  <span class="metrica-valor">{{ valor(adulto.salud?.fc_media) }}</span>
-                  <span class="metrica-unidad">latidos por minuto</span>
-                </div>
-                @if (adulto.salud?.fc_reposo !== null && adulto.salud?.fc_reposo !== undefined) {
-                  <div class="metrica">
-                    <ion-icon name="bed-outline"></ion-icon>
-                    <span class="metrica-valor">{{ valor(adulto.salud?.fc_reposo) }}</span>
-                    <span class="metrica-unidad">en reposo</span>
-                  </div>
-                }
-              </div>
-              @if (antiguedadLectura(adulto.salud?.fc_ultima_hora)) {
-                <p class="nota-linea" [class.nota-vieja]="lecturaVieja(adulto.salud?.fc_ultima_hora)">
-                  <ion-icon name="time-outline"></ion-icon>
-                  Última lectura: {{ antiguedadLectura(adulto.salud?.fc_ultima_hora) }}
-                </p>
-              }
             </div>
 
             <div class="grupo">

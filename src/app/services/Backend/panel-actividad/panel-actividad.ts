@@ -183,6 +183,19 @@ const PUNTOS_MAPA_MAX = 150;
  */
 const MARGEN_ZONA_M = 15;
 
+/**
+ * Tope de trayectos leídos por corrida.
+ *
+ * Existe por el tamaño de la consulta de puntos: todos estos ids van en un
+ * `.in('id_desplazamiento', [...])`, y PostgREST los manda dentro de la URL. Sin
+ * tope, una ventana con muchos trayectos genera una consulta que el servidor
+ * rechaza y el panel pierde los puntos de TODOS los días.
+ *
+ * Se aplican sobre los más recientes (ver `leerViajes`), que son los que se
+ * está mirando.
+ */
+const MAX_TRAYECTOS = 500;
+
 
 @Injectable({
   providedIn: 'root'
@@ -192,6 +205,41 @@ export class PanelActividadService {
   private supabaseService = inject(SupabaseService);
 
   private supabase = this.supabaseService.getClient();
+
+
+  /**
+   * ¿Hay algo registrado de movimiento en la ventana?
+   *
+   * Consulta mínima (una fila, `limit(1)`) para poder responder en una ida al
+   * servidor. Antes el panel no distinguía entre "no se movió" y "nunca se ha
+   * medido": en los dos casos salía el gráfico vacío, y el cuidador leía
+   * "no se movió" cuando en realidad lo cierto es que nadie midió nada.
+   */
+  async hayDatosDeActividad(idUsuario: string, dias = 7): Promise<boolean | null> {
+    if (!idUsuario) return null;
+
+    const desde = new Date();
+    desde.setDate(desde.getDate() - dias);
+
+    try {
+      const { data, error } = await this.supabase
+        .from('historial_desplazamiento')
+        .select('id')
+        .eq('id_usuario', idUsuario)
+        .gte('fecha_inicio', desde.toISOString())
+        .limit(1);
+
+      if (error) {
+        console.warn('[panel-actividad] no se pudo comprobar si hay actividad:', error.message || error);
+        return null;
+      }
+
+      return (data || []).length > 0;
+    } catch (e) {
+      console.warn('[panel-actividad] falló la comprobación de actividad:', e);
+      return null;
+    }
+  }
 
 
   /**
@@ -229,8 +277,19 @@ export class PanelActividadService {
    * cero indistinguible de "no pasó nada".
    */
   private async unaVez(idUsuario: string, dias: number): Promise<ResumenPanel> {
-    const desde = new Date();
-    desde.setDate(desde.getDate() - dias);
+    // La ventana arranca a las 00:00 del día más lejano que se dibuja, con un
+    // día extra de holgura.
+    //
+    // Importante: la fecha base es la MISMA que usaba antes (`hoy - dias`), y
+    // sólo se le floors a medianoche. Floorla hace la ventana MÁS ancha que la
+    // original, nunca más angosta: si un trayecto cae a las 23:50 de hace 6
+    // días, con la hora actual quedaba del lado equivocado y desaparecía del
+    // gráfico. Acortar el rango para "cuadrar con el gráfico" hacía justo lo
+    // contrario de lo que se buscaba.
+    const hoy = new Date();
+    const desde = new Date(hoy);
+    desde.setDate(hoy.getDate() - dias);
+    desde.setHours(0, 0, 0, 0);
     const desdeIso = desde.toISOString();
 
     const [viajesL, zonasL, sosL, saludL, zonaAlertaL] = await Promise.all([
@@ -434,8 +493,22 @@ export class PanelActividadService {
         .select('id, fecha_inicio, fecha_fin, distancia_metros, duracion_segundos, activo')
         .eq('id_usuario', idUsuario)
         .gte('fecha_inicio', desdeIso)
-        .order('fecha_inicio', { ascending: true }));
-    return { valor: (data || []) as any[], fallo };
+        // Orden descendente para que el tope se coma los MÁS ANTIGUOS y no los
+        // recientes. Al revés, con más de MAX trayectos en la ventana, el
+        // recorte se llevaba justo los días que se están mirando y el panel
+        // aparecía vacío.
+        .order('fecha_inicio', { ascending: false })
+        .limit(MAX_TRAYECTOS)
+    );
+
+    // Se reordena de nuevo hacia el más antiguo para no cambiar el contrato con
+    // el resto del panel: el cálculo de rutas y de tiempos por día supone
+    // puntos en orden.
+    const valor = (data || []).slice().sort(
+      (a: any, b: any) => Date.parse(a.fecha_inicio) - Date.parse(b.fecha_inicio)
+    );
+
+    return { valor: valor as any[], fallo };
   }
 
   private async leerPuntos(idsViaje: string[]) {
@@ -491,9 +564,12 @@ export class PanelActividadService {
   }
 
   /**
-   * Estado actual de la geocerca. `zona_alerta` no tiene PRIMARY KEY en
-   * `id_usuario`, así que puede haber más de una fila; se toma la más reciente
-   * en vez de `maybeSingle`, que fallaría si encuentra dos.
+   * Estado actual de la geocerca.
+   *
+   * `zona_alerta` guarda una fila por persona y se va sobrescribiendo, así que
+   * `id_usuario` NO es único y puede haber más de una fila. Por eso se ordena
+   * por `actualizada_en` y se toma la última con `limit(1)` en vez de
+   * `maybeSingle`, que fallaría al encontrar dos.
    */
   private async leerZonaAlerta(idUsuario: string) {
     const { data, fallo } = await this.leer('el estado de la zona segura', () =>

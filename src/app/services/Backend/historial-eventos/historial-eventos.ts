@@ -73,6 +73,15 @@ interface FilaDesplazamiento {
   fecha_fin: string | null;
   distancia_metros: number | null;
   duracion_segundos: number | null;
+  activo: boolean;
+}
+
+/** Fila de `historial_punto`, sólo lo necesario para medir un trayecto abierto. */
+interface FilaPunto {
+  id_desplazamiento: string;
+  latitud: number;
+  longitud: number;
+  fecha: string;
 }
 
 /** Fila de `zona_alerta`. */
@@ -160,6 +169,15 @@ export class HistorialEventos {
 
   private supabase = this.supabaseService.getClient();
 
+  /**
+   * Desde qué momento se leen los eventos, en ISO.
+   *
+   * Va como estado y no como parámetro porque lo necesitan dos lecturas
+   * distintas (los desplazamientos y los que no dependen de ellos) y duplicar el
+   * cálculo en cada llamada es justo como se descuadran las ventanas.
+   */
+  private desdeIso: string = '';
+
 
   // =====================================================
   // LEER EL HISTORIAL
@@ -182,6 +200,14 @@ export class HistorialEventos {
     offset: number = 0
   ): Promise<EventoHistorialFila[]> {
     if (!idUsuario) return [];
+
+    // Ventana de 30 días para los desplazamientos, que son graduales, y de 30
+    // días también para el resto: el historial es un registro, no un panel de la
+    // semana. Un trayecto de hace tres semanas es información que el cuidador
+    // sigue queriendo.
+    const desde = new Date();
+    desde.setDate(desde.getDate() - 30);
+    this.desdeIso = desde.toISOString();
 
     const [
       sos,
@@ -286,40 +312,136 @@ export class HistorialEventos {
 
   // -------------------------------------------------------------
   // DESPLAZAMIENTOS (movimiento del teléfono)
+// -------------------------------------------------------------
+  // DESPLAZAMIENTOS (movimiento del teléfono)
   // -------------------------------------------------------------
 
+  /**
+   * Trayectos registrados como movimiento.
+   *
+   * OJO con los que siguen `activo = true`: NO se filtran, y es a propósito.
+   *
+   * El tracker sólo cierra un trayecto cuando llega una posición nueva después
+   * de un hueco de 5 minutos, o cuando se reabre la app si el trayecto tiene más
+   * de 6 horas. O sea que si la persona camina, cierra la app y no vuelve a
+   * abrirla, ese trayecto queda `activo` indefinidamente.
+   *
+   * Y un trayecto activo tiene `distancia_metros = 0` y `duracion_segundos = 0`,
+   * porque esos dos campos los calcula `finalizarDesplazamiento()` recién al
+   * cerrar. Filtrar por `activo = false` (que es lo que hacía antes) borraba de
+   * la vista justo el movimiento de quien abre la app una vez y la deja abierta:
+   * la pantalla salía vacía aunque la tabla tuviera la fila.
+   *
+   * Por eso los activos se miden acá con sus propios puntos, en vez de
+   * creerse en ceros.
+   */
   private async leerDesplazamientos(idUsuario: string, limite: number): Promise<EventoHistorialFila[]> {
     const filas = await this.leerSeguro<FilaDesplazamiento>('los desplazamientos', () =>
       this.supabase
         .from('historial_desplazamiento')
-        .select('id, fecha_inicio, fecha_fin, distancia_metros, duracion_segundos')
+        .select('id, fecha_inicio, fecha_fin, distancia_metros, duracion_segundos, activo')
         .eq('id_usuario', idUsuario)
-        // Sólo los cerrados: uno en curso no tiene duración todavía y se
-        // completaría en otra carga, moviéndose de lugar en la línea de tiempo.
-        .eq('activo', false)
+        .gte('fecha_inicio', this.desdeIso)
         .order('fecha_inicio', { ascending: false })
         .limit(limite)
     );
 
-    return filas
-      .map((f): EventoHistorialFila | null => {
-        const distancia = Number(f.distancia_metros || 0);
-        const duracion = Number(f.duracion_segundos || 0);
+    if (filas.length === 0) return [];
 
-        // Menos de 30 m es ruido del GPS, no un recorrido.
-        if (distancia < 30) return null;
+    // Puntos de los que siguen abiertos, que es donde los valores guardados son
+    // cero y hay que medirlos.
+    const abiertos = filas.filter((f) => f.activo);
+    let puntosPorTrayecto = new Map<string, FilaPunto[]>();
 
-        return {
-          id: `desp-${f.id}`,
-          id_usuario: idUsuario,
-          tipo: 'desplazamiento',
-          titulo: `Recorrido ${metrosBonitos(distancia)}`,
-          detalle: `${duracionBonita(duracion)} · desde el teléfono`,
-          fecha: f.fecha_inicio,
-          id_origen: f.id
-        };
-      })
-      .filter((e): e is EventoHistorialFila => e !== null);
+    if (abiertos.length > 0) {
+      const puntos = await this.leerSeguro<FilaPunto>('los puntos de los trayectos', () =>
+        this.supabase
+          .from('historial_punto')
+          .select('id_desplazamiento, latitud, longitud, fecha')
+          .in('id_desplazamiento', abiertos.map((f) => f.id))
+          .order('orden', { ascending: true })
+      );
+
+      puntosPorTrayecto = new Map<string, FilaPunto[]>();
+      for (const p of puntos) {
+        const lista = puntosPorTrayecto.get(p.id_desplazamiento) || [];
+        lista.push(p);
+        puntosPorTrayecto.set(p.id_desplazamiento, lista);
+      }
+    }
+
+    const salida: EventoHistorialFila[] = [];
+
+    for (const f of filas) {
+      let distancia = Number(f.distancia_metros || 0);
+      let duracionS = Number(f.duracion_segundos || 0);
+      let enCurso = false;
+
+      if (f.activo) {
+        const puntos = puntosPorTrayecto.get(f.id) || [];
+        distancia = this.distanciaDePuntos(puntos);
+        // La duración va desde el inicio hasta el último punto guardado, no hasta
+        // ahora: si la app se cerró hace una hora, "ahora" daría una duración de
+        // una hora que nadie recorrió.
+        const ultimo = puntos[puntos.length - 1];
+        if (ultimo) {
+          const fin = Date.parse(ultimo.fecha);
+          const inicio = Date.parse(f.fecha_inicio);
+          duracionS = Number.isFinite(fin) && Number.isFinite(inicio)
+            ? Math.max(0, Math.round((fin - inicio) / 1000))
+            : 0;
+          // "En curso" sólo si el último punto es reciente. Si la app se cerró
+          // hace días, lo honesto es mostrar el trayecto como estaba.
+          enCurso = Date.now() - fin < 5 * 60 * 1000;
+        }
+      }
+
+      // Menos de 30 m es ruido del GPS, no un recorrido.
+      if (distancia < 30) continue;
+
+      salida.push({
+        id: `desp-${f.id}`,
+        id_usuario: idUsuario,
+        tipo: 'desplazamiento',
+        titulo: `Recorrido ${metrosBonitos(distancia)}`,
+        detalle: `${duracionBonita(duracionS)} · desde el teléfono${enCurso ? ' · en curso' : ''}`,
+        fecha: f.fecha_inicio,
+        id_origen: f.id
+      });
+    }
+
+    return salida;
+  }
+
+  /** Distancia recorrida siguiendo la secuencia de puntos. */
+  private distanciaDePuntos(puntos: FilaPunto[]): number {
+    let total = 0;
+
+    for (let i = 1; i < puntos.length; i++) {
+      total += this.metrosEntre(
+        puntos[i - 1].latitud,
+        puntos[i - 1].longitud,
+        puntos[i].latitud,
+        puntos[i].longitud
+      );
+    }
+
+    return total;
+  }
+
+  /** Distancia entre dos puntos (fórmula del haversine). */
+  private metrosEntre(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371000;
+    const aGrados = (g: number) => (g * Math.PI) / 180;
+
+    const dLat = aGrados(lat2 - lat1);
+    const dLon = aGrados(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(aGrados(lat1)) * Math.cos(aGrados(lat2)) * Math.sin(dLon / 2) ** 2;
+
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
 

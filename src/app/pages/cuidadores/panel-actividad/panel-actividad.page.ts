@@ -21,10 +21,16 @@ import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 declare const L: any;
 
 /**
- * El panel mira una sola ventana: los últimos 7 días. El selector de ventana se
- * quita cuando no hay nada que elegir, porque un grupo de un botón parece algo
- * que se puede cambiar y no lo es.
+ * Ventanas que se pueden mirar, en días.
+ *
+ * Antes eran 7 días fijos y no había forma de ampliarla. Eso dejó un problema
+ * concreto: el panel queda vacío con la misma exactitud si la persona no se
+ * movió hoy como si su último rastro fuera de hace un mes, y el cuidador no
+ * tenía cómo distinguirlo. Con 7 / 15 / 30 se ve de un vistazo: si en 7 no hay
+ * nada y en 30 sí, el dato existe y está más atrás.
  */
+const RANGOS: number[] = [7, 15, 30];
+
 const DIAS = 7;
 
 @Component({
@@ -55,8 +61,11 @@ export class PanelActividadPage implements OnDestroy {
   cargando = signal(true);
   error = signal<string | null>(null);
 
-  /** La ventana que se mira. Fija: el panel solo muestra los últimos 7 días. */
-  readonly rango = DIAS;
+  /** La ventana que se mira, en días. Cambiable desde el selector del encabezado. */
+  readonly rango = signal<number>(DIAS);
+
+  /** Opciones del selector de ventana. */
+  readonly rangos = RANGOS;
 
   /** Los adultos a cargo, para poder cambiar de persona. */
   adultos: { id: string; nombre: string }[] = [];
@@ -83,14 +92,61 @@ export class PanelActividadPage implements OnDestroy {
     this.cargar();
   }
 
+  /**
+   * Numeración de las corridas de carga. Sólo la última vale: ver la nota
+   * dentro de `cargar()`.
+   */
+  private peticionCarga = 0;
+
+  /**
+   * Si hay trayectos registrados en la ventana.
+   *
+   * Se consulta aparte y antes del panel completo, para poder distinguir tres
+   * cosas que antes se veían exactamente igual:
+   *   · no hay datos         → el gráfico vacío
+   *   · hay datos           → el panel normal
+   *   · no se pudo comprobar → se dice que hubo una falla, en vez de suponer
+   */
+  datosDisponibles: boolean | null = null;
+
+  /**
+   * Nombre de la persona en pantalla, o un texto neutro si no se sabe.
+   *
+   * Se usa en el aviso de "no hay actividad", que le dice al cuidador por qué
+   * no ve nada. Con el nombre de la persona el aviso es accionable ("pregúntale
+   * que abra la app"); con un "la persona" genérico no lo es.
+   */
+  nombreLimpio(): string {
+    const lista = this.adultos || [];
+    const actual = lista.find((a) => a.id === this.idSeleccionado());
+    const nombre = (actual?.nombre || '').trim();
+    return nombre && nombre !== 'Adulto mayor' ? nombre : 'la persona';
+  }
+
   async cargar() {
     this.cargando.set(true);
     this.error.set(null);
 
+// Token de petición.
+    //
+    // Cada corrida hace cinco consultas en paralelo y con los datos del
+    // cuidador ninguna es instantánea. Si el cuidador pasa rápido de una persona
+    // a otra se encajan dos corridas, y antes la que terminaba último ganaba: el
+    // selector podía quedar diciendo "Pedro" con los datos de Ana en pantalla,
+    // sin que nada lo anunciara.
+    //
+    // Con el token sólo la corrida más reciente puede escribir el resultado.
+    // Las viejas terminan igual (no se corta nada a mitad), pero su resultado se
+    // descarta.
+    const peticion = ++this.peticionCarga;
+    const esActual = () => peticion === this.peticionCarga;
+
     try {
-      if (!this.adultos.length) {
-        this.adultos = await this.listaAdultos();
-      }
+      // La lista de adultos se relee en cada entrada, no sólo la primera: si el
+      // cuidador vinculó a alguien mientras el panel estaba cargado, con el
+      // `if (!this.adultos.length)` la persona nueva nunca aparecía en el
+      // selector hasta que se reiniciaba la app.
+      this.adultos = await this.listaAdultos();
 
       const deUrl = this.ruta.snapshot.queryParamMap.get('id');
       const id = deUrl || this.idSeleccionado() || this.adultos[0]?.id || null;
@@ -102,12 +158,25 @@ export class PanelActividadPage implements OnDestroy {
       }
 
       this.idSeleccionado.set(id);
-      this.panel.set(await this.panelService.cargar(id, this.rango));
+      this.datosDisponibles = await this.panelService.hayDatosDeActividad(id, this.rango());
+
+      const resumen = await this.panelService.cargar(id, this.rango());
+
+      // Pasó otro cambio mientras esperábamos: el resultado ya no interesa.
+      if (!esActual()) return;
+
+      this.panel.set(resumen);
     } catch (e) {
       console.error('No se pudo cargar el panel de actividad', e);
-      this.error.set('No se pudo cargar la actividad. Revisa tu conexión e inténtalo de nuevo.');
+      if (esActual()) {
+        this.error.set('No se pudo cargar la actividad. Revisa tu conexión e inténtalo de nuevo.');
+      }
     } finally {
-      this.cargando.set(false);
+      // El cartel de "cargando" también es de la corrida que se queda, no de la
+      // última en empezar: si no, se apagaría mientras la buena sigue pidiendo.
+      if (esActual()) {
+        this.cargando.set(false);
+      }
     }
   }
 
@@ -141,6 +210,21 @@ export class PanelActividadPage implements OnDestroy {
   refrescar() {
     this.rutaSeleccionada.set(null);
     this.mapaGrande.set(false);
+    this.cargar();
+  }
+
+  /**
+   * Cambia la ventana de tiempo y vuelve a pedir los datos.
+   *
+   * Se recarga todo y no sólo el encabezado porque el gráfico por día, los
+   * lugares frecuentes y los trayectos dependen del rango: un eje de 30 días con
+   * barras calculadas para 7 sería peor que un panel vacío.
+   */
+  cambiarRango(dias: number) {
+    if (!this.rangos.includes(dias) || dias === this.rango()) return;
+
+    this.rango.set(dias);
+    this.rutaSeleccionada.set(null);
     this.cargar();
   }
 

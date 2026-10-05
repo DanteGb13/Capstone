@@ -75,6 +75,47 @@ ion-content {
     }
 }
 
+/* Selector de ventana (7 / 15 / 30 días).
+   Vive dentro de la píldora azul del período para no sumar una fila más, y los
+   botones se distinguen del texto con fondo propio: si sólo cambiaran de color
+   el cuidador no los reconocería como algo pulsable. */
+.pa-rangos {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 2px;
+}
+
+.pa-rango {
+    min-width: 34px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(2, 132, 199, 0.35);
+    background: #ffffff;
+    color: var(--pa-azul);
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.15s ease, color 0.15s ease;
+
+    &:active {
+        transform: scale(0.94);
+    }
+
+    &.activo {
+        background: var(--pa-azul);
+        border-color: var(--pa-azul);
+        color: #ffffff;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--pa-azul);
+        outline-offset: 2px;
+    }
+}
+
 
 // =====================================================
 // ESTADOS

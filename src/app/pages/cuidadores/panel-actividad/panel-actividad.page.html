@@ -41,7 +41,26 @@
 
       <div class="pa-periodo">
         <ion-icon name="calendar"></ion-icon>
-        <span>Últimos {{ rango }} días</span>
+
+        <!-- Selector de ventana: 7 / 15 / 30 días. Antes eran 7 fijos y no había
+             forma de ampliar, así que un panel vacío no distinguía entre "hoy no
+             se movió" y "el último rastro es de hace un mes". -->
+        <span>Últimos</span>
+
+        <div class="pa-rangos" role="group" aria-label="Período a mirar">
+          @for (d of rangos; track d) {
+            <button
+              type="button"
+              class="pa-rango"
+              [class.activo]="rango() === d"
+              [attr.aria-pressed]="rango() === d"
+              (click)="cambiarRango(d)">
+              {{ d }}
+            </button>
+          }
+        </div>
+
+        <span>días</span>
       </div>
     </div>
 
@@ -70,7 +89,7 @@
       <div class="pa-registro" [class.vacio]="p.diasConDatos === 0">
         <div class="pa-registro-cifra">
           <span class="pa-registro-valor">{{ p.diasConDatos }}</span>
-          <span class="pa-registro-de">de {{ rango }}</span>
+          <span class="pa-registro-de">de {{ rango() }}</span>
         </div>
         <div class="pa-registro-texto">
           <strong>
@@ -78,7 +97,7 @@
               No se pudo leer la actividad
             } @else if (p.diasConDatos === 0) {
               Sin ningún día con registro
-            } @else if (p.diasConDatos === rango) {
+            } @else if (p.diasConDatos === rango()) {
               Días con registro: todos
             } @else {
               Días con registro
@@ -88,10 +107,13 @@
             @if (p.diasConDatos === 0 && p.fallos.length) {
               No es que no haya movimiento: es que no se pudo preguntar.
             } @else if (p.diasConDatos === 0) {
-              En estos {{ rango }} días el GPS no cerró ningún trayecto, así que
-              los números de abajo no describen nada.
+              En estos {{ rango() }} días el GPS no cerró ningún trayecto, así que
+              los números de abajo no describen nada. El registro de
+              movimiento se guarda cuando {{ nombreLimpio() }} abre la app, no
+              con el teléfono en el bolsillo: si no la ha abierto, aquí no hay
+              nada que medir todavía.
             } @else {
-              El GPS registró {{ p.diasConDatos }} de los {{ rango }} días. Las
+              El GPS registró {{ p.diasConDatos }} de los {{ rango() }} días. Las
               cifras de abajo son de esos días, no de la semana entera.
             }
           </span>
@@ -367,7 +389,7 @@
                     <ion-icon name="arrow-back"></ion-icon>
                   </button>
                   <span class="pa-mapa-titulo">
-                    Rutas · últimos {{ rango }} días
+                    Rutas · últimos {{ rango() }} días
                   </span>
                   <button
                     type="button"
