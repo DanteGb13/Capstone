@@ -35,6 +35,15 @@ export interface EstadoNotificaciones {
   zonaAlertaActivo: boolean;
   zonaEstadoActivo: boolean;
   alarmaActivo: boolean;
+  /**
+   * Si el canal de alarma tiene sonido asignado.
+   *
+   * Va aparte de `alarmaActivo` a proposito: un canal puede estar encendido y a
+   * la vez mudo, y entonces la notificacion aparece pero no suena. Mirando solo
+   * la importance la app daba el visto bueno y el recordatorio "funcionaba"
+   * sin oirse nada.
+   */
+  alarmaConSonido: boolean;
   /** Sin esto el SOS no suena, aunque el permiso esté concedido. */
   alertaFunciona: boolean;
 }

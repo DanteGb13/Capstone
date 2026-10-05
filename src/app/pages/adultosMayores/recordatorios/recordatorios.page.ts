@@ -30,7 +30,7 @@ import {
   handLeft,
   trashOutline
 } from 'ionicons/icons';
-import { AlarmaRecordatorio, AlarmasService, DIAS_SEMANA_TODOS } from '../../../services/alarmas/alarmas';
+import { AlarmaRecordatorio, AlarmasService, DIAS_SEMANA_TODOS, LIMITE_DESCRIPCION, validarAlarma } from '../../../services/alarmas/alarmas';
 import { RuedaComponent } from '../../../components/rueda/rueda.component';
 import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
 
@@ -76,9 +76,12 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   nuevaDescripcion = '';
   nuevosDias: number[] = [];
   errorNombre = false;
+  errorDescripcion = false;
 
   horas: number[] = Array.from({ length: 24 }, (_, i) => i);
   minutos: number[] = Array.from({ length: 60 }, (_, i) => i);
+
+  readonly limiteDescripcion = LIMITE_DESCRIPCION;
 
   sesionRueda = 0;
 
@@ -284,6 +287,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.nuevaDescripcion = '';
     this.nuevosDias = [...DIAS_SEMANA_TODOS];
     this.errorNombre = false;
+    this.errorDescripcion = false;
     this.sesionRueda++;
     this.mostrarModal = true;
   }
@@ -298,6 +302,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
       ? [...alarma.dias]
       : [...DIAS_SEMANA_TODOS];
     this.errorNombre = false;
+    this.errorDescripcion = false;
     this.sesionRueda++;
     this.mostrarModal = true;
   }
@@ -423,19 +428,39 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.errorNombre = limpio.length > 0 && !this.nombreValido(limpio);
   }
 
+  /**
+   * La descripcion no tenia ninguna validacion y es el campo con mas riesgo:
+   * va al cuerpo de la notificacion, donde Android la recorta igual, y un texto
+   * enorme se queda guardado y se vuelve a mandar al servidor en cada sincronizacion.
+   */
+  onDescripcionInput() {
+    this.errorDescripcion = this.nuevaDescripcion.length > LIMITE_DESCRIPCION;
+  }
+
   async guardarNueva() {
     const nombre = this.nuevoNombre.trim();
-    if (!this.nombreValido(nombre)) {
-      this.errorNombre = true;
+    const descripcion = this.nuevaDescripcion.trim();
+
+    this.errorNombre = !this.nombreValido(nombre);
+    this.errorDescripcion = descripcion.length > LIMITE_DESCRIPCION;
+    if (this.errorNombre || this.errorDescripcion) {
       this.changeDetectorRef.detectChanges();
       return;
     }
-    this.errorNombre = false;
 
+    // Elige al menos un dia: la pantalla nunca deja quitarlos todos, pero un
+    // recordatorio sin dias se queda sin ninguna ocurrencia que programar y
+    // aparece en la lista sin sonar nunca.
     let dias = [...this.nuevosDias];
     if (dias.length === 0) {
       const hoy = new Date().getDay() + 1;
       dias = [hoy];
+    }
+
+    const problemas = validarAlarma(nombre, this.nuevaHoraSel, this.nuevoMinutoSel, descripcion, dias);
+    if (problemas.length > 0) {
+      await this.mostrarInfo('Revisa el recordatorio', problemas[0].mensaje);
+      return;
     }
 
     const { hora, minuto } = {
@@ -448,7 +473,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
         nombre,
         hora,
         minuto,
-        descripcion: this.nuevaDescripcion.trim(),
+        descripcion,
         dias
       });
 
@@ -478,7 +503,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
       nombre,
       hora,
       minuto,
-      this.nuevaDescripcion.trim(),
+      descripcion,
       true,
       dias
     );

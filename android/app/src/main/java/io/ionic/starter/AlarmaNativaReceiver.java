@@ -804,8 +804,19 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
             return;
         }
-        if (nm.getNotificationChannel(SiempreCercaPlugin.CANAL_ALARMA_ID) != null) {
-            return;
+        NotificationChannel existente = nm.getNotificationChannel(SiempreCercaPlugin.CANAL_ALARMA_ID);
+        if (existente != null) {
+            // Un canal apagado a proposito en Ajustes del sistema se respeta.
+            // Uno encendido y mudo es un fallo, no una decision del usuario: se
+            // borra y se rehace, o el recordatorio se limita a enseñar la
+            // notificacion sin sonar. Borrarlo es ademas la unica forma de que
+            // Android acepte un sonido nuevo en un canal ya creado.
+            if (existente.getImportance() == NotificationManager.IMPORTANCE_NONE
+                    || existente.getSound() != null) {
+                return;
+            }
+            Log.w(TAG, "El canal de alarma estaba mudo: se borra y se recrea");
+            nm.deleteNotificationChannel(SiempreCercaPlugin.CANAL_ALARMA_ID);
         }
         // El canal lo crea SiempreCercaPlugin al abrir la app, pero si la alarma
         // salta antes de que la app se haya abierto nunca, se crea aqui. Con el
@@ -817,17 +828,17 @@ public class AlarmaNativaReceiver extends BroadcastReceiver {
         canal.setVibrationPattern(new long[] { 400, 500, 300, 500, 300, 500 });
         canal.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
 
-        int resId = context.getResources()
-            .getIdentifier("alarmmelodia", "raw", context.getPackageName());
-        if (resId != 0) {
+        Uri sonido = SiempreCercaPlugin.sonidoAlarma(context);
+        if (sonido != null) {
             canal.setSound(
-                Uri.parse("android.resource://" + context.getPackageName() + "/" + resId),
+                sonido,
                 new AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ALARM)
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build());
         }
         nm.createNotificationChannel(canal);
+        Log.i(TAG, "Canal de alarma creado. Sonido=" + (sonido != null ? sonido : "NINGUNO"));
     }
 
     // =====================================================

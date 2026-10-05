@@ -12,6 +12,35 @@ export interface PerfilResumen {
   fotoUrl: string | null;
   /** Rol: 'Usuario' (adulto mayor) o 'Familiar' (cuidador). */
   rol: string | null;
+
+  // ── Los campos siguientes los necesita la pantalla de Perfil ───────────────
+  // Son opcionales a propósito: el resto de pantallas (los dos paneles) no los
+  // usan, y agregarlos como requeridos obligaría a tocarlas.
+
+  /** Apellidos por separado: el formulario los valida y los guarda uno por uno. */
+  apellidopa?: string;
+  apellidoma?: string;
+  rut?: string;
+  fechaNacimiento?: string | null;
+
+  /** Para actualizar la dirección por separado (tabla `direccion`). */
+  idDireccion?: string | null;
+  direccion?: PerfilDireccion | null;
+
+  /**
+   * `usuario.id_rol`. La pantalla de Perfil lo usa para el texto de "cuenta"
+   * ("Adulto Mayor" / "Cuidador") cuando el rol no viene legible, así que hace
+   * falta traerlo: sin él, un adulto mayor se mostraría como cuidador.
+   */
+  idRol?: number | null;
+}
+
+/** Dirección de la persona, tal como la guarda el perfil. */
+export interface PerfilDireccion {
+  region?: string;
+  comuna?: string;
+  calle?: string;
+  numero?: string;
 }
 
 interface PerfilCacheEntry {
@@ -49,6 +78,12 @@ export class PerfilCacheService {
 
   /** Promesa en vuelo, para no disparar dos consultas a la vez. */
   private enVuelo: Promise<PerfilResumen | null> | null = null;
+
+  /**
+   * Lo mismo para la foto. Va con el id de usuario porque la promesa es de una
+   * persona concreta: si cambia la cuenta, la otra promesa no le sirve.
+   */
+  private fotoEnVuelo: { idUsuario: string; promesa: Promise<string | null> } | null = null;
 
   // =====================================================
   // ID DE SESIÓN (local, sin red)
@@ -109,12 +144,16 @@ export class PerfilCacheService {
     }
   }
 
-  private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
+private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
     try {
       const supabase = this.supabaseService.getClient();
 
       const { data, error } = await supabase
         .from('usuario')
+        // Antes eram 8 columnas y faltaban la fecha de nacimiento y la
+        // dirección, que son justamente los campos que edita la pantalla de
+        // Perfil. Iba a buscar esos por su cuenta en otro viaje, y con esto
+        // sigue siendo un solo viaje.
         .select(`
           id,
           nombre,
@@ -122,6 +161,16 @@ export class PerfilCacheService {
           apellidoma,
           telefono,
           correo,
+          rut,
+          fecha_nacimiento,
+          id_direccion,
+          id_rol,
+          direccion (
+            region,
+            comuna,
+            calle,
+            numero
+          ),
           rol (nombre)
         `)
         .eq('id', id)
@@ -142,6 +191,12 @@ export class PerfilCacheService {
       const apellidoPaterno = (data.apellidopa ?? '').trim();
       const apellidoMaterno = (data.apellidoma ?? '').trim();
 
+      // Supabase devuelve las relaciones 1 a 1 como arreglo a veces.
+      const dirData = data.direccion as any;
+      const direccion: PerfilDireccion | null = Array.isArray(dirData)
+        ? (dirData[0] ?? null)
+        : (dirData ?? null);
+
       const perfil: PerfilResumen = {
         id: data.id,
         nombre,
@@ -150,7 +205,21 @@ export class PerfilCacheService {
         telefono: data.telefono ?? '',
         correo: data.correo ?? '',
         fotoUrl: null,
-        rol
+        rol,
+        apellidopa: apellidoPaterno,
+        apellidoma: apellidoMaterno,
+        rut: data.rut ?? '',
+        fechaNacimiento: data.fecha_nacimiento ?? null,
+        idDireccion: (data.id_direccion as string | null) ?? null,
+        idRol: (data.id_rol as number | null) ?? null,
+        direccion: direccion
+          ? {
+            region: direccion.region ?? '',
+            comuna: direccion.comuna ?? '',
+            calle: direccion.calle ?? '',
+            numero: direccion.numero ?? ''
+          }
+          : null
       };
 
       this.enMemoria = { perfil, guardadoEn: Date.now() };
@@ -188,6 +257,31 @@ export class PerfilCacheService {
       return guardado.url;
     }
 
+    // Sin este guardia, dos pantallas que piden la foto al mismo tiempo (o los
+    // dos disparos de carga de una misma pantalla).each una hace su propio
+    // `list()` + `createSignedUrl()`. Con el guardia, la segunda espera la misma
+    // promesa: una sola ida a storage.
+    if (this.fotoEnVuelo?.idUsuario === idUsuario) {
+      return this.fotoEnVuelo.promesa;
+    }
+
+    const promesa = this.resolverFoto(idUsuario);
+    this.fotoEnVuelo = { idUsuario, promesa };
+
+    try {
+      return await promesa;
+    } finally {
+      if (this.fotoEnVuelo?.promesa === promesa) {
+        this.fotoEnVuelo = null;
+      }
+    }
+  }
+
+  /**
+   * El trabajo pesado de `cargarFoto()`: lista el bucket, firma la URL y guarda
+   * el resultado en caché.
+   */
+  private async resolverFoto(idUsuario: string): Promise<string | null> {
     try {
       const supabase = this.supabaseService.getClient();
 
@@ -227,6 +321,22 @@ export class PerfilCacheService {
     this.enVuelo = null;
     try {
       localStorage.removeItem(CLAVE_CACHE);
+      localStorage.removeItem(CLAVE_FOTO);
+    } catch {
+      // sin almacenamiento local no hay nada que borrar
+    }
+  }
+
+  /**
+   * Borra sólo la foto cacheada.
+   *
+   * Hace falta cuando la persona acaba de subir o de borrar su foto: la caché
+   * dura una hora, así que sin esto el avatar seguiría mostrando la anterior
+   * (o la que ya no existe) hasta que venciera el TTL. `limpiar()` no sirve
+   * para esto porque tiraría también el perfil.
+   */
+  limpiarFoto(): void {
+    try {
       localStorage.removeItem(CLAVE_FOTO);
     } catch {
       // sin almacenamiento local no hay nada que borrar

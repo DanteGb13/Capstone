@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController, ToastController, IonModal, IonActionSheet, ActionSheetController } from '@ionic/angular';
-import { CuidadoresService } from '../../services/Backend/cuidadores/cuidadores';
 import { AlarmasService } from '../../services/alarmas/alarmas';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
@@ -72,7 +71,6 @@ import {
 export class PerfilPage implements OnInit {
 
   constructor(
-    private cuidadoresService: CuidadoresService,
     private alarmasService: AlarmasService,
     private router: Router,
     private changeDetectorRef: ChangeDetectorRef,
@@ -100,6 +98,14 @@ export class PerfilPage implements OnInit {
   usuarioOriginal: any = {};
   modoEditar = false;
   cargandoPerfil: boolean = true;
+
+  /**
+   * Marca que hay una carga de perfil en curso. `ngOnInit` e
+   * `ionViewWillEnter` corren casi al mismo tiempo la primera vez que se entra,
+   * y sin esto la pantalla pintaba dos veces y pedía la foto dos veces.
+   */
+  private cargaEnCurso = false;
+
   fotoUrl: string | null = null;
   cargandoFoto: boolean = false;
 
@@ -139,55 +145,147 @@ export class PerfilPage implements OnInit {
   mensajeError: string = '';
 
   async ngOnInit() {
-    try {
-      const datosUsuario = await this.cuidadoresService.cargarUsuario();
+    await this.cargarPerfil();
+  }
 
-      if (datosUsuario) {
-        this.usuario = datosUsuario;
-        this.nombreUsuario = datosUsuario.nombre || '';
-        this.usuarioOriginal = JSON.parse(JSON.stringify(datosUsuario));
-        await this.cargarFotoPerfil();
+  /**
+   * Revisa el perfil en cada entrada, no sólo en `ngOnInit`.
+   *
+   * Ionic deja la página viva en el router outlet, así que `ngOnInit` corre una
+   * sola vez en toda la sesión: sin esto, corregir el nombre en otro lado y
+   * volver acá mostraba el dato viejo.
+   *
+   * Por qué NO fuerza caché acá: al entrar por primera vez, Ionic dispara
+   * `ngOnInit` y `ionViewWillEnter` casi pegados, y con `forzar` eran DOS viajes
+   * de red para lo mismo. Peor: `forzar` en cada entrada convertía la caché en
+   * un no-op, que es justo lo que se vino a arreglar. La ventana de 5 minutos
+   * cubre el caso "lo corregí en otro lado", y `guardarCambios()` ya refresca la
+   * caché cuando el dato cambia desde esta misma pantalla.
+   */
+  ionViewWillEnter() {
+    void this.cargarPerfil();
+  }
+
+  /**
+   * Carga el perfil desde la caché compartida.
+   *
+   * Antes iba directo a `cargarUsuario()`, que son DOS viajes a la red
+   * (`auth.getUser()` —que revalida contra el servidor aunque la sesión esté en
+   * el teléfono— más un select con tres relaciones), y después awaited otra vez
+   * por la foto (listar + firmar). Cuatro viajes encadenados, y el
+   * `*ngIf="cargandoPerfil"` de la plantilla no dejaba ver nada hasta que
+   * terminaban los cuatro.
+   *
+   * Ahora:
+   *  - el perfil sale de `PerfilCacheService`, que ya está en los dos paneles y
+   *    cachea 5 minutos. La primera visita cuesta 1 viaje y las siguientes 0.
+   *  - la foto NO bloquea la pantalla: se pide después y se pinta el avatar
+   *    cuando llega.
+   *
+   * `forzar` ignora la caché del perfil (no la foto, que tiene su propio TTL).
+   */
+  private async cargarPerfil(forzar = false): Promise<void> {
+    // Al entrar por primera vez Ionic dispara `ngOnInit` y `ionViewWillEnter`
+    // casi pegados. Sin este guardia la pantalla se pintaba dos veces con el
+    // mismo dato y pedía dos veces la foto.
+    if (this.cargaEnCurso) {
+      return;
+    }
+
+    this.cargaEnCurso = true;
+    this.cargandoPerfil = true;
+    this.changeDetectorRef.detectChanges();
+
+    try {
+      const perfil = await this.perfilCache.perfil(forzar);
+
+      if (!perfil) {
+        console.warn('No se pudo obtener el perfil del usuario');
+        return;
       }
 
+      // Se reconstruye con la misma forma que tenía antes, porque el formulario,
+      // las validaciones y `guardarCambios()` leen estos campos por nombre. La
+      // caché guarda un resumen; esta función lo devuelve con la forma que la
+      // pantalla ya esperaba, sin tocar una línea de esas tres cosas.
+      //
+      // `rol` e `id_rol` también van: los usa el getter `tipoCuentaTexto` para
+      // el rótulo de la tarjeta. Sin ellos caía siempre en "Cuidador" y un
+      // adulto mayor se veía con el tipo de cuenta equivocado.
+      this.usuario = {
+        id: perfil.id,
+        nombre: perfil.nombre,
+        apellidopa: perfil.apellidopa ?? '',
+        apellidoma: perfil.apellidoma ?? '',
+        telefono: perfil.telefono ?? '',
+        correo: perfil.correo ?? '',
+        rut: perfil.rut ?? '',
+        fecha_nacimiento: perfil.fechaNacimiento ?? '',
+        id_direccion: perfil.idDireccion ?? null,
+        id_rol: perfil.idRol ?? null,
+        // `rol` vuelve como texto ('Usuario' / 'Familiar'); se devuelve con la
+        // forma de relación (arreglo de un objeto) que es la que espera el
+        // getter. `tipoCuentaTexto` además tolera el texto plano.
+        rol: perfil.rol ? [{ nombre: perfil.rol }] : undefined,
+        direccion: {
+          region: perfil.direccion?.region ?? '',
+          comuna: perfil.direccion?.comuna ?? '',
+          calle: perfil.direccion?.calle ?? '',
+          numero: perfil.direccion?.numero ?? ''
+        }
+      };
+
+      this.nombreUsuario = perfil.nombre || '';
+      this.usuarioOriginal = JSON.parse(JSON.stringify(this.usuario));
+
+      // Lo que había en caché si viene, para no dejar el avatar vacío mientras
+      // se resuelve.
+      this.fotoUrl = perfil.fotoUrl ?? null;
+
+      this.changeDetectorRef.detectChanges();
+
+      // La foto se resuelve después y no bloquea nada. Si falla, el avatar queda
+      // con el ícono de persona, igual que antes.
+      this.cargarFotoPerfil();
     } catch (error) {
       console.error("Error al cargar los datos del usuario:", error);
     } finally {
+      this.cargaEnCurso = false;
       this.cargandoPerfil = false;
       this.changeDetectorRef.detectChanges();
     }
   }
 
-  async cargarFotoPerfil() {
+  /**
+   * Resuelve la foto de perfil.
+   *
+   * Va por `PerfilCacheService.cargarFoto()` y no por las dos llamadas
+   * directas que hacía antes, porque ese método ya existe, ya cachea el resultado
+   * por una hora y tiene el mismo comportamiento (null si no hay foto). El
+   * `list()` + `createSignedUrl()` se sigue haciendo igual, pero una vez por
+   * hora en vez de en cada entrada al perfil.
+   *
+   * Además ya no se espera: el avatar aparece aunque la foto tarde, o nunca
+   * llegue.
+   */
+  private async cargarFotoPerfil(): Promise<void> {
+    const userId = this.usuario?.id;
+    if (!userId) {
+      this.fotoUrl = null;
+      return;
+    }
+
+    this.cargandoFoto = true;
+    this.changeDetectorRef.detectChanges();
+
     try {
-      const supabase = this.supabaseService.getClient();
-      const userId = this.usuario.id;
-
-      const { data, error } = await supabase
-        .storage
-        .from('fotos-perfil')
-        .list(`${userId}/`, { limit: 1 });
-
-      if (error || !data || data.length === 0) {
-        this.fotoUrl = null;
-        return;
-      }
-
-      const fileName = data[0].name;
-      const { data: signedUrlData, error: signedUrlError } = await supabase
-        .storage
-        .from('fotos-perfil')
-        .createSignedUrl(`${userId}/${fileName}`, 3600);
-
-      if (signedUrlError || !signedUrlData) {
-        this.fotoUrl = null;
-        return;
-      }
-
-      this.fotoUrl = signedUrlData.signedUrl;
-
+      this.fotoUrl = await this.perfilCache.cargarFoto(userId);
     } catch (error) {
       console.error('Error cargando foto de perfil:', error);
       this.fotoUrl = null;
+    } finally {
+      this.cargandoFoto = false;
+      this.changeDetectorRef.detectChanges();
     }
   }
 
@@ -283,6 +381,11 @@ export class PerfilPage implements OnInit {
         return;
       }
 
+      // La foto que acaba de subirse tiene que verse YA. La caché dura una hora,
+      // así que sin esto el avatar seguiría mostrando la anterior (o el ícono
+      // de persona) hasta que venciera el TTL.
+      this.perfilCache.limpiarFoto();
+
       await this.cargarFotoPerfil();
       this.changeDetectorRef.detectChanges();
 
@@ -316,6 +419,11 @@ export class PerfilPage implements OnInit {
     try {
       this.cargandoFoto = true;
       await this.eliminarFotoExistente();
+
+      // Por lo mismo que al subir: hay que olvidar la foto cacheada o el avatar
+      // seguiría mostrándola aunque ya no exista.
+      this.perfilCache.limpiarFoto();
+
       this.fotoUrl = null;
       this.changeDetectorRef.detectChanges();
     } catch (error) {
@@ -712,14 +820,20 @@ export class PerfilPage implements OnInit {
   get tipoCuentaTexto(): string {
     const rol = this.usuario?.rol;
     let nombre: string | undefined;
-    if (Array.isArray(rol)) {
+
+    if (typeof rol === 'string') {
+      // La caché entrega el rol como texto plano ('Usuario' / 'Familiar').
+      nombre = rol;
+    } else if (Array.isArray(rol)) {
       nombre = rol[0]?.nombre;
     } else if (rol) {
       nombre = rol.nombre;
     }
+
     if (nombre) {
       return nombre;
     }
+
     return this.usuario?.id_rol === 1 ? 'Adulto Mayor' : 'Cuidador';
   }
 

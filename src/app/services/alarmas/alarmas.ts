@@ -43,6 +43,91 @@ export const DIAS_SEMANA_TODOS = [1, 2, 3, 4, 5, 6, 7];
 const TABLA = 'alarma_recordatorio';
 const ACCION_APAGAR = 'apagar';
 
+/** Longitudes maximas. El nombre se ve entero en la tarjeta; la descripcion se
+ *  muestra como cuerpo de la notificacion, donde Android la corta igual. */
+export const LIMITE_NOMBRE = 40;
+export const LIMITE_DESCRIPCION = 140;
+
+export interface ProblemaAlarma {
+  campo: 'nombre' | 'hora' | 'minuto' | 'descripcion' | 'dias';
+  mensaje: string;
+}
+
+/**
+ * Revisa un recordatorio antes de crearlo o cambiarlo.
+ *
+ * La pantalla ya valida el nombre, pero esta es la capa por la que pasan todas
+ * las demas: la sincronizacion, la API y cualquier llamada futura. Sin esto, un
+ * valor fuera de rango no daba error, se guardaba y producia una alarma que
+ * nunca sonaba:
+ *
+ *  - `hora`/`minuto` fuera de rango entran en generarOcurrencias() y el Date se
+ *    desborda a otro dia, asi que la alarma salta en un momento que nadie pidio.
+ *  - Un dia de la semana que no es 1..7 no coincide jamas con `getDay() + 1`, y
+ *    una alarma con dias vacios o invalidos se queda sin ninguna ocurrencia:
+ *    aparece en la lista, se puede activar, y no suena nunca. Es el fallo mas
+ *    silencioso de los tres.
+ */
+export function validarAlarma(
+  nombre: string,
+  hora: number,
+  minuto: number,
+  descripcion: string,
+  dias: number[]
+): ProblemaAlarma[] {
+  const problemas: ProblemaAlarma[] = [];
+
+  const nom = (nombre ?? '').trim();
+  if (nom.length === 0) {
+    problemas.push({ campo: 'nombre', mensaje: 'Escribe un nombre para el recordatorio.' });
+  } else if (nom.length > LIMITE_NOMBRE) {
+    problemas.push({
+      campo: 'nombre',
+      mensaje: `El nombre no puede pasar de ${LIMITE_NOMBRE} caracteres.`
+    });
+  } else if (/[\u0000-\u001F\u007F]/.test(nom)) {
+    problemas.push({ campo: 'nombre', mensaje: 'El nombre tiene caracteres no permitidos.' });
+  }
+
+  if (!Number.isInteger(hora) || hora < 0 || hora > 23) {
+    problemas.push({ campo: 'hora', mensaje: 'La hora debe estar entre 0 y 23.' });
+  }
+  if (!Number.isInteger(minuto) || minuto < 0 || minuto > 59) {
+    problemas.push({ campo: 'minuto', mensaje: 'El minuto debe estar entre 0 y 59.' });
+  }
+
+  if ((descripcion ?? '').length > LIMITE_DESCRIPCION) {
+    problemas.push({
+      campo: 'descripcion',
+      mensaje: `La descripcion no puede pasar de ${LIMITE_DESCRIPCION} caracteres.`
+    });
+  }
+
+  const lista = dias ?? [];
+  if (lista.length === 0) {
+    problemas.push({ campo: 'dias', mensaje: 'Elige al menos un dia de la semana.' });
+  } else if (lista.some((d) => !Number.isInteger(d) || d < 1 || d > 7)) {
+    problemas.push({ campo: 'dias', mensaje: 'Los dias de la semana no son validos.' });
+  }
+
+  return problemas;
+}
+
+/**
+ * Deja los dias en 1..7, sin repetir y ordenados.
+ *
+ * Aplicarlo en un solo sitio evita depender de que cada quien filtre: un `dias`
+ * con 0, con 8 o con duplicados se guardaba tal cual y hacia que la alarma
+ * nunca encontrara su dia.
+ */
+export function normalizarDias(dias: number[]): number[] {
+  const validos = (dias ?? []).filter(
+    (d) => Number.isInteger(d) && d >= 1 && d <= 7
+  );
+  const unicos = [...new Set(validos)].sort((a, b) => a - b);
+  return unicos.length > 0 ? unicos : [...DIAS_SEMANA_TODOS];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -263,6 +348,12 @@ export class AlarmasService {
     activa = true,
     dias: number[] = DIAS_SEMANA_TODOS
   ): Promise<AlarmaRecordatorio | null> {
+    const problemas = validarAlarma(nombre, hora, minuto, descripcion, dias);
+    if (problemas.length > 0) {
+      console.warn('Recordatorio no valido, no se crea', problemas);
+      return null;
+    }
+
     const userId = await this.obtenerUsuarioId();
     if (!userId) {
       return null;
@@ -271,13 +362,13 @@ export class AlarmasService {
     const alarma: AlarmaRecordatorio = {
       id: this.generarId(),
       id_usuario: userId,
-      nombre,
+      nombre: nombre.trim(),
       hora,
       minuto,
-      descripcion,
+      descripcion: (descripcion ?? '').trim(),
       activa,
       confirmado: null,
-      dias: dias.length > 0 ? dias : [...DIAS_SEMANA_TODOS]
+      dias: normalizarDias(dias)
     };
 
     this.espejoUpsert(alarma);
@@ -308,16 +399,48 @@ export class AlarmasService {
       return false;
     }
 
+    // Se valida SOLO lo que trae este cambio. Validar el registro entero
+    // ataba a `actualizarAlarma({ confirmado })` y `{ activa }` —que no tocan
+    // ni el nombre ni los dias— a que el registro viejo ya fuera valido, y una
+    // fila antigua con `dias` vacio o nulo dejaba de poder confirmarse.
+    const problemas = validarAlarma(
+      cambios.nombre ?? '',
+      cambios.hora ?? 0,
+      cambios.minuto ?? 0,
+      cambios.descripcion ?? '',
+      cambios.dias ?? DIAS_SEMANA_TODOS
+    ).filter((p) => {
+      if (p.campo === 'nombre') return cambios.nombre !== undefined;
+      if (p.campo === 'hora') return cambios.hora !== undefined;
+      if (p.campo === 'minuto') return cambios.minuto !== undefined;
+      if (p.campo === 'descripcion') return cambios.descripcion !== undefined;
+      return cambios.dias !== undefined;
+    });
+
+    if (problemas.length > 0) {
+      console.warn('Cambio de recordatorio no valido, no se aplica', id, problemas);
+      return false;
+    }
+
+    // Normalizar antes de encolar, no despues: lo que se manda al servidor y lo
+    // que se guarda en el espejo tienen que ser el mismo dato.
+    const limpio: Partial<AlarmaRecordatorio> = { ...cambios };
+    if (cambios.nombre !== undefined) limpio.nombre = cambios.nombre.trim();
+    if (cambios.descripcion !== undefined) {
+      limpio.descripcion = (cambios.descripcion ?? '').trim();
+    }
+    if (cambios.dias !== undefined) limpio.dias = normalizarDias(cambios.dias);
+
     const espejo = this.leerEspejo();
     const existente = espejo.find((e) => e.id === id && e.id_usuario === userId);
     if (existente) {
-      this.espejoUpsert({ ...existente, ...cambios });
+      this.espejoUpsert({ ...existente, ...limpio });
     }
 
     const restantes = this.leerCola().filter(
       (o) => o.op !== 'insert' || o.id !== id
     );
-    restantes.push({ id, op: 'update', payload: cambios, ts: Date.now() });
+    restantes.push({ id, op: 'update', payload: limpio, ts: Date.now() });
     this.guardarCola(restantes);
 
     void this.flushCola();

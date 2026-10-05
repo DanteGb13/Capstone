@@ -185,10 +185,20 @@ export class PanelActividadPage implements OnDestroy {
       const lista = await this.vinculacion.obtenerAdultosACargo();
       return (lista || []).map((a: any) => {
         const id = a?.adulto_mayor?.id || a?.id_usuario || a?.id;
-        const nombre = [a?.adulto_mayor?.nombre, a?.adulto_mayor?.appellidopa]
+
+        // Se leen las dos grafías del apellido: hay instalaciones donde la columna se
+        // llama `apellidopa` y otras `appellidopa` (el servicio de contactos ya
+        // contempla las dos). Con acceso por corchetes, una columna que no
+        // exista devuelve `undefined` y no rompe la consulta, así que el
+        // selector nunca queda sin nombre por un detalle de la base.
+        const d = (a?.adulto_mayor ?? {}) as any;
+        const apellido = d['apellidopa'] ?? d['appellidopa'] ?? '';
+
+        const nombre = [d?.nombre, apellido]
           .filter(Boolean)
           .join(' ')
           .trim();
+
         return { id, nombre: nombre || 'Adulto mayor' };
       }).filter((a: any) => !!a.id);
     } catch (e) {

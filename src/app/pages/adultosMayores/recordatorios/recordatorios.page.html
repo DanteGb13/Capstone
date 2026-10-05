@@ -330,14 +330,19 @@
             </button>
           </label>
 
-          <label class="campo">
+          <label class="campo" [class.invalido]="errorDescripcion">
             <span>Descripción</span>
             <ion-textarea
               placeholder="Ej. Después del desayuno"
               rows="3"
-              [(ngModel)]="nuevaDescripcion">
+              [(ngModel)]="nuevaDescripcion"
+              (ionInput)="onDescripcionInput()">
             </ion-textarea>
           </label>
+
+          @if (errorDescripcion) {
+            <p class="campo-error">La descripción no puede pasar de {{ limiteDescripcion }} caracteres.</p>
+          }
 
           <ion-button expand="block" (click)="guardarNueva()" class="btn-primario">
             {{ botonGuardarTitulo }}

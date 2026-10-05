@@ -14,6 +14,7 @@ import android.os.PowerManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
+import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationManagerCompat;
@@ -39,6 +40,10 @@ public class SiempreCercaPlugin extends Plugin {
     public static final String CANAL_ZONA_ALERTA_ID = "zona-alertas";
     public static final String CANAL_ZONA_ESTADO_ID = "zona-estado";
 
+    private static final String TAG = "SiempreCerca";
+    /** Sonido de los recordatorios, en res/raw (sin extension). */
+    static final String ARCHIVO_SONIDO = "alarmmelodia";
+
     // Acción de la notificación que abrió la app cuando ya estaba viva.
     private String accionPendiente = null;
     private String notificacionPendiente = null;
@@ -53,7 +58,7 @@ public class SiempreCercaPlugin extends Plugin {
     // el canal de alarma llevaba su propio "canal_alarma_v3", y subir la version
     // desde aquí no lo recreaba: había que acordarse de subir los dos, o el
     // canal se quedaba con el sonido viejo para siempre.
-    private static final String VERSION_CANALES = "v6";
+    private static final String VERSION_CANALES = "v7";
 
     // =====================================================
     // CANALES DE NOTIFICACIÓN
@@ -202,6 +207,12 @@ public class SiempreCercaPlugin extends Plugin {
         ret.put("zonaAlertaActivo", canalActivo(contexto, CANAL_ZONA_ALERTA_ID));
         ret.put("zonaEstadoActivo", canalActivo(contexto, CANAL_ZONA_ESTADO_ID));
         ret.put("alarmaActivo", canalActivo(contexto, CANAL_ALARMA_ID));
+        // Importa aparte del "activo": un canal puede estar encendido y aun asi
+        // mudo, y con eso la notificacion se ve pero no suena. Con solo mirar
+        // la importance la app daba todo por bueno mientras los recordatorios
+        // no oian nada.
+        ret.put("alarmaConSonido", !canalSinSonido(
+                contexto.getSystemService(NotificationManager.class)));
         ret.put("canales", canales);
         // Sin POST_NOTIFICATIONS no suena nada, aunque los canales estén bien.
         ret.put("alertaFunciona", habilitadas && canalActivo(contexto, CANAL_SOS_ID));
@@ -400,19 +411,72 @@ public class SiempreCercaPlugin extends Plugin {
 
     @PluginMethod
     public void crearCanalAlarma(PluginCall call) {
-        // El canal lo crea (o recrea) crearCanales() con el mismo flag de versión
-        // que el resto. Aquí solo se asegura por si la alarma salta antes de que
-        // la app llegue a crearCanales() (MainActivity lo hace, pero no siempre
-        // ha corrido). Si ya existe, no se toca: tocar un canal existente lo
-        // reinicia para el usuario, y no se debe deshacer un silencio que él
-        // eligió a propósito en Ajustes.
+        // Si ya existe se respeta lo que el usuario haya elegido en Ajustes del
+        // sistema. La excepcion es un canal encendido pero mudo: ahi no hay una
+        // decision del usuario que respetar, es un fallo, y mientras no se
+        // repare el recordatorio se ve en pantalla y no suena nada.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationManager nm = getContext().getSystemService(NotificationManager.class);
-            if (nm != null && nm.getNotificationChannel(CANAL_ALARMA_ID) == null) {
-                crearCanalAlarma(nm, getContext());
+            if (nm != null) {
+                if (nm.getNotificationChannel(CANAL_ALARMA_ID) == null) {
+                    crearCanalAlarma(nm, getContext());
+                } else if (canalSinSonido(nm)) {
+                    Log.w(TAG, "El canal de alarma estaba mudo: se borra y se recrea");
+                    eliminar(nm, CANAL_ALARMA_ID);
+                    crearCanalAlarma(nm, getContext());
+                }
             }
         }
         call.resolve();
+    }
+
+    /**
+     * Uri del sonido de los recordatorios.
+     *
+     * Se usa la forma por NOMBRE (android.resource://<paquete>/raw/alarmmelodia)
+     * y no la numerica (android.resource://<paquete>/2131492864). El canal
+     * guarda la uri como texto en los ajustes del sistema, y el id numerico de
+     * un recurso cambia al recompilar: con el, una actualizacion dejaba el
+     * canal apuntando a un recurso que ya no existia y la alarma se quedaba
+     * muda sin que nada fallara ni dejara rastro.
+     *
+     * Devuelve null si el recurso no esta en el paquete, para que la ausencia
+     * quede en el log en vez de crear un canal mudo sin avisar.
+     */
+    static Uri sonidoAlarma(Context contexto) {
+        String paquete = contexto.getPackageName();
+        if (contexto.getResources().getIdentifier(ARCHIVO_SONIDO, "raw", paquete) == 0) {
+            Log.w(TAG, "No se encontro res/raw/" + ARCHIVO_SONIDO + ": el canal de alarma quedara mudo");
+            return null;
+        }
+        return new Uri.Builder()
+                .scheme("android.resource")
+                .authority(paquete)
+                .appendPath("raw")
+                .appendPath(ARCHIVO_SONIDO)
+                .build();
+    }
+
+    /**
+     * Si el canal de alarma esta encendido pero sin sonido.
+     *
+     * Un canal con IMPORTANCE_NONE si es un canal apagado, y ahi la decision es
+     * del usuario y se respeta. Un canal encendido sin sonido es el peor estado
+     * posible: la notificacion aparece, el boton de apagar funciona y no se oye
+     * nada, que es exactamente el fallo de "funciona pero no suena".
+     */
+    static boolean canalSinSonido(NotificationManager nm) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || nm == null) {
+            return false;
+        }
+        NotificationChannel canal = nm.getNotificationChannel(CANAL_ALARMA_ID);
+        if (canal == null) {
+            return false; // aun no creado: se creara bien
+        }
+        if (canal.getImportance() == NotificationManager.IMPORTANCE_NONE) {
+            return false; // apagado a proposito: no se toca
+        }
+        return canal.getSound() == null;
     }
 
     private static void crearCanalAlarma(NotificationManager nm, Context contexto) {
@@ -428,10 +492,8 @@ public class SiempreCercaPlugin extends Plugin {
         canal.setLightColor(Color.parseColor("#7715c7"));
         canal.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
 
-        int resId = contexto.getResources().getIdentifier(
-            "alarmmelodia", "raw", contexto.getPackageName());
-        if (resId != 0) {
-            Uri sonido = Uri.parse("android.resource://" + contexto.getPackageName() + "/" + resId);
+        Uri sonido = sonidoAlarma(contexto);
+        if (sonido != null) {
             AudioAttributes atributos = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
