@@ -293,18 +293,30 @@ private readonly CLAVE_DIR_CACHE = 'sc_dir_casa';
 
       const supabase = this.supabaseService.getClient();
 
+      // La tabla `direccion` NO tiene columna `id_usuario`: el vinculo es
+      // `usuario.id_direccion` -> `direccion.id`, igual que en el perfil. Por eso
+      // se lee pasando por `usuario` con la relacion anidada. Antes se consultaba
+      // `direccion` por `id_usuario`, esa consulta fallaba siempre, la caja de
+      // texto quedaba vacia y "Ir a mi casa" avisaba que no habia direccion.
       const { data, error } = await supabase
-        .from('direccion')
-        .select('region, comuna, calle, numero')
-        .eq('id_usuario', id)
+        .from('usuario')
+        .select('direccion:id_direccion(region, comuna, calle, numero)')
+        .eq('id', id)
         .maybeSingle();
 
-      if (error || !data) return;
+      if (error || !data) {
+        console.warn('No se pudo leer la direccion del perfil:', error?.message);
+        return;
+      }
 
-      this.aplicarDireccion(data);
+      // La relacion 1 a 1 puede venir como objeto o como arreglo de un elemento.
+      const dir = Array.isArray(data.direccion) ? data.direccion[0] : data.direccion;
+      if (!dir) return;
+
+      this.aplicarDireccion(dir);
 
       try {
-        localStorage.setItem(this.CLAVE_DIR_CACHE, JSON.stringify(data));
+        localStorage.setItem(this.CLAVE_DIR_CACHE, JSON.stringify(dir));
       } catch {
         /* sin persistencia */
       }
