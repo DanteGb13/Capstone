@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { IonButton, IonContent, IonIcon, IonInput, IonSpinner, NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -47,6 +47,15 @@ export class LoginPage implements OnInit, OnDestroy {
     contrasena?: string;
   } = {};
 
+  private cdr = inject(ChangeDetectorRef);
+
+  // La app corre SIN zone.js (zoneless): cambiar `mensajeError` o `cargando`
+  // después de un await NO repinta la vista por sí solo, así que el error
+  // quedaba invisible hasta que el usuario tocaba la pantalla.
+  private refrescar() {
+    this.cdr.markForCheck();
+  }
+
   constructor(
     private loginService: Login,
     private supabaseService: SupabaseService,
@@ -90,6 +99,7 @@ export class LoginPage implements OnInit, OnDestroy {
         }
       } else if (res.error) {
         this.mensajeError = 'No se pudo iniciar con Google: ' + res.error;
+        this.refrescar();
       }
     });
 
@@ -167,8 +177,10 @@ export class LoginPage implements OnInit, OnDestroy {
       } else {
         this.mensajeError = error?.message || 'No se pudo iniciar sesión. Inténtalo nuevamente.';
       }
+      this.refrescar();
     } finally {
       this.cargando = false;
+      this.refrescar();
     }
   }
 
@@ -178,6 +190,7 @@ export class LoginPage implements OnInit, OnDestroy {
       await this.loginService.iniciarSesionGoogle();
     } catch (error: any) {
       this.mensajeError = error?.message || 'No se pudo conectar con Google.';
+      this.refrescar();
     }
   }
 
@@ -190,8 +203,10 @@ export class LoginPage implements OnInit, OnDestroy {
       await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
     } catch (error: any) {
       this.mensajeError = error?.message || 'No se pudo completar el registro.';
+      this.refrescar();
     } finally {
       this.cargando = false;
+      this.refrescar();
     }
   }
 

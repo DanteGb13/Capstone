@@ -1,0 +1,17 @@
+// Estructura compartida por las páginas públicas de la web. La navegación vive
+// en `web-nav`; aquí sólo el contenedor y los títulos.
+.web-page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.web-page h1 {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.web-page .descripcion {
+  color: #8c8c8c;
+  margin-bottom: 24px;
+}

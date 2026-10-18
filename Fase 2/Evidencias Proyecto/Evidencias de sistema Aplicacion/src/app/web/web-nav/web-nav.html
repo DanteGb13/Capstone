@@ -1,0 +1,15 @@
+<nav class="web-nav">
+  <a class="web-nav__marca" routerLink="/inicio">
+    <img class="web-nav__logo" src="/assets/logo/logo-128.png" alt="" />
+    SiempreCerca
+  </a>
+
+  <div class="web-nav__enlaces">
+    <a routerLink="/inicio" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: true }">Inicio</a>
+    <a routerLink="/planes" routerLinkActive="activo">Planes</a>
+    <a routerLink="/descarga" routerLinkActive="activo">Descarga</a>
+    <a routerLink="/contactanos" routerLinkActive="activo">Contáctanos</a>
+  </div>
+
+  <a class="web-nav__login" routerLink="/login">Login</a>
+</nav>

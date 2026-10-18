@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import {
   noAuthGuard,
   siguientePasoGuard,
@@ -6,11 +7,35 @@ import {
   onboardingPermisosGuard
 } from './services/guards/auth.guard';
 
+// La app abre en el login; la web (celular o PC) abre en la página de inicio
+// pública. `home` sigue reservada para la pantalla principal ya autenticada.
+const rutaInicial = Capacitor.isNativePlatform() ? 'login' : 'inicio';
+
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: 'login',
+    redirectTo: rutaInicial,
     pathMatch: 'full',
+  },
+  {
+    path: 'inicio',
+    loadComponent: () => import('./web/inicio/inicio.page').then((m) => m.InicioPage)
+  },
+  {
+    path: 'planes',
+    loadComponent: () => import('./web/planes/planes.page').then((m) => m.PlanesPage)
+  },
+  {
+    path: 'descarga',
+    loadComponent: () => import('./web/descarga/descarga.page').then((m) => m.DescargaPage)
+  },
+  {
+    path: 'contactanos',
+    loadComponent: () => import('./web/contactanos/contactanos.page').then((m) => m.ContactanosPage)
+  },
+  {
+    path: 'panel-control',
+    loadComponent: () => import('./web/panel-control/panel-control.page').then((m) => m.PanelControlPage)
   },
   {
     path: 'home',

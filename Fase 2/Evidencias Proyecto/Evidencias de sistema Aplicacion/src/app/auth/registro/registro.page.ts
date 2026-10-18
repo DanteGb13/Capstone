@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { IonButton, IonContent, IonIcon, IonInput, IonSpinner, NavController } from '@ionic/angular';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
@@ -67,6 +67,15 @@ export class RegistroPage implements OnInit, OnDestroy {
     contrasena?: string;
     confirmarContrasena?: string;
   } = {};
+
+  private cdr = inject(ChangeDetectorRef);
+
+  // La app corre SIN zone.js (zoneless): cambiar `mensajeError` o `cargando`
+  // después de un await NO repinta la vista por sí solo, así que los errores
+  // de registro quedaban invisibles hasta que el usuario tocaba la pantalla.
+  private refrescar() {
+    this.cdr.markForCheck();
+  }
 
   formularioIntentado: boolean = false;
 
@@ -200,6 +209,7 @@ export class RegistroPage implements OnInit, OnDestroy {
         }
       } else if (res.error) {
         this.mensajeError = 'No se pudo registrar con Google: ' + res.error;
+        this.refrescar();
       }
     });
 
@@ -238,8 +248,10 @@ export class RegistroPage implements OnInit, OnDestroy {
     } catch (error: any) {
       this.procesandoGoogle = false;
       this.mensajeError = error?.message || 'No se pudo completar el registro con Google.';
+      this.refrescar();
     } finally {
       this.cargando = false;
+      this.refrescar();
     }
   }
 
@@ -382,8 +394,10 @@ export class RegistroPage implements OnInit, OnDestroy {
       } else {
         this.mensajeError = error?.message || 'No se pudo registrar el usuario. Revisa tu conexión.';
       }
+      this.refrescar();
     } finally {
       this.cargando = false;
+      this.refrescar();
     }
   }
 
@@ -393,6 +407,7 @@ export class RegistroPage implements OnInit, OnDestroy {
       await this.registroService.registrarConGoogle();
     } catch (error: any) {
       this.mensajeError = error?.message || 'No se pudo conectar con Google.';
+      this.refrescar();
     }
   }
 }

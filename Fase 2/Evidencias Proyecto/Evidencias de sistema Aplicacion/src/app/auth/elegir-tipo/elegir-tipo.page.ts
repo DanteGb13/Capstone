@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
@@ -29,6 +29,14 @@ export class ElegirTipoPage implements OnInit {
 
   cargando: boolean = false;
 
+  private cdr = inject(ChangeDetectorRef);
+
+  // La app corre SIN zone.js (zoneless): cambiar `cargando` después de un await
+  // NO repinta la vista por sí solo, así que el spinner se quedaba pegado.
+  private refrescar() {
+    this.cdr.markForCheck();
+  }
+
   constructor(
     private loginService: Login,
     private router: Router,
@@ -57,6 +65,7 @@ export class ElegirTipoPage implements OnInit {
     } catch (error: any) {
       console.error('Error al completar el registro:', error);
       this.cargando = false;
+      this.refrescar();
     }
   }
 
