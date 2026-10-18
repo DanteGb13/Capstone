@@ -375,8 +375,8 @@ allow_dynamic_registration = false
 [edge_runtime]
 enabled = true
 # Supported request policies: `oneshot`, `per_worker`.
-# `per_worker` (default) — enables hot reload during local development.
-# `oneshot` — fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
+# `per_worker` (default) â€” enables hot reload during local development.
+# `oneshot` â€” fallback mode if hot reload causes issues (e.g. in large repos or with symlinks).
 policy = "per_worker"
 # Port to attach the Chrome inspector for debugging edge functions.
 inspector_port = 8083
@@ -413,3 +413,19 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# =====================================================
+# Edge Functions
+# =====================================================
+
+# El formulario de contacto lo llena cualquiera que abra la web, sin sesión:
+# puede no tener cuenta y no haber descargado la app todavía. Con el JWT
+# verificado (que es lo que se usa por defecto) el navegador recibiría 401
+# antes de llegar a la función, así que se desactiva acá.
+#
+# Es aceptable porque la función NO lee datos de ningún usuario: no consulta
+# tablas, no usa la service_role y sólo reenvía texto a un correo. Lo que
+# frena el spam es el campo trampa y los límites de largo, no el token.
+[functions.enviar-contacto]
+verify_jwt = false
+

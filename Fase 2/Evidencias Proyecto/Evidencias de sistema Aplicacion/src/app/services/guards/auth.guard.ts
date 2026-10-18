@@ -30,7 +30,13 @@ const ESTADO_SIN_RED = {
  *    el token en cada consulta, así que no se abre ningún acceso),
  *  - si el error viene de la base de datos, no se toma como perfil incompleto.
  */
-async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
+/**
+ * Estado de la sesión y del perfil del usuario.
+ *
+ * Exportada para que `rol.guard.ts` pueda reutilizarla: consultar el rol otra
+ * vez duplicaba la espera antes de abrir cada pantalla.
+ */
+export async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
   try {
     const supabase = supabaseService.getClient();
 

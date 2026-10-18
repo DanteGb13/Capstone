@@ -1,9 +1,112 @@
 <app-web-nav />
 
-<ion-content>
-  <div class="web-page">
+<ion-content class="web-contenido">
+  <div class="web-page web-page--centrado">
     <h1>Contáctanos</h1>
-    <p class="descripcion">Canal de contacto con el equipo de SiempreCerca.</p>
-    <ion-button routerLink="/inicio">Volver al inicio</ion-button>
+    <p class="descripcion">¿Tienes una duda, una sugerencia o un problema? Cuéntanos.</p>
+
+    <form class="contacto-form" (ngSubmit)="enviar()" novalidate>
+
+      <div class="contacto-fila">
+        <label class="contacto-label" for="contacto-nombre">Nombre completo</label>
+        <input
+          id="contacto-nombre"
+          name="nombre"
+          type="text"
+          class="contacto-input"
+          autocomplete="name"
+          [attr.placeholder]="'Nombre y apellido'"
+          [class.contacto-input--error]="errores.nombre"
+          [(ngModel)]="nombre" />
+        @if (errores.nombre) {
+          <span class="contacto-error" role="alert">{{ errores.nombre }}</span>
+        }
+      </div>
+
+      <div class="contacto-fila">
+        <label class="contacto-label" for="contacto-correo">Correo electrónico</label>
+        <input
+          id="contacto-correo"
+          name="correo"
+          type="email"
+          class="contacto-input"
+          autocomplete="email"
+          [attr.placeholder]="'tucorreo@ejemplo.cl'"
+          [class.contacto-input--error]="errores.correo"
+          [(ngModel)]="correo" />
+        @if (errores.correo) {
+          <span class="contacto-error" role="alert">{{ errores.correo }}</span>
+        }
+      </div>
+
+      <div class="contacto-fila">
+        <label class="contacto-label" for="contacto-telefono">Teléfono</label>
+        <input
+          id="contacto-telefono"
+          name="telefono"
+          type="tel"
+          class="contacto-input"
+          autocomplete="tel"
+          [attr.placeholder]="'+56 9 1234 5678'"
+          [class.contacto-input--error]="errores.telefono"
+          [(ngModel)]="telefono" />
+        @if (errores.telefono) {
+          <span class="contacto-error" role="alert">{{ errores.telefono }}</span>
+        }
+      </div>
+
+      <div class="contacto-fila">
+        <label class="contacto-label" for="contacto-motivo">Motivo</label>
+        <select
+          id="contacto-motivo"
+          name="motivo"
+          class="contacto-input contacto-select"
+          [class.contacto-input--error]="errores.motivo"
+          [(ngModel)]="motivo">
+          <option value="" disabled selected>Selecciona un motivo</option>
+          @for (opcion of motivos; track opcion) {
+            <option [value]="opcion">{{ opcion }}</option>
+          }
+        </select>
+        @if (errores.motivo) {
+          <span class="contacto-error" role="alert">{{ errores.motivo }}</span>
+        }
+      </div>
+
+      <div class="contacto-fila">
+        <label class="contacto-label" for="contacto-comentario">Comentario</label>
+        <textarea
+          id="contacto-comentario"
+          name="comentario"
+          rows="5"
+          class="contacto-input contacto-textarea"
+          [attr.placeholder]="'Cuéntanos qué necesitas…'"
+          [class.contacto-input--error]="errores.comentario"
+          [(ngModel)]="comentario"></textarea>
+        @if (errores.comentario) {
+          <span class="contacto-error" role="alert">{{ errores.comentario }}</span>
+        }
+      </div>
+
+      <!--
+        Campo trampa: queda fuera de la pantalla y fuera del recorrido del
+        tabulador, así que una persona nunca lo ve. Si un robot lo llena, la
+        función descarta el envío sin avisarle.
+      -->
+      <div class="contacto-trampa" aria-hidden="true">
+        <label for="contacto-sitio">No completar</label>
+        <input id="contacto-sitio" name="sitio_web" type="text" tabindex="-1" autocomplete="off"
+               [(ngModel)]="sitio_web" />
+      </div>
+
+      <button type="submit" class="contacto-boton" [disabled]="cargando">
+        @if (cargando) {
+          <ion-spinner name="crescent"></ion-spinner>
+          Enviando…
+        } @else {
+          Enviar mensaje
+        }
+      </button>
+    </form>
   </div>
 </ion-content>

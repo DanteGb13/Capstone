@@ -6,6 +6,7 @@ import {
   authGuard,
   onboardingPermisosGuard
 } from './services/guards/auth.guard';
+import { rolGuard } from './services/guards/rol.guard';
 
 // La app abre en el login; la web (celular o PC) abre en la página de inicio
 // pública. `home` sigue reservada para la pantalla principal ya autenticada.
@@ -35,7 +36,8 @@ export const routes: Routes = [
   },
   {
     path: 'panel-control',
-    loadComponent: () => import('./web/panel-control/panel-control.page').then((m) => m.PanelControlPage)
+    loadComponent: () => import('./web/panel-control/panel-control.page').then((m) => m.PanelControlPage),
+    canActivate: [rolGuard(['Administrador'])]
   },
   {
     path: 'home',

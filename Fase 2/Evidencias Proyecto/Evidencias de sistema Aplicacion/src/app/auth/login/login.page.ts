@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { IonButton, IonContent, IonIcon, IonInput, IonSpinner, NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -33,6 +34,11 @@ import { validarEmail } from '../../services/utils/validators';
   ]
 })
 export class LoginPage implements OnInit, OnDestroy {
+
+  // El registro y el acceso con Google son de la app. En la web el usuario
+  // normal todavía no tiene cuenta porque no descargó la app, así que se le
+  // manda a la página de descarga en vez de ofrecerle algo que no puede usar.
+  readonly esWeb = !Capacitor.isNativePlatform();
 
   correo: string = '';
   contrasena: string = '';
