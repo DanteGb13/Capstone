@@ -24,15 +24,56 @@
       class="web-nav__panel"
       [class.web-nav__panel--abierto]="menuAbierto">
 
-      <div class="web-nav__enlaces">
-        <a routerLink="/inicio" routerLinkActive="activo" [routerLinkActiveOptions]="{ exact: true }"
-           (click)="cerrarMenu()">Inicio</a>
-        <a routerLink="/planes" routerLinkActive="activo" (click)="cerrarMenu()">Planes</a>
-        <a routerLink="/descarga" routerLinkActive="activo" (click)="cerrarMenu()">Descarga</a>
-        <a routerLink="/contactanos" routerLinkActive="activo" (click)="cerrarMenu()">Contáctanos</a>
-      </div>
+      <!--
+        Mientras se resuelve el rol no se pinta nada: si no, en una pantalla
+        del panel aparecería la landing de la web pública un instante.
+      -->
+      @if (!cargando) {
 
-      <a class="web-nav__login" routerLink="/login" (click)="cerrarMenu()">Login</a>
+        <div class="web-nav__enlaces">
+          @for (item of enlaces; track item.ruta) {
+            <a
+              [routerLink]="item.ruta"
+              routerLinkActive="activo"
+              [routerLinkActiveOptions]="{ exact: true }"
+              (click)="cerrarMenu()">{{ item.etiqueta }}</a>
+          }
+        </div>
+
+        <!--
+          A la derecha: el mini perfil del Administrador si lo es; si no, el
+          botón de acceso cuando no hay sesión, o la salida cuando la hay. Un
+          Familiar o un Usuario entra por /acceso pero no tiene panel propio,
+          así que para ellos sólo queda cerrar sesión.
+        -->
+        @if (esAdmin) {
+          <div class="web-nav__perfil">
+            <button
+              type="button"
+              class="web-nav__perfil-boton"
+              [class.web-nav__perfil-boton--activo]="perfilAbierto"
+              [attr.aria-expanded]="perfilAbierto"
+              aria-controls="web-nav-perfil"
+              (click)="alternarPerfil(); $event.stopPropagation()">
+              <span class="web-nav__avatar">{{ iniciales || 'AD' }}</span>
+              <span class="web-nav__perfil-nombre">{{ perfil?.nombreCompleto || 'Administrador' }}</span>
+            </button>
+
+            <div
+              id="web-nav-perfil"
+              class="web-nav__perfil-menu"
+              [class.web-nav__perfil-menu--abierto]="perfilAbierto">
+              <a routerLink="/mi-perfil" (click)="cerrarMenu()">Perfil</a>
+              <button type="button" (click)="cerrarSesion()">Cerrar sesión</button>
+            </div>
+          </div>
+        } @else if (logueado) {
+          <button type="button" class="web-nav__salir" (click)="cerrarSesion()">Cerrar sesión</button>
+        } @else {
+          <a class="web-nav__login" routerLink="/acceso" (click)="cerrarMenu()">Entrar</a>
+        }
+
+      }
 
     </div>
 

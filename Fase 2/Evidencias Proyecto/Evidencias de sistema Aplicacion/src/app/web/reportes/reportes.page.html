@@ -1,0 +1,30 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <div class="web-page web-page--centrado">
+
+    <div class="panel-cabecera">
+      <h1>Reportes</h1>
+      <p class="descripcion">Exporta los datos de uso para llevarlos a una planilla.</p>
+    </div>
+
+    <div class="panel-tarjeta panel-tarjeta--bloque">
+      <h2 class="panel-subtitulo">Eventos de analítica</h2>
+      <p class="panel-texto">
+        Últimos 30 días: fecha, página, tipo de evento y plataforma.
+        Se descarga en formato CSV, que se abre en Excel o Google Sheets.
+      </p>
+      <button
+        type="button"
+        class="panel-boton"
+        [disabled]="exportando"
+        (click)="exportarEventos()">
+        {{ exportando ? 'Preparando…' : 'Descargar CSV' }}
+      </button>
+      @if (mensaje) {
+        <p class="panel-texto panel-texto--menor">{{ mensaje }}</p>
+      }
+    </div>
+
+  </div>
+</ion-content>

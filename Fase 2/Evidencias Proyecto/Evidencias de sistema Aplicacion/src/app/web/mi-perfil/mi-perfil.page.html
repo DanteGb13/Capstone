@@ -1,0 +1,53 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <div class="web-page web-page--centrado">
+
+    <div class="panel-cabecera">
+      <h1>Perfil</h1>
+      <p class="descripcion">Los datos de tu cuenta de administración.</p>
+    </div>
+
+    @if (cargando) {
+      <p class="panel-vacio">Cargando…</p>
+    } @else if (!perfil) {
+      <p class="panel-error">No se pudo cargar tu perfil.</p>
+    } @else {
+
+      <div class="panel-tarjeta panel-tarjeta--bloque">
+        <dl class="panel-datos">
+          <div class="panel-datos__fila">
+            <dt>Nombre completo</dt>
+            <dd>{{ perfil.nombreCompleto || 'Sin nombre' }}</dd>
+          </div>
+          <div class="panel-datos__fila">
+            <dt>Correo electrónico</dt>
+            <dd>{{ perfil.correo || '—' }}</dd>
+          </div>
+          <div class="panel-datos__fila">
+            <dt>RUT</dt>
+            <dd>{{ perfil.rut || '—' }}</dd>
+          </div>
+          <div class="panel-datos__fila">
+            <dt>Teléfono</dt>
+            <dd>{{ perfil.telefono || '—' }}</dd>
+          </div>
+          <div class="panel-datos__fila">
+            <dt>Fecha de nacimiento</dt>
+            <dd>{{ perfil.fechaNacimiento || '—' }}</dd>
+          </div>
+          <div class="panel-datos__fila">
+            <dt>Dirección</dt>
+            <dd>{{ direccionLegible }}</dd>
+          </div>
+          <div class="panel-datos__fila">
+            <dt>Rol</dt>
+            <dd>{{ perfil.rol || '—' }}</dd>
+          </div>
+        </dl>
+      </div>
+
+    }
+
+  </div>
+</ion-content>

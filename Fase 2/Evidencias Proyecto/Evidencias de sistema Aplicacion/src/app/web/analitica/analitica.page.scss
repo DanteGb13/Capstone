@@ -1,0 +1,115 @@
+/* ------------------------------------------------------------------
+   Analítica de la web (/admin/analitica)
+
+   Aviso, tarjetas de resumen, ranking de páginas y su ajuste para
+   pantalla chica. Nada de esto lo usa ninguna otra página, así que
+   se queda acá en vez de en global.scss.
+
+   Lo que sí comparte con las otras secciones del panel
+   (`.panel-cabecera`, `.panel-tarjeta`, `.panel-vacio`, ...)
+   sigue en global.scss, que es donde está el comentario que lo
+   explica: duplicarlo cinco veces es cinco lugares que arreglar.
+   ------------------------------------------------------------------ */
+/* Aviso secundario bajo la descripción. En Analítica explica por qué el
+   ranking no incluye el propio panel, que es justo lo que alguien va a
+   preguntarse al ver cifras más bajas de lo esperado. */
+.panel-aviso {
+  margin-top: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 3px solid #c4b5fd;
+  border-radius: 0 8px 8px 0;
+  background-color: #f3effc;
+  color: #4b3f66;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.panel-tarjetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.9rem;
+}
+
+.panel-tarjeta__valor {
+  display: block;
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #7715c7;
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-tarjeta__etiqueta {
+  display: block;
+  margin-top: 0.25rem;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+/* ---------------- Ranking de páginas ---------------- */
+.panel-ranking {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #e2ddf2;
+  border-radius: 12px;
+  background-color: #ffffff;
+  overflow: hidden;
+}
+
+.panel-ranking__fila {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) 2fr auto;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.75rem 1rem;
+}
+
+.panel-ranking__fila + .panel-ranking__fila {
+  border-top: 1px solid #f0edf8;
+}
+
+.panel-ranking__ruta {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #241b38;
+  overflow-wrap: anywhere;
+}
+
+.panel-ranking__barra {
+  display: block;
+  height: 9px;
+  border-radius: 999px;
+  background-color: #efeafb;
+  overflow: hidden;
+}
+
+.panel-ranking__relleno {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #813edc 0%, #6c2dd4 100%);
+}
+
+.panel-ranking__valor {
+  min-width: 3.5ch;
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #443c56;
+  font-variant-numeric: tabular-nums;
+}
+
+
+@media (max-width: 600px) {
+  /* En pantalla chica el ranking aprieta la barra hasta hacerla inútil: se
+     apila el nombre arriba y la barra con su número abajo. */
+  .panel-ranking__fila {
+    grid-template-columns: 1fr auto;
+    row-gap: 0.4rem;
+  }
+
+  .panel-ranking__barra {
+    grid-column: 1 / -1;
+  }
+}

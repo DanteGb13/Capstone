@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import { SupabaseService } from '../supabase/supabase';
 
 /**
@@ -27,6 +28,39 @@ export const RUTAS_ADULTO_MAYOR = [
   '/informacion',
   '/recordatorios',
   '/mi-ubicacion'
+];
+
+/**
+ * Secciones internas del panel de administración.
+ *
+ * NO se registran en la analítica: el administrador mirando su propio panel
+ * no es dato de uso de la app, y contarlo infla las cifras de "páginas más
+ * visitadas" con tráfico que no aporta nada.
+ */
+export const RUTAS_PANEL_ADMIN = [
+  '/panel-control',
+  '/analitica',
+  '/usuarios',
+  '/reportes',
+  '/configuracion',
+  '/mi-perfil'
+];
+
+/**
+ * Rutas que un Administrador sí puede ver: las páginas públicas de la web y su
+ * propio panel. Nada de la app móvil.
+ *
+ * Es una lista blanca a propósito y no un "todo salvo la app": si mañana se
+ * agrega una ruta nueva a la app, el administrador queda fuera por defecto en
+ * lugar de poder abrirla. Que las rutas del panel estén aquí también es lo que
+ * evita el bucle: el guard lo redirige a una ruta que él mismo permite.
+ */
+export const RUTAS_ADMIN = [
+  ...RUTAS_PANEL_ADMIN,
+  '/inicio',
+  '/planes',
+  '/descarga',
+  '/contactanos'
 ];
 
 @Injectable({
@@ -82,9 +116,28 @@ export class NavegacionRolService {
   }
 
   /**
+   * El Administrador es de la web: en la app móvil no hay pantallas para él.
+   *
+   * Se comprueba en un solo lugar porque desde acá salen todos los destinos:
+   * `rutaPrincipal` y `verificarAccesoConRol` son los que usan `authGuard`,
+   * `noAuthGuard`, `siguientePasoGuard` y la salida de sesión. Si el control
+   * viviera en cada guard por separado, bastaría con olvidarse de uno para
+   * que un administrador entrara a la app por ahí.
+   */
+  private esAdministradorEnApp(rol: string | null): boolean {
+    return rol === 'Administrador' && Capacitor.isNativePlatform();
+  }
+
+  /**
    * Devuelve la ruta del panel principal según el rol.
+   *
+   * Administrador va a su panel de la web. En el celular, como no tiene
+   * pantallas propias, se manda a la landing pública: es un callejón sin
+   * salida (esa ruta no tiene guard), así que no hay bucle de redirecciones.
    */
   rutaPrincipal(rol: string | null): string {
+    if (this.esAdministradorEnApp(rol)) return '/inicio';
+    if (rol === 'Administrador') return '/panel-control';
     return rol === 'Familiar' ? '/cuidador' : '/adulto-mayor';
   }
 
@@ -102,6 +155,21 @@ export class NavegacionRolService {
    * la consulta aquí agregaba una espera más antes de abrir cada pantalla.
    */
   verificarAccesoConRol(rol: string | null, url: string): string | null {
+    // En la app móvil el Administrador no tiene nada que hacer: cualquier
+    // pantalla de la app lo devuelve a la landing pública. Va antes del resto
+    // porque en el navegador esa misma persona sí tiene su panel.
+    if (this.esAdministradorEnApp(rol)) {
+      return this.rutaPrincipal(rol);
+    }
+
+    if (rol === 'Administrador') {
+      // Lista blanca: fuera de la web pública y de su panel no hay nada para
+      // él, así que cubre todas las rutas de la app de una sola vez (home,
+      // ajustes, perfil, juegos, zona-segura, privacidad, ...) sin tener que
+      // listarlas una por una.
+      return RUTAS_ADMIN.includes(url) ? null : this.rutaPrincipal(rol);
+    }
+
     if (rol === 'Familiar' && RUTAS_ADULTO_MAYOR.includes(url)) {
       return this.rutaPrincipal(rol);
     }

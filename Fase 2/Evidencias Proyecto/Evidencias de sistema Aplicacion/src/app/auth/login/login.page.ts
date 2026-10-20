@@ -35,11 +35,6 @@ import { validarEmail } from '../../services/utils/validators';
 })
 export class LoginPage implements OnInit, OnDestroy {
 
-  // El registro y el acceso con Google son de la app. En la web el usuario
-  // normal todavía no tiene cuenta porque no descargó la app, así que se le
-  // manda a la página de descarga en vez de ofrecerle algo que no puede usar.
-  readonly esWeb = !Capacitor.isNativePlatform();
-
   correo: string = '';
   contrasena: string = '';
   mensajeError: string = '';
@@ -272,6 +267,23 @@ export class LoginPage implements OnInit, OnDestroy {
 
       const rolData = usuario?.rol as any;
       const rolNombre = Array.isArray(rolData) ? rolData[0]?.nombre : rolData?.nombre;
+
+      // El administrador entra a su panel antes de mirar si el perfil está
+      // completo: `/elegir-tipo` pregunta "¿eres Usuario o Familiar?", pregunta
+      // que no tiene sentido para alguien que ya tiene rol de Administrador.
+      if (rolNombre === 'Administrador' && Capacitor.isNativePlatform()) {
+        this.mensajeError =
+          'Esta cuenta es de administracion y se usa desde la web. En la app no hay pantallas para ella.';
+        await this.loginService.cerrarSesion();
+        this.refrescar();
+        return;
+      }
+
+      if (rolNombre === 'Administrador') {
+        this.navRol.limpiarCache();
+        await this.navCtrl.navigateRoot('/panel-control', { replaceUrl: true });
+        return;
+      }
 
       if (!usuario || !usuario.rut || !usuario.id_direccion) {
         // Registro incompleto → siempre elegir Usuario / Familiar.

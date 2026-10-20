@@ -2,8 +2,20 @@
 
 <ion-content class="web-contenido">
   <div class="web-page">
-    <h1>Panel de control</h1>
-    <p class="descripcion">Panel de control de SiempreCerca.</p>
-    <ion-button routerLink="/inicio">Volver al inicio</ion-button>
+
+    <div class="panel-cabecera">
+      <h1>Panel de control</h1>
+      <p class="descripcion">Administración de SiempreCerca.</p>
+    </div>
+
+    <div class="panel-accesos">
+      @for (seccion of secciones; track seccion.ruta) {
+        <a class="panel-acceso" [routerLink]="seccion.ruta">
+          <span class="panel-acceso__titulo">{{ seccion.titulo }}</span>
+          <span class="panel-acceso__detalle">{{ seccion.detalle }}</span>
+        </a>
+      }
+    </div>
+
   </div>
 </ion-content>

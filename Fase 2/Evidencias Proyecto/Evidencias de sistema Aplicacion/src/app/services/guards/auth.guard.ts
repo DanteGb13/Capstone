@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import type { Session } from '@supabase/supabase-js';
+import { Capacitor } from '@capacitor/core';
 import { SupabaseService } from '../supabase/supabase';
 import { NavegacionRolService, RUTAS_CUIDADOR, RUTAS_ADULTO_MAYOR } from '../navegacion-rol/navegacion-rol';
 import { PermisosService } from '../permisos/permisos.service';
@@ -114,7 +115,7 @@ export const noAuthGuard: CanActivateFn = async () => {
       router.navigate([navRol.rutaPrincipal(estado.rol)], { replaceUrl: true });
       return false;
     } else {
-      // Registro incompleto → siempre /elegir-tipo.
+      // Registro incompleto siempre va a /elegir-tipo.
       router.navigate(['/elegir-tipo'], { replaceUrl: true });
       return false;
     }
@@ -212,3 +213,23 @@ export const onboardingPermisosGuard: CanActivateFn = () => {
   router.navigate(['/permisos-inicial'], { replaceUrl: true });
   return false;
 };
+
+/**
+ * Guard de las pantallas de acceso: Login, Registro, Elegir tipo y Siguiente
+ * paso.
+ *
+ * Son de la app móvil. La web tendrá su propio acceso aparte, así que en el
+ * navegador estas rutas no existen: cualquiera que entre a una de ellas va a
+ * la landing pública en vez de quedar en una pantalla que no le corresponde.
+ */
+export const soloAppGuard: CanActivateFn = () => {
+  const router = inject(Router);
+
+  if (Capacitor.isNativePlatform()) return true;
+
+  router.navigate(['/inicio'], { replaceUrl: true });
+  return false;
+};
+
+// El guard espejo de éste, `soloWebGuard`, vive en `web/acceso/acceso.guard.ts`
+// junto al resto del acceso de la web. Acá se quedó sólo el de la app móvil.

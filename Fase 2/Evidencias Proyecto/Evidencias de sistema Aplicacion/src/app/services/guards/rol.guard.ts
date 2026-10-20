@@ -1,5 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 import { SupabaseService } from '../supabase/supabase';
 import { obtenerEstadoUsuario } from './auth.guard';
 
@@ -24,10 +25,24 @@ export const rolGuard = (rolesPermitidos: string[]): CanActivateFn => async () =
 
   const estado = await obtenerEstadoUsuario(supabaseService);
 
-  // Sin sesión no hay rol: al login, que además es la puerta de entrada tanto
-  // de la web como de la app.
+  // Sin sesión no hay rol: al acceso de cada plataforma. En el celular eso es
+  // `/login`; en el navegador sería `/login` también, pero esa ruta tiene
+  // `soloAppGuard` y rebotaría de vuelta a `/inicio`, con lo que la web
+  // daría dos saltos y acabaría en la landing en vez de en su propio
+  // formulario.
   if (!estado.autenticado) {
-    router.navigate(['/login'], { replaceUrl: true });
+    router.navigate(
+      [Capacitor.isNativePlatform() ? '/login' : '/acceso'],
+      { replaceUrl: true }
+    );
+    return false;
+  }
+
+  // El Administrador usa la web, no la app móvil: estas pantallas son de la
+  // web, y en el celular no hay nada para él. Sin esto, escribiendo la URL a
+  // mano entraría al panel adentro de la app.
+  if (estado.rol === 'Administrador' && Capacitor.isNativePlatform()) {
+    router.navigate(['/inicio'], { replaceUrl: true });
     return false;
   }
 

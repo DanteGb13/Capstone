@@ -1,0 +1,440 @@
+/* ------------------------------------------------------------------
+   Navbar de la web (<app-web-nav>)
+
+   Vive acá y no en global.scss porque es de un solo componente.
+
+   Ojo: `app-web-nav { display: block; width: 100% }` NO puede estar
+   acá. Ese selector apunta al elemento host, que está declarado en el
+   template del padre, y con encapsulamiento emulado el componente hijo
+   no lo alcanzaría. Sigue en global.scss.
+   ------------------------------------------------------------------ */
+.web-nav {
+  box-sizing: border-box;
+  width: 100%;
+  background: linear-gradient(168deg, #813edc 0%, #7734d9 50%, #6c2dd4 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 4px 18px rgba(119, 21, 199, 0.3);
+
+  /* Sin esto el desplegable del mini perfil NO se ve y no recibe clics.
+     `ion-content` es `position: relative` y opaco (pinta `#background-content`),
+     y va DESPUÉS que `<app-web-nav>` en el DOM: los dos son posicionados con
+     `z-index: auto`, así que el navegador resuelve el orden por árbol y la
+     página se pinta encima del menú, que cuelga hacia abajo y queda tapado.
+     Al darle al navbar su propio `z-index` positivo sube a la capa de
+     apilamiento de arriba y el menú queda por encima de la página.
+     Sigue quedando DENTRO de `.ion-page` (que tiene `z-index: 0`), así que
+     no tapa los overlays de Ionic. */
+  position: relative;
+  z-index: 10;
+}
+
+.web-nav__fila {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 0.7rem 1.25rem;
+}
+
+.web-nav a {
+  text-decoration: none;
+  transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+
+/* El botón de hamburguesa sólo existe en el breakpoint chico; arriba el navbar
+   es una sola fila y los enlaces ya están a la vista. */
+.web-nav__toggle {
+  display: none;
+}
+
+/*
+ * En escritorio los enlaces y el login van sueltos en la fila: la marca a la
+ * izquierda, los enlaces al centro y el login al extremo derecho.
+ *
+ * `display: contents` hace que este contenedor no genere caja, así que sus dos
+ * hijos pasan a ser elementos de la grilla directamente y el reparto de
+ * columnas sigue funcionando. En el breakpoint chico se le da `display: block`
+ * y pasa a ser el panel desplegable que los agrupa a los dos.
+ */
+.web-nav__panel {
+  display: contents;
+}
+
+.web-nav__marca {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* El logo es un cuadro morado sobre morado: sin fondo propio se pierde el
+   borde y sólo se ve el corazón recortado. */
+.web-nav__logo {
+  display: block;
+  width: auto;
+  height: 30px;
+  padding: 3px;
+  border-radius: 8px;
+  background-color: #ffffff;
+}
+
+.web-nav__enlaces {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.web-nav__enlaces a {
+  padding: 0.5rem 0.9rem;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.web-nav__enlaces a:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.web-nav__enlaces a.activo {
+  color: #ffffff;
+  font-weight: 700;
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+.web-nav__login {
+  justify-self: end;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 6px;
+  color: #ffffff;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.web-nav__login:hover {
+  color: #7715c7;
+  background-color: #ffffff;
+  border-color: #ffffff;
+}
+
+/* Mismo aspecto que `.web-nav__login`, pero como botón: es la salida para
+   quien entró por /acceso y no tiene panel propio. Sin esto quedaría atrapado
+   en la web pública sin forma de cerrar la sesión. */
+.web-nav__salir {
+  justify-self: end;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 6px;
+  background-color: transparent;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 1rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.web-nav__salir:hover {
+  color: #7715c7;
+  background-color: #ffffff;
+  border-color: #ffffff;
+}
+
+/* ------------------------------------------------------------------
+   Mini perfil del administrador
+
+   Ocupa el lugar del botón de Login. Igual que él, participa de la grilla
+   como hijo del `display: contents` del panel, así que con `justify-self: end`
+   queda pegado al extremo derecho sin ningún posicionamiento extra.
+
+   El menú no puede vivir dentro del botón: un elemento interactivo dentro de
+   otro es inválido y los lectores de pantalla anuncian cosas que no existen.
+   ------------------------------------------------------------------ */
+.web-nav__perfil {
+  justify-self: end;
+  position: relative;
+}
+
+.web-nav__perfil-boton {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.28rem 0.75rem 0.28rem 0.28rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+
+.web-nav__perfil-boton:hover,
+.web-nav__perfil-boton--activo {
+  background-color: rgba(255, 255, 255, 0.24);
+}
+
+/* Sobre morado el avatar invierte los colores: fondo blanco, letras moradas.
+   Es lo contrario de lo que hace el botón de Login, que se rellena de morado
+   al pasar el mouse porque está vacío. */
+.web-nav__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  color: #7715c7;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.web-nav__perfil-menu {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  display: none;
+  min-width: 190px;
+  border-radius: 10px;
+  background-color: #ffffff;
+  box-shadow: 0 8px 22px rgba(119, 21, 199, 0.24);
+  overflow: hidden;
+}
+
+.web-nav__perfil-menu--abierto {
+  display: block;
+}
+
+.web-nav__perfil-menu a,
+.web-nav__perfil-menu button {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: none;
+  background: none;
+  color: #443c56;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.web-nav__perfil-menu a:hover,
+.web-nav__perfil-menu button:hover {
+  color: #7715c7;
+  background-color: rgba(119, 21, 199, 0.07);
+}
+
+/* "Cerrar sesión" en rojo y separado: es la única acción destructiva del menú
+   y tiene que distinguirse de "Perfil" de un vistazo. */
+.web-nav__perfil-menu button {
+  border-top: 1px solid #f0edf8;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.web-nav__perfil-menu button:hover {
+  color: #991b1b;
+  background-color: rgba(220, 38, 38, 0.08);
+}
+
+@media (max-width: 768px) {
+  .web-nav__fila {
+    grid-template-columns: 1fr auto;
+    row-gap: 0.4rem;
+  }
+
+  /* La marca se queda arriba a la izquierda; el botón de menú, arriba a la
+     derecha. El login sigue visible al lado para no obligar a abrir el menú
+     para entrar. */
+  .web-nav__toggle {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 42px;
+    height: 42px;
+    padding: 0 9px;
+    border: none;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.14);
+    cursor: pointer;
+    transition: background-color 0.18s ease;
+  }
+
+  .web-nav__toggle:hover {
+    background-color: rgba(255, 255, 255, 0.24);
+  }
+
+  .web-nav__barra {
+    display: block;
+    width: 100%;
+    height: 2px;
+    border-radius: 2px;
+    background-color: #ffffff;
+    transition: transform 0.22s ease, opacity 0.18s ease;
+  }
+
+  /* Las tres barras se cruzan para formar la X de "cerrar". La de en medio se
+     desvanece porque si se moviera formaría una barra torcida. */
+  .web-nav__toggle--abierto .web-nav__barra:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+  }
+
+  .web-nav__toggle--abierto .web-nav__barra:nth-child(2) {
+    opacity: 0;
+  }
+
+  .web-nav__toggle--abierto .web-nav__barra:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+  }
+
+  /* El panel es una tarjeta blanca colgando de la barra morada. Ocupa todo el
+     ancho y se muestra con `display`, no con altura: animate el alto
+     automáticamente obliga a medirlo en JavaScript. */
+  .web-nav__panel {
+    display: none;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-top: 0.5rem;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 8px 22px rgba(119, 21, 199, 0.24);
+    overflow: hidden;
+  }
+
+  .web-nav__panel--abierto {
+    display: block;
+  }
+
+  .web-nav__enlaces {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+
+  .web-nav__enlaces a {
+    padding: 0.85rem 1.1rem;
+    border-radius: 0;
+    color: #443c56;
+    font-size: 0.95rem;
+  }
+
+  .web-nav__enlaces a + a {
+    border-top: 1px solid #f0edf8;
+  }
+
+  .web-nav__enlaces a:hover,
+  .web-nav__enlaces a.activo {
+    color: #7715c7;
+    background-color: rgba(119, 21, 199, 0.07);
+  }
+
+  .web-nav__enlaces a.activo {
+    font-weight: 700;
+  }
+
+  /* El login se vuelve un botón SÓLIDO, no una fila más: dentro de un panel
+     blanco se lee de inmediato como la acción principal del menú, mientras
+     que en la barra morada es un contorno discreto. Así los dos se distinguen
+     de un vistazo sin tener que probar cuál es cuál. */
+  .web-nav__login,
+  .web-nav__salir {
+    justify-self: stretch;
+    display: block;
+    width: calc(100% - 1.8rem);
+    margin: 0.9rem;
+    padding: 0.75rem 1.1rem;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(168deg, #813edc 0%, #7734d9 50%, #6c2dd4 100%);
+    color: #ffffff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .web-nav__login:hover,
+  .web-nav__salir:hover {
+    background: linear-gradient(168deg, #7734d9 0%, #6c2dd4 100%);
+    color: #ffffff;
+  }
+
+  /* En el panel desplegable el mini perfil se vuelve una fila de identidad y
+     sus dos opciones quedan siempre visibles debajo: dentro de un menú chico
+     no tiene sentido ocultar "Perfil" y "Cerrar sesión" detrás de un segundo
+     clic, y además ahorraría un toque para salir de la cuenta. */
+  .web-nav__perfil {
+    justify-self: stretch;
+    position: static;
+    border-top: 1px solid #f0edf8;
+  }
+
+  .web-nav__perfil-boton {
+    justify-content: flex-start;
+    width: 100%;
+    padding: 0.85rem 1.1rem;
+    border: none;
+    border-radius: 0;
+    background: none;
+    color: #443c56;
+    /* El menú de abajo ya está abierto: el botón deja de ser un interruptor. */
+    pointer-events: none;
+  }
+
+  .web-nav__perfil-boton:hover,
+  .web-nav__perfil-boton--activo {
+    background: none;
+  }
+
+  /* El avatar se invierte otra vez: sobre fondo blanco le toca ser morado. */
+  .web-nav__avatar {
+    background-color: #7715c7;
+    color: #ffffff;
+  }
+
+  .web-nav__perfil-menu {
+    position: static;
+    display: block;
+    min-width: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .web-nav__perfil-menu a,
+  .web-nav__perfil-menu button {
+    border-top: 1px solid #f0edf8;
+  }
+}
+
+
+/* Respetar a quien pidió menos movimiento en el sistema. */
+@media (prefers-reduced-motion: reduce) {
+  .web-nav a {
+    transition: none;
+  }
+}

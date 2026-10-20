@@ -4,9 +4,11 @@ import {
   noAuthGuard,
   siguientePasoGuard,
   authGuard,
-  onboardingPermisosGuard
+  onboardingPermisosGuard,
+  soloAppGuard
 } from './services/guards/auth.guard';
 import { rolGuard } from './services/guards/rol.guard';
+import { soloWebGuard, noAccesoGuard } from './web/acceso/acceso.guard';
 
 // La app abre en el login; la web (celular o PC) abre en la página de inicio
 // pública. `home` sigue reservada para la pantalla principal ya autenticada.
@@ -35,8 +37,40 @@ export const routes: Routes = [
     loadComponent: () => import('./web/contactanos/contactanos.page').then((m) => m.ContactanosPage)
   },
   {
+    // Acceso de la web: pantalla, servicio y guards propios, todos dentro de
+    // `web/acceso/`. No reutiliza nada del acceso de la app (`/login`).
+    path: 'acceso',
+    loadComponent: () => import('./web/acceso/acceso.page').then((m) => m.AccesoPage),
+    canActivate: [soloWebGuard, noAccesoGuard]
+  },
+  {
     path: 'panel-control',
     loadComponent: () => import('./web/panel-control/panel-control.page').then((m) => m.PanelControlPage),
+    canActivate: [rolGuard(['Administrador'])]
+  },
+  {
+    path: 'analitica',
+    loadComponent: () => import('./web/analitica/analitica.page').then((m) => m.AnaliticaPage),
+    canActivate: [rolGuard(['Administrador'])]
+  },
+  {
+    path: 'usuarios',
+    loadComponent: () => import('./web/usuarios/usuarios.page').then((m) => m.UsuariosPage),
+    canActivate: [rolGuard(['Administrador'])]
+  },
+  {
+    path: 'reportes',
+    loadComponent: () => import('./web/reportes/reportes.page').then((m) => m.ReportesPage),
+    canActivate: [rolGuard(['Administrador'])]
+  },
+  {
+    path: 'configuracion',
+    loadComponent: () => import('./web/configuracion/configuracion.page').then((m) => m.ConfiguracionPage),
+    canActivate: [rolGuard(['Administrador'])]
+  },
+  {
+    path: 'mi-perfil',
+    loadComponent: () => import('./web/mi-perfil/mi-perfil.page').then((m) => m.MiPerfilPage),
     canActivate: [rolGuard(['Administrador'])]
   },
   {
@@ -77,22 +111,22 @@ export const routes: Routes = [
   {
     path: 'login',
     loadComponent: () => import('./auth/login/login.page').then( m => m.LoginPage),
-    canActivate: [noAuthGuard]
+    canActivate: [soloAppGuard, noAuthGuard]
   },
   {
     path: 'registro',
     loadComponent: () => import('./auth/registro/registro.page').then( m => m.RegistroPage),
-    canActivate: [noAuthGuard]
+    canActivate: [soloAppGuard, noAuthGuard]
   },
   {
     path: 'siguiente-paso',
     loadComponent: () => import('./auth/siguiente-paso/siguiente-paso.page').then( m => m.SiguientePasoPage),
-    canActivate: [siguientePasoGuard]
+    canActivate: [soloAppGuard, siguientePasoGuard]
   },
   {
     path: 'elegir-tipo',
     loadComponent: () => import('./auth/elegir-tipo/elegir-tipo.page').then( m => m.ElegirTipoPage),
-    canActivate: [siguientePasoGuard]
+    canActivate: [soloAppGuard, siguientePasoGuard]
   },
   {
     path: 'adulto-mayor',
@@ -238,11 +272,13 @@ export const routes: Routes = [
   },
   {
     path: 'recuperar-contrasena',
-    loadComponent: () => import('./auth/recuperar-contrasena/recuperar-contrasena.page').then( m => m.RecuperarContrasenaPage)
+    loadComponent: () => import('./auth/recuperar-contrasena/recuperar-contrasena.page').then( m => m.RecuperarContrasenaPage),
+    canActivate: [soloAppGuard]
   },
   {
     path: 'correo-contrasena',
-    loadComponent: () => import('./auth/correo-contrasena/correo-contrasena.page').then( m => m.CorreoContrasenaPage)
+    loadComponent: () => import('./auth/correo-contrasena/correo-contrasena.page').then( m => m.CorreoContrasenaPage),
+    canActivate: [soloAppGuard]
   },
  
  

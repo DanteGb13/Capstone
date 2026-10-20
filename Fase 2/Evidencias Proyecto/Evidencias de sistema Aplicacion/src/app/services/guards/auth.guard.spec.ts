@@ -1,11 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
+import { Capacitor } from '@capacitor/core';
 
 import {
   noAuthGuard,
   siguientePasoGuard,
   authGuard,
-  onboardingPermisosGuard
+  onboardingPermisosGuard,
+  soloAppGuard
 } from './auth.guard';
 import { SupabaseService } from '../supabase/supabase';
 import { NavegacionRolService } from '../navegacion-rol/navegacion-rol';
@@ -101,6 +103,15 @@ describe('guards de autenticacion', () => {
 
   beforeEach(() => {
     TestBed.resetTestingModule();
+
+    // Por defecto se prueba como si corriera en el celular: es el flujo de la
+    // app, y los guards que se bifurcan por plataforma dependen de eso. Las
+    // pruebas de la web lo invierten con `vi.mocked` en el caso puntual.
+    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   // ===================================================================
@@ -152,6 +163,30 @@ describe('guards de autenticacion', () => {
 
       await correr(noAuthGuard);
       expect(router.navigate).toHaveBeenCalledWith(['/elegir-tipo'], { replaceUrl: true });
+    });
+  });
+
+  // ===================================================================
+  // soloAppGuard: Login, Registro, Elegir tipo y Siguiente paso
+  // ===================================================================
+
+  describe('soloAppGuard', () => {
+    it('deja las pantallas de acceso en el celular', async () => {
+      configurar(crearSupabaseMock({}));
+
+      expect(await correr(soloAppGuard)).toBe(true);
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('en la web no existen: van a la landing publica', async () => {
+      // La web tendra su propio acceso aparte. Mientras tanto, entrar a
+      // /login desde el navegador no debe dejar a nadie en una pantalla de
+      // la app movil.
+      vi.mocked(Capacitor.isNativePlatform).mockReturnValue(false);
+      configurar(crearSupabaseMock({}));
+
+      expect(await correr(soloAppGuard)).toBe(false);
+      expect(router.navigate).toHaveBeenCalledWith(['/inicio'], { replaceUrl: true });
     });
   });
 

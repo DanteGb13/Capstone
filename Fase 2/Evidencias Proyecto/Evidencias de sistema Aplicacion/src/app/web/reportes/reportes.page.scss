@@ -1,0 +1,31 @@
+/* ------------------------------------------------------------------
+   Reportes de la web (/admin/reportes)
+
+   El botón de exportar. Exclusivo de esta página.
+   ------------------------------------------------------------------ */
+.panel-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.6rem 1.3rem;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(168deg, #813edc 0%, #7734d9 50%, #6c2dd4 100%);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.panel-boton:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.panel-boton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

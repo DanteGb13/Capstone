@@ -9,6 +9,25 @@
  * https://ionicframework.com/docs/layout/global-stylesheets
  */
 
+/* =====================================================
+   QUÉ VIVE EN ESTE ARCHIVO
+   -----------------------------------------------------
+   Dos dueños conviven acá y conviene no mezclarlos:
+
+   1. La app entera: variables, filtros, los `.alerta-*` de los overlays
+      de Ionic y el `.zona-*` de Leaflet. Ninguno de esos estilos puede
+      ir en un `styleUrls`: esos elementos los crea JavaScript fuera del
+      template del componente.
+
+   2. La web (/, /acceso, /planes, /contactanos y el panel de /admin):
+      SOLO lo que comparten 2 o más páginas. Lo exclusivo de una sola
+      página vive en el .scss de esa página, en `styleUrls`.
+      La regla completa está en el banner "PÁGINAS PÚBLICAS DE LA WEB".
+
+   Si vas a agregar una regla: pregúntate cuántas páginas la van a usar.
+   Una sola -> va en el .scss de esa página. Dos o más -> va acá.
+   ===================================================== */
+
 /* Core CSS required for Ionic components to work properly */
 @import "@ionic/angular/css/core.css";
 
@@ -392,14 +411,29 @@ ion-app {
 /* =====================================================
    PÁGINAS PÚBLICAS DE LA WEB
 
-   Van aquí y no en el `styleUrls` de cada componente a propósito: el servidor
-   de desarrollo entrega el CSS de los componentes con los marcadores de scope
-   (`[_ngcontent-%COMP%]`, `var(--%NS%sc-…)`) sin sustituir, y el navegador no
-   los procesa, así que ninguna regla llegaba a aplicarse. Al ser global no hay
-   scoping que dependa de esa sustitución.
+   Cómo está dividido el CSS de la web:
 
-   No usan clases de Bootstrap: son CSS propio con nombres `web-nav` / `web-page`
-   para no depender de cómo ese framework resuelva specificity o resets.
+   · Compartido por 2 o más páginas -> acá, en global.scss
+     (`.web-page` y su grilla, y las piezas de las cinco secciones del
+     panel `.panel-*`).
+
+   · Exclusivo de una sola página -> en el .scss de esa página, que se
+     declara en su `styleUrls`:
+        src/app/web/<pagina>/<pagina>.page.scss
+
+   · DOM que Angular o Leaflet crean fuera del template (los `.alerta-*`
+     y los `.zona-*`) -> acá también, porque ningún `styleUrls` los
+     alcanza: no existen en el template de ningún componente.
+
+   Sobre el comentario viejo, que decía que los `styleUrls` no aplicaban
+   porque el marcador `[_ngcontent-%COMP%]` salía sin sustituir: ya no es
+   así. Angular lo reemplaza en runtime (`shimStylesContent`, en
+   @angular/platform-browser) y el resto del proyecto lleva sus páginas
+   en `.page.scss` con `styleUrls`.
+
+   No usan clases de Bootstrap: son CSS propio con nombres `web-nav` /
+   `web-page` para no depender de cómo ese framework resuelva specificity
+   o resets.
    ===================================================== */
 
 /* El fondo del cuerpo toma la misma variable que el login para que ambas se
@@ -445,10 +479,6 @@ ion-content.web-contenido {
   .web-page {
     animation: none;
   }
-
-  .web-nav a {
-    transition: none;
-  }
 }
 
 .web-page h1 {
@@ -471,125 +501,6 @@ ion-content.web-contenido {
 .web-page--centrado h1,
 .web-page--centrado .descripcion {
   text-align: center;
-}
-
-/* ------------------------------------------------------------------
-   Formulario de contacto
-
-   Labels e inputs como cajas normales, no como `ion-input`: en una web el
-   campo nativo es el que el navegador mobile ajusta solo al abrir el teclado
-   y el que funciona con los gestores de contraseña del sistema.
-   ------------------------------------------------------------------ */
-.contacto-form {
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-.contacto-fila {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 1.1rem;
-}
-
-.contacto-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #443c56;
-  margin-bottom: 0.35rem;
-}
-
-.contacto-input {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 0.7rem 0.85rem;
-  border: 1px solid #c9bfe6;
-  border-radius: 8px;
-  background-color: #ffffff;
-  color: #1a1d26;
-  font-family: inherit;
-  font-size: 1rem;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.contacto-input::placeholder {
-  color: #9ca3af;
-}
-
-.contacto-input:focus {
-  outline: none;
-  border-color: #7715c7;
-  box-shadow: 0 0 0 3px rgba(119, 21, 199, 0.16);
-}
-
-.contacto-input--error {
-  border-color: #dc2626;
-}
-
-.contacto-textarea {
-  resize: vertical;
-  min-height: 120px;
-}
-
-/* El <select> guarda el color del sistema para la flecha; hay que fijarlo o
-   queda en negro sobre la caja blanca mientras los textos van en --sc-ink. */
-.contacto-select {
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-  background-image: linear-gradient(45deg, transparent 50%, #6b6480 50%),
-    linear-gradient(135deg, #6b6480 50%, transparent 50%);
-  background-position: calc(100% - 20px) calc(50% + 2px), calc(100% - 14px) calc(50% + 2px);
-  background-size: 6px 6px, 6px 6px;
-  background-repeat: no-repeat;
-  padding-right: 2.5rem;
-}
-
-.contacto-error {
-  margin-top: 0.3rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #b91c1c;
-}
-
-.contacto-trampa {
-  position: absolute;
-  left: -9999px;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-}
-
-.contacto-boton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  min-width: 190px;
-  min-height: 46px;
-  padding: 0.7rem 1.5rem;
-  border: none;
-  border-radius: 8px;
-  background: linear-gradient(168deg, #813edc 0%, #7734d9 50%, #6c2dd4 100%);
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 1rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: filter 0.15s ease;
-}
-
-.contacto-boton:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-.contacto-boton:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-.contacto-boton ion-spinner {
-  width: 20px;
-  height: 20px;
 }
 
 /* =====================================================
@@ -658,246 +569,141 @@ ion-content.web-contenido {
 /* ------------------------------------------------------------------
    Navbar
 
-   Barra de marca: mismo gradiente morado que el toolbar de la app, para que
-   se despegue del cuerpo, que es claro. Ocupa todo el ancho; los enlaces van
-   al centro gracias a una grilla de tres columnas.
+   Acá queda solo el elemento host. El resto de la barra (`.web-nav` y
+   todas sus piezas, más el ajuste para pantalla chica) está en
+   src/app/web/web-nav/web-nav.scss, porque es de un solo componente.
 
-   `display: block` en el host y `width: 100%` en la barra son a propósito: un
-   `<app-web-nav>` es un elemento personalizado y sin esto queda en línea, que
-   es lo que hace que en algunas pantallas la barra no llegue a los bordes.
+   `display: block` en el host y `width: 100%` en la barra son a propósito:
+   un `<app-web-nav>` es un elemento personalizado y sin esto queda en línea,
+   que es lo que hace que en algunas pantallas la barra no llegue a los
+   bordes.
+
+   Y no: esta regla NO puede mudarse a `web-nav.scss`. `app-web-nav` está
+   declarado en el template del padre, y con encapsulamiento emulado el
+   componente hijo no lo alcanzaría.
    ------------------------------------------------------------------ */
 app-web-nav {
   display: block;
   width: 100%;
 }
 
-.web-nav {
-  box-sizing: border-box;
-  width: 100%;
-  background: linear-gradient(168deg, #813edc 0%, #7734d9 50%, #6c2dd4 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 4px 18px rgba(119, 21, 199, 0.3);
+/* =====================================================
+   PANEL DE ADMINISTRACIÓN
+
+   Piezas compartidas por las cinco secciones (Panel, Analítica, Usuarios,
+   Reportes y Configuración). Va acá y no en el `styleUrls` de cada página
+   porque las cinco las usan y duplicarlas cinco veces es cinco lugares donde
+   hay que acordarse de arreglar el mismo error de color.
+
+   Lo que NO está acá es lo que usa una sola sección, y vive en su propia
+   página: `.panel-accesos`/`.panel-acceso*` (Panel), `.panel-aviso`,
+   `.panel-tarjetas`, `.panel-tarjeta__valor`, `.panel-ranking*`
+   (Analítica), `.panel-tabla*`/`.panel-estado*` (Usuarios),
+   `.panel-boton` (Reportes), `.panel-lista` (Configuración).
+   ===================================================== */
+.panel-cabecera {
+  margin-bottom: 1.75rem;
 }
 
-.web-nav__fila {
-  box-sizing: border-box;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 1rem;
-  width: 100%;
-  max-width: 1320px;
-  margin: 0 auto;
-  padding: 0.7rem 1.25rem;
-}
-
-.web-nav a {
-  text-decoration: none;
-  transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
-}
-
-/* El botón de hamburguesa sólo existe en el breakpoint chico; arriba el navbar
-   es una sola fila y los enlaces ya están a la vista. */
-.web-nav__toggle {
-  display: none;
-}
-
-/*
- * En escritorio los enlaces y el login van sueltos en la fila: la marca a la
- * izquierda, los enlaces al centro y el login al extremo derecho.
- *
- * `display: contents` hace que este contenedor no genere caja, así que sus dos
- * hijos pasan a ser elementos de la grilla directamente y el reparto de
- * columnas sigue funcionando. En el breakpoint chico se le da `display: block`
- * y pasa a ser el panel desplegable que los agrupa a los dos.
- */
-.web-nav__panel {
-  display: contents;
-}
-
-.web-nav__marca {
-  justify-self: start;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: #ffffff;
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1;
-}
-
-/* El logo es un cuadro morado sobre morado: sin fondo propio se pierde el
-   borde y sólo se ve el corazón recortado. */
-.web-nav__logo {
-  display: block;
-  width: auto;
-  height: 30px;
-  padding: 3px;
-  border-radius: 8px;
-  background-color: #ffffff;
-}
-
-.web-nav__enlaces {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.web-nav__enlaces a {
-  padding: 0.5rem 0.9rem;
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 1rem;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.web-nav__enlaces a:hover {
-  color: #ffffff;
-  background-color: rgba(255, 255, 255, 0.16);
-}
-
-.web-nav__enlaces a.activo {
-  color: #ffffff;
+.panel-subtitulo {
+  margin: 2rem 0 0.9rem;
+  font-size: 1.2rem;
   font-weight: 700;
-  background-color: rgba(255, 255, 255, 0.22);
+  color: #241b38;
 }
 
-.web-nav__login {
-  justify-self: end;
-  padding: 0.45rem 1.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.65);
-  border-radius: 6px;
-  color: #ffffff;
-  font-size: 1rem;
-  white-space: nowrap;
+.panel-tarjeta--bloque .panel-subtitulo {
+  margin-top: 0;
 }
 
-.web-nav__login:hover {
-  color: #7715c7;
+.panel-tarjeta {
+  padding: 1.1rem 1.2rem;
+  border: 1px solid #e2ddf2;
+  border-radius: 12px;
   background-color: #ffffff;
-  border-color: #ffffff;
 }
 
-@media (max-width: 768px) {
-  .web-nav__fila {
-    grid-template-columns: 1fr auto;
-    row-gap: 0.4rem;
-  }
+.panel-tarjeta--bloque {
+  margin-bottom: 1.1rem;
+}
 
-  /* La marca se queda arriba a la izquierda; el botón de menú, arriba a la
-     derecha. El login sigue visible al lado para no obligar a abrir el menú
-     para entrar. */
-  .web-nav__toggle {
-    display: flex;
+/* ---------------- Bloques de texto, botones y listas ---------------- */
+.panel-texto {
+  color: #4b4560;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.panel-texto--menor {
+  margin-top: 0.7rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.panel-vacio {
+  padding: 1.5rem;
+  border: 1px dashed #d6cfe9;
+  border-radius: 12px;
+  background-color: #fbfaff;
+  color: #6b7280;
+  font-size: 0.92rem;
+  text-align: center;
+}
+
+.panel-error {
+  padding: 1.1rem 1.2rem;
+  border: 1px solid #f3c1c1;
+  border-radius: 12px;
+  background-color: #fdecec;
+  color: #991b1b;
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+/* Lista de detalles (Perfil y Configuración): etiqueta a la izquierda,
+   valor a la derecha, separados por una línea fina. */
+.panel-datos {
+  margin: 0;
+}
+
+.panel-datos__fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 0;
+}
+
+.panel-datos__fila + .panel-datos__fila {
+  border-top: 1px solid #f0edf8;
+}
+
+.panel-datos dt {
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.panel-datos dd {
+  margin: 0;
+  color: #241b38;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+  /* Los datos de Perfil y Configuración también se apilan: con etiqueta y
+     valor en la misma fila el valor queda con tres caracteres por línea. */
+  .panel-datos__fila {
     flex-direction: column;
-    justify-content: center;
-    gap: 5px;
-    width: 42px;
-    height: 42px;
-    padding: 0 9px;
-    border: none;
-    border-radius: 8px;
-    background-color: rgba(255, 255, 255, 0.14);
-    cursor: pointer;
-    transition: background-color 0.18s ease;
+    align-items: flex-start;
+    gap: 0.15rem;
   }
 
-  .web-nav__toggle:hover {
-    background-color: rgba(255, 255, 255, 0.24);
-  }
-
-  .web-nav__barra {
-    display: block;
-    width: 100%;
-    height: 2px;
-    border-radius: 2px;
-    background-color: #ffffff;
-    transition: transform 0.22s ease, opacity 0.18s ease;
-  }
-
-  /* Las tres barras se cruzan para formar la X de "cerrar". La de en medio se
-     desvanece porque si se moviera formaría una barra torcida. */
-  .web-nav__toggle--abierto .web-nav__barra:nth-child(1) {
-    transform: translateY(7px) rotate(45deg);
-  }
-
-  .web-nav__toggle--abierto .web-nav__barra:nth-child(2) {
-    opacity: 0;
-  }
-
-  .web-nav__toggle--abierto .web-nav__barra:nth-child(3) {
-    transform: translateY(-7px) rotate(-45deg);
-  }
-
-  /* El panel es una tarjeta blanca colgando de la barra morada. Ocupa todo el
-     ancho y se muestra con `display`, no con altura: animate el alto
-     automáticamente obliga a medirlo en JavaScript. */
-  .web-nav__panel {
-    display: none;
-    grid-column: 1 / -1;
-    grid-row: 2;
-    margin-top: 0.5rem;
-    border-radius: 10px;
-    background-color: #ffffff;
-    box-shadow: 0 8px 22px rgba(119, 21, 199, 0.24);
-    overflow: hidden;
-  }
-
-  .web-nav__panel--abierto {
-    display: block;
-  }
-
-  .web-nav__enlaces {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0;
-  }
-
-  .web-nav__enlaces a {
-    padding: 0.85rem 1.1rem;
-    border-radius: 0;
-    color: #443c56;
-    font-size: 0.95rem;
-  }
-
-  .web-nav__enlaces a + a {
-    border-top: 1px solid #f0edf8;
-  }
-
-  .web-nav__enlaces a:hover,
-  .web-nav__enlaces a.activo {
-    color: #7715c7;
-    background-color: rgba(119, 21, 199, 0.07);
-  }
-
-  .web-nav__enlaces a.activo {
-    font-weight: 700;
-  }
-
-  /* El login se vuelve un botón SÓLIDO, no una fila más: dentro de un panel
-     blanco se lee de inmediato como la acción principal del menú, mientras
-     que en la barra morada es un contorno discreto. Así los dos se distinguen
-     de un vistazo sin tener que probar cuál es cuál. */
-  .web-nav__login {
-    justify-self: stretch;
-    display: block;
-    width: calc(100% - 1.8rem);
-    margin: 0.9rem;
-    padding: 0.75rem 1.1rem;
-    border: none;
-    border-radius: 8px;
-    background: linear-gradient(168deg, #813edc 0%, #7734d9 50%, #6c2dd4 100%);
-    color: #ffffff;
-    font-size: 0.95rem;
-    font-weight: 700;
-    text-align: center;
-  }
-
-  .web-nav__login:hover {
-    background: linear-gradient(168deg, #7734d9 0%, #6c2dd4 100%);
-    color: #ffffff;
+  .panel-datos dd {
+    text-align: left;
   }
 }
 

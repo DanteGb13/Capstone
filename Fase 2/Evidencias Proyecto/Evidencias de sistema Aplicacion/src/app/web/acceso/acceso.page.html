@@ -1,0 +1,82 @@
+<ion-content class="acceso-fondo">
+  <main class="acceso-tarjeta">
+
+    <header class="acceso-marca">
+      <img
+        class="acceso-logo"
+        src="/assets/logo/logo-128.png"
+        alt=""
+        width="90"
+        height="90"
+        decoding="async" />
+      <p class="acceso-nombre">Siempre<span>Cerca</span></p>
+      <p class="acceso-lema">Tu familia te cuida, estés donde estés</p>
+    </header>
+
+    <h1 class="acceso-titulo">Iniciar sesión</h1>
+
+    <form class="acceso-form" (ngSubmit)="entrar()" novalidate>
+
+      <div class="acceso-campo">
+        <label class="acceso-label" for="acceso-correo">Correo electrónico</label>
+        <div class="acceso-caja">
+          <ion-icon class="acceso-icono" name="mail-outline" aria-hidden="true"></ion-icon>
+          <input
+            id="acceso-correo"
+            name="correo"
+            type="email"
+            class="acceso-input"
+            autocomplete="username"
+            inputmode="email"
+            spellcheck="false"
+            placeholder="tucorreo@ejemplo.cl"
+            [(ngModel)]="correo" />
+        </div>
+      </div>
+
+      <div class="acceso-campo">
+        <label class="acceso-label" for="acceso-contrasena">Contraseña</label>
+        <div class="acceso-caja">
+          <ion-icon class="acceso-icono" name="lock-closed-outline" aria-hidden="true"></ion-icon>
+          <input
+            id="acceso-contrasena"
+            name="contrasena"
+            [type]="verContrasena ? 'text' : 'password'"
+            class="acceso-input acceso-input--ojo"
+            autocomplete="current-password"
+            placeholder="Tu contraseña"
+            [(ngModel)]="contrasena" />
+          <button
+            type="button"
+            class="acceso-ojo"
+            [attr.aria-label]="verContrasena ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+            [attr.aria-pressed]="verContrasena"
+            (click)="alternarContrasena()">
+            <ion-icon
+              [name]="verContrasena ? 'eye-off-outline' : 'eye-outline'"
+              aria-hidden="true"></ion-icon>
+          </button>
+        </div>
+      </div>
+
+      @if (mensajeError) {
+        <p class="acceso-error" role="alert">{{ mensajeError }}</p>
+      }
+
+      <button class="acceso-boton" type="submit" [disabled]="cargando">
+        @if (cargando) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+          Ingresar
+        }
+      </button>
+
+    </form>
+
+    <p class="acceso-nota">
+      ¿Todavía no tienes cuenta?
+      <a routerLink="/descarga">Descarga la app</a>
+    </p>
+
+  </main>
+</ion-content>

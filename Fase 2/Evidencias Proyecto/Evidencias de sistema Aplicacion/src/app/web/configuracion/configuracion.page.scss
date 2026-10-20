@@ -1,0 +1,15 @@
+/* ------------------------------------------------------------------
+   Configuración de la web (/admin/configuracion)
+
+   La lista con viñetas. Es la única regla exclusiva de esta página;
+   lo demás (`.panel-datos`, `.panel-datos__fila`, `.panel-texto`)
+   lo comparte con Mi Perfil y sigue en global.scss.
+   ------------------------------------------------------------------ */
+.panel-lista {
+  margin: 0.8rem 0 0;
+  padding-left: 1.15rem;
+  color: #4b4560;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+

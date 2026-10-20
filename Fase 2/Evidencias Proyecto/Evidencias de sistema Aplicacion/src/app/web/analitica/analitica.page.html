@@ -1,0 +1,70 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <div class="web-page">
+
+    <div class="panel-cabecera">
+      <h1>Analítica</h1>
+      <p class="descripcion">Uso real de la aplicación en los últimos 30 días.</p>
+      <p class="panel-aviso">
+        Las rutas del panel de administración no se registran: mirar tu propio
+        panel no es uso de la app y contaminaría el ranking.
+      </p>
+    </div>
+
+    @if (cargando) {
+      <p class="panel-vacio">Cargando…</p>
+    } @else if (error) {
+      <p class="panel-error">{{ error }}</p>
+    } @else {
+
+      <div class="panel-tarjetas">
+        <div class="panel-tarjeta">
+          <span class="panel-tarjeta__valor">{{ totalVisitas }}</span>
+          <span class="panel-tarjeta__etiqueta">Pantallas vistas</span>
+        </div>
+        <div class="panel-tarjeta">
+          <span class="panel-tarjeta__valor">{{ paginasDistintas }}</span>
+          <span class="panel-tarjeta__etiqueta">Páginas distintas</span>
+        </div>
+        <div class="panel-tarjeta">
+          <span class="panel-tarjeta__valor">{{ usuariosActivos }}</span>
+          <span class="panel-tarjeta__etiqueta">Usuarios activos</span>
+        </div>
+        <div class="panel-tarjeta">
+          <span class="panel-tarjeta__valor">{{ visitasWeb }}</span>
+          <span class="panel-tarjeta__etiqueta">Desde la web</span>
+        </div>
+        <div class="panel-tarjeta">
+          <span class="panel-tarjeta__valor">{{ visitasApp }}</span>
+          <span class="panel-tarjeta__etiqueta">Desde la app</span>
+        </div>
+      </div>
+
+      <h2 class="panel-subtitulo">Páginas más usadas</h2>
+
+      @if (ranking.length) {
+        <ul class="panel-ranking">
+          @for (fila of ranking; track fila.ruta) {
+            <li class="panel-ranking__fila">
+              <span class="panel-ranking__ruta">{{ rutaLegible(fila.ruta) }}</span>
+              <span class="panel-ranking__barra">
+                <span
+                  class="panel-ranking__relleno"
+                  [style.width.%]="fila.proporcion * 100"></span>
+              </span>
+              <span class="panel-ranking__valor">{{ fila.vistas }}</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="panel-vacio">
+          Todavía no hay eventos registrados. Entra a una página desde la web o
+          desde la app y recarga.
+        </p>
+      }
+
+    }
+
+  </div>
+</ion-content>

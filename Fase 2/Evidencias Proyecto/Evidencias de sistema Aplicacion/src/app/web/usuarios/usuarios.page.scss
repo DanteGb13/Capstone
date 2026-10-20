@@ -1,0 +1,61 @@
+/* ------------------------------------------------------------------
+   Usuarios de la web (/admin/usuarios)
+
+   La tabla, su envoltura con scroll horizontal y las etiquetas de
+   estado. Exclusivos de esta página.
+   ------------------------------------------------------------------ */
+/* ---------------- Tabla de usuarios ---------------- */
+/* En pantalla chica la tabla se desborda: se envuelve y se scrollea en
+   horizontal en vez de achicar las columnas hasta que el texto se rompe. */
+.panel-tabla-envoltura {
+  border: 1px solid #e2ddf2;
+  border-radius: 12px;
+  background-color: #ffffff;
+  overflow-x: auto;
+}
+
+.panel-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.panel-tabla th {
+  padding: 0.8rem 1rem;
+  background-color: #f8f7fc;
+  color: #4b3f66;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.panel-tabla td {
+  padding: 0.75rem 1rem;
+  border-top: 1px solid #f0edf8;
+  color: #443c56;
+  white-space: nowrap;
+}
+
+.panel-tabla__fuerte {
+  font-weight: 600;
+  color: #241b38;
+}
+
+.panel-estado {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background-color: #e7f6ec;
+  color: #166534;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.panel-estado--inactivo {
+  background-color: #fdecec;
+  color: #991b1b;
+}
+

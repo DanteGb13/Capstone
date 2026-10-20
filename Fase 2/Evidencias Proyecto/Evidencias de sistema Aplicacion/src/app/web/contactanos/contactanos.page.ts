@@ -25,6 +25,7 @@ const TIEMPO_LIMITE_MS = 20000;
 @Component({
   selector: 'app-contactanos',
   templateUrl: 'contactanos.page.html',
+  styleUrls: ['contactanos.page.scss'],
   imports: [WebNav, RouterLink, FormsModule, IonContent, IonSpinner],
 })
 export class ContactanosPage {

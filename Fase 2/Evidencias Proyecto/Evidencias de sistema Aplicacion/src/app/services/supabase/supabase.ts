@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
-import { createClient, SupabaseClient, Session } from '@supabase/supabase-js';
+import { SupabaseClient, Session } from '@supabase/supabase-js';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { SiempreCerca } from '../alarmas/siempre-cerca';
+import { clienteSupabase } from '../../core/supabase-client';
 
 
 @Injectable({
@@ -23,17 +24,9 @@ export class SupabaseService {
   constructor() {
     const isNative = Capacitor.isNativePlatform();
 
-    this.supabase = createClient(
-      environment.supabaseUrl,
-      environment.supabaseKey,
-      {
-        auth: {
-          // Forzamos PKCE. Si el proyecto en Supabase está en modo implícito,
-          // el token llegará en el fragmento y lo manejamos igual abajo.
-          flowType: 'pkce'
-        }
-      }
-    );
+    // El cliente es único y vive en `core/`: la web también lo usa, y dos
+    // clientes con la misma llave se pelean por el mismo refresh token.
+    this.supabase = clienteSupabase();
 
     // En móvil (Capacitor) capturamos el retorno del navegador OAuth
     // (deep link). Soportamos ambos flujos:

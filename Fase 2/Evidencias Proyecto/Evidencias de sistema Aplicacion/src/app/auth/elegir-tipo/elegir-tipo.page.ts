@@ -83,7 +83,9 @@ export class ElegirTipoPage implements OnInit {
     }
 
     try {
-      await this.supabaseService.getClient().auth.signOut();
+      // scope local: acá se cambia de tipo de cuenta, no se cierra la cuenta en
+      // todos los dispositivos.
+      await this.supabaseService.getClient().auth.signOut({ scope: 'local' });
     } catch (e) {
       console.warn('No se pudo cerrar la sesión:', e);
     }

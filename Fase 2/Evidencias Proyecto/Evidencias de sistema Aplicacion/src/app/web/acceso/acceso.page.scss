@@ -1,0 +1,244 @@
+/* ------------------------------------------------------------------
+   Acceso de la web (/acceso)
+
+   Pantalla de entrada a pantalla completa y centrada: sin navbar de la
+   web, porque el acceso es la puerta y no una sección del sitio. Todo
+   lo de acá es propio de esta página.
+
+   Antes reutilizaba el kit de formulario de Contáctanos (`.contacto-*`);
+   como el diseño cambió, esas cajas ahora son exclusivas de esa página
+   y viven en contactanos.page.scss.
+
+   Los tokens (--sc-*) están en src/theme/variables.scss.
+   ------------------------------------------------------------------ */
+
+.acceso-fondo {
+  --background: var(--sc-bg);
+}
+
+/* `min-height: 100%` se resuelve contra el scroll host de `ion-content`,
+   que sí tiene alto fijo. El `100dvh` queda como respaldo por si algún
+   navegador no se lo atribuye a un elemento proyectado por <slot>. */
+.acceso-tarjeta {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 462px;
+  min-height: 100%;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem;
+}
+
+/* ===== Marca: logo, nombre y lema ===== */
+
+.acceso-marca {
+  text-align: center;
+}
+
+.acceso-logo {
+  display: block;
+  width: 90px;
+  height: 90px;
+  margin: 0 auto;
+  border-radius: 22px;
+}
+
+.acceso-nombre {
+  margin: 0.7rem 0 0;
+  color: var(--sc-ink);
+  font-size: clamp(1.65rem, 7vw, 1.9rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.acceso-nombre span {
+  color: var(--sc-primary);
+}
+
+.acceso-lema {
+  margin: 0.4rem 0 0;
+  color: var(--sc-ink-muted);
+  font-size: 0.9rem;
+}
+
+/* ===== Título ===== */
+
+.acceso-titulo {
+  margin: 2.1rem 0 0;
+  color: var(--sc-ink);
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ===== Formulario ===== */
+
+.acceso-form {
+  margin-top: 1.3rem;
+}
+
+.acceso-campo {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.15rem;
+}
+
+.acceso-label {
+  margin-bottom: 0.45rem;
+  color: var(--sc-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+/* La caja existe sólo para posicionar el ícono de adentro y el ojo:
+   son `position: absolute` y no pueden colgarse del <input> sin
+   romper la corrección automática del navegador. */
+.acceso-caja {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.acceso-icono {
+  position: absolute;
+  left: 15px;
+  color: var(--sc-ink-muted);
+  font-size: 17px;
+  pointer-events: none;
+}
+
+.acceso-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 48px;
+  padding: 0 1rem 0 44px;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  background-color: var(--sc-surface);
+  color: var(--sc-ink);
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.acceso-input::placeholder {
+  color: #9ca3af;
+}
+
+.acceso-input:focus {
+  outline: none;
+  border-color: var(--sc-primary);
+  box-shadow: var(--sc-focus-ring);
+}
+
+/* El ojo ocupa el extremo derecho: sin este aire el texto pasaría por
+   debajo y no se leería. */
+.acceso-input--ojo {
+  padding-right: 46px;
+}
+
+.acceso-ojo {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--sc-radius-pill);
+  background: transparent;
+  color: var(--sc-ink-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.acceso-ojo:hover {
+  background-color: var(--sc-surface-alt);
+  color: var(--sc-primary);
+}
+
+.acceso-ojo:focus-visible {
+  outline: none;
+  box-shadow: var(--sc-focus-ring);
+  color: var(--sc-primary);
+}
+
+.acceso-ojo ion-icon {
+  font-size: 20px;
+}
+
+/* ===== Aviso general ===== */
+
+.acceso-error {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 1.1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid #f3b4b4;
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-danger-soft);
+  color: var(--sc-danger-dark);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+/* ===== Botón ===== */
+
+.acceso-boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--sc-radius-pill);
+  background: var(--sc-brand-gradient);
+  color: var(--sc-ink-invert);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.acceso-boton:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.acceso-boton:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.acceso-boton ion-spinner {
+  width: 20px;
+  height: 20px;
+}
+
+/* ===== Pie ===== */
+
+.acceso-nota {
+  margin: 2rem 0 0;
+  color: var(--sc-ink-muted);
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.acceso-nota a {
+  color: var(--sc-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.acceso-nota a:hover {
+  text-decoration: underline;
+}

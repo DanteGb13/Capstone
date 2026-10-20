@@ -1,0 +1,53 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <div class="web-page">
+
+    <div class="panel-cabecera">
+      <h1>Usuarios</h1>
+      <p class="descripcion">Cuentas registradas y su última actividad.</p>
+    </div>
+
+    @if (cargando) {
+      <p class="panel-vacio">Cargando…</p>
+    } @else if (error) {
+      <p class="panel-error">{{ error }}</p>
+    } @else if (!usuarios.length) {
+      <p class="panel-vacio">Todavía no hay usuarios registrados.</p>
+    } @else {
+
+      <div class="panel-tabla-envoltura">
+        <table class="panel-tabla">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Última actividad</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (usuario of usuarios; track usuario.correo) {
+              <tr>
+                <td class="panel-tabla__fuerte">{{ usuario.nombre }}</td>
+                <td>{{ usuario.correo }}</td>
+                <td>{{ usuario.rol }}</td>
+                <td>
+                  <span
+                    class="panel-estado"
+                    [class.panel-estado--inactivo]="!usuario.activo">
+                    {{ usuario.activo ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td>{{ haceCuanto(usuario.ultimoVisto) }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+    }
+
+  </div>
+</ion-content>

@@ -89,37 +89,30 @@
         }
       </ion-button>
 
-      @if (!esWeb) {
-        <!-- Separador -->
-        <div class="separador"><span>o</span></div>
+      <!-- Separador -->
+      <div class="separador"><span>o</span></div>
 
-        <!-- Login con Google -->
-        <ion-button
-          expand="block"
-          fill="outline"
-          class="google-button"
-          (click)="ingresarConGoogle()"
-          [disabled]="cargando">
-          <ion-icon
-            name="logo-google"
-            slot="start"
-            class="google-icon">
-          </ion-icon>
-          Continuar con Google
-        </ion-button>
-      }
+      <!-- Login con Google -->
+      <ion-button
+        expand="block"
+        fill="outline"
+        class="google-button"
+        (click)="ingresarConGoogle()"
+        [disabled]="cargando">
+        <ion-icon
+          name="logo-google"
+          slot="start"
+          class="google-icon">
+        </ion-icon>
+        Continuar con Google
+      </ion-button>
 
     </div>
 
     <!-- Registro -->
     <div class="register-container">
-      @if (esWeb) {
-        <span>¿Todavía no tienes cuenta?</span>
-        <a [routerLink]="['/descarga']">Descarga la app</a>
-      } @else {
-        <span>¿Todavía no tienes cuenta?</span>
-        <a [routerLink]="['/registro']">Crear cuenta</a>
-      }
+      <span>¿Todavía no tienes cuenta?</span>
+      <a [routerLink]="['/registro']">Crear cuenta</a>
     </div>
 
   </div>

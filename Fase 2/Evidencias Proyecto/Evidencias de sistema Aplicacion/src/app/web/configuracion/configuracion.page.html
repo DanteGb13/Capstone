@@ -1,0 +1,48 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <div class="web-page">
+
+    <div class="panel-cabecera">
+      <h1>Configuración</h1>
+      <p class="descripcion">Cuenta de administración y datos que se registran.</p>
+    </div>
+
+    @if (!cargando && perfil) {
+      <div class="panel-tarjeta panel-tarjeta--bloque">
+        <h2 class="panel-subtitulo">Cuenta</h2>
+        <dl class="panel-datos">
+          <div class="panel-datos__fila">
+            <dt>Nombre</dt>
+            <dd>{{ perfil.nombreCompleto || 'Sin nombre' }}</dd>
+          </div>
+          <div class="panel-datos__fila">
+            <dt>Correo</dt>
+            <dd>{{ perfil.correo || '—' }}</dd>
+          </div>
+          <div class="panel-datos__fila">
+            <dt>Rol</dt>
+            <dd>{{ perfil.rol || '—' }}</dd>
+          </div>
+        </dl>
+      </div>
+    }
+
+    <div class="panel-tarjeta panel-tarjeta--bloque">
+      <h2 class="panel-subtitulo">Analítica</h2>
+      <p class="panel-texto">
+        Cada pantalla que se abre en la web o en la app deja un evento con la
+        ruta, la plataforma y la hora. Si hay sesión iniciada, también el
+        usuario.
+      </p>
+      <ul class="panel-lista">
+        <li>No se registran las pantallas de este panel.</li>
+        <li>No se registran datos personales ni escritos en formularios.</li>
+        <li>No se usan cookies de terceros ni servicios externos: los datos
+            viven en la base del proyecto.</li>
+        <li>Sólo la cuenta con rol Administrador puede leerlos.</li>
+      </ul>
+    </div>
+
+  </div>
+</ion-content>

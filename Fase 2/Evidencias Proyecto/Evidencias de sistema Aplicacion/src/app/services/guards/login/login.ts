@@ -281,8 +281,12 @@ export class Login {
     // siguiente usuario de este teléfono vería su nombre y su foto.
     this.perfilCache.limpiar();
 
+    // scope: 'local' y no el 'global' que viene por defecto. El default revoca
+    // el refresh token de TODOS los dispositivos de la cuenta, así que cerrar
+    // sesión en la web expulsaba del celular. Cerrar sesión es salir de este
+    // dispositivo; salir de todos lados debería ser una acción aparte.
     const { error } =
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
 
     this.navRol.limpiarCache();
 

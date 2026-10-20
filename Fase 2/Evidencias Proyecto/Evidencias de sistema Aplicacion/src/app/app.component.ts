@@ -12,6 +12,7 @@ import { PermisosService } from './services/permisos/permisos.service';
 import { PerfilCacheService } from './services/perfil-cache/perfil-cache.service';
 import { RealtimeService } from './services/realtime/realtime.service';
 import { SupabaseService } from './services/supabase/supabase';
+import { AnaliticaService } from './services/analitica/analitica';
 
 @Component({
   selector: 'app-root',
@@ -27,6 +28,7 @@ export class AppComponent {
   private perfilCache = inject(PerfilCacheService);
   private realtimeService = inject(RealtimeService);
   private supabaseService = inject(SupabaseService);
+  private analiticaService = inject(AnaliticaService);
 
   constructor(
     private router: Router,
@@ -50,6 +52,10 @@ export class AppComponent {
 
     // Deja constancia de que la app está activa (estado "en línea" para el cuidador)
     this.presenciaService.iniciar();
+
+    // Registra qué pantallas se visitan para el panel del administrador.
+    // Ignora las rutas del propio panel.
+    this.analiticaService.iniciar();
 
     // Tocar una alerta SOS con la app cerrada tiene que confirmarse aunque
     // el panel del cuidador todavía no se haya abierto.

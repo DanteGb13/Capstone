@@ -857,7 +857,9 @@ export class PerfilPage implements OnInit {
               // Antes de cerrar sesión: este celular deja de estar atado a esta
               // cuenta, para que la siguiente no siga recibiendo sus alertas
               await this.pushService.eliminarToken();
-              await this.supabaseService.getClient().auth.signOut();
+              // scope local: el 'global' que trae por defecto cierra la sesión
+              // en TODOS los dispositivos de la cuenta, no solo en este.
+              await this.supabaseService.getClient().auth.signOut({ scope: 'local' });
             } catch (err) {
               console.error('Error al cerrar sesión:', err);
             } finally {

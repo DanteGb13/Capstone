@@ -6,6 +6,7 @@ import { WebNav } from '../web-nav/web-nav';
 @Component({
   selector: 'app-inicio',
   templateUrl: 'inicio.page.html',
+  styleUrls: ['inicio.page.scss'],
   imports: [WebNav, RouterLink, IonContent, IonButton],
 })
 export class InicioPage {}

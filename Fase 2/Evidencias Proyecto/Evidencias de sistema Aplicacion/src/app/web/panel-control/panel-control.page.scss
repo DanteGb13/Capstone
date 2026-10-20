@@ -1,0 +1,46 @@
+/* ------------------------------------------------------------------
+   Panel de control de la web (/admin/panel)
+
+   La grilla de accesos y cada tarjeta de acceso. Exclusivos de esta
+   página; el resto del panel (`.panel-cabecera`, `.panel-tarjeta`,
+   `.panel-subtitulo`, ...) es de las cinco secciones y vive en
+   global.scss.
+   ------------------------------------------------------------------ */
+/* ---------------- Accesos del panel principal ---------------- */
+.panel-accesos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.panel-acceso {
+  display: block;
+  padding: 1.2rem 1.3rem;
+  border: 1px solid #e2ddf2;
+  border-radius: 12px;
+  background-color: #ffffff;
+  text-decoration: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.panel-acceso:hover {
+  border-color: #b9a3e8;
+  box-shadow: 0 6px 18px rgba(119, 21, 199, 0.12);
+  transform: translateY(-1px);
+}
+
+.panel-acceso__titulo {
+  display: block;
+  color: #241b38;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.panel-acceso__detalle {
+  display: block;
+  margin-top: 0.3rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
