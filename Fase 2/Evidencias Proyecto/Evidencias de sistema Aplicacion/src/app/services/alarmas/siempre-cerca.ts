@@ -96,6 +96,8 @@ export interface AccionNotificacion {
 export interface SiempreCercaPlugin {
   crearCanalAlarma(): Promise<void>;
   crearCanalSOS(): Promise<void>;
+  /** Fuerza recreación de canales (ignora versión) para reparar sonido/vibración. */
+  forzarRecrearCanales(): Promise<void>;
   vibrar(opciones?: VibrarOpciones): Promise<void>;
   guardarSesionBackend(datos: Partial<SesionBackend>): Promise<void>;
   obtenerSesionBackend(): Promise<SesionBackend>;

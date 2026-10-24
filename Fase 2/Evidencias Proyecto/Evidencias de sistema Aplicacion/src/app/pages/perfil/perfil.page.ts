@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSpinner, AlertController, ToastController, IonModal, IonActionSheet, ActionSheetController } from '@ionic/angular';
+import { IonContent, IonHeader, IonIcon, IonTitle, IonToolbar, IonButton, IonButtons, IonInput, IonSelect, IonSelectOption, IonDatetime, IonSpinner, AlertController, ToastController, IonModal, IonActionSheet, ActionSheetController } from '@ionic/angular';
 import { AlarmasService } from '../../services/alarmas/alarmas';
 import { Router } from '@angular/router';
 import { ChangeDetectorRef } from '@angular/core';
@@ -38,16 +38,19 @@ import {
 import { SupabaseService } from '../../services/supabase/supabase';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
 import { PushNotificationService } from '../../services/Backend/push-notification/push-notification';
-import { PerfilCacheService } from '../../services/perfil-cache/perfil-cache.service';
+import { PerfilCacheService, PerfilResumen } from '../../services/perfil-cache/perfil-cache.service';
 import { environment } from '../../../environments/environment';
 import {
   validarNombreOApellido,
   validarTelefonoChileno,
   validarFechaNacimiento,
+  esMayorDeEdad,
   validarTextoBasico,
   validarEmail,
   validarPassword
 } from '../../services/utils/validators';
+import { mensajeErrorApp } from '../../services/utils/mensaje-error';
+import { RegionesComunasService, RegionChile } from '../../services/utils/regiones-comunas.service';
 
 @Component({
   selector: 'app-perfil',
@@ -64,6 +67,9 @@ import {
     FormsModule,
     IonButtons,
     IonInput,
+    IonSelect,
+    IonSelectOption,
+    IonDatetime,
     IonSpinner,
     IonModal
   ]
@@ -80,7 +86,8 @@ export class PerfilPage implements OnInit {
     private actionSheetController: ActionSheetController,
     private navRol: NavegacionRolService,
     private pushService: PushNotificationService,
-    private perfilCache: PerfilCacheService
+    private perfilCache: PerfilCacheService,
+    private regionesService: RegionesComunasService
   ) {
     addIcons({
       arrowBackOutline, person, personOutline, cardOutline, mailOutline,
@@ -144,6 +151,25 @@ export class PerfilPage implements OnInit {
 
   mensajeError: string = '';
 
+  /** Las 16 regiones con sus comunas (API de CNT.cl con respaldo oficial). */
+  listaRegiones: RegionChile[] = [];
+  /** Comunas de la región elegida; vacías hasta que se elija región. */
+  comunasDisponibles: string[] = [];
+  /** Mensaje si falla la descarga de la lista de regiones. */
+  errorRegiones: string = '';
+
+  mostrarModalFecha: boolean = false;
+  /**
+   * Mismos límites que el registro: desde 1900 (hay abuelos de más de
+   * 100 años) y sin fechas que dejen a la persona con menos de 18 años.
+   */
+  fechaMinima: string = '1900-01-01';
+  fechaMaxima: string = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString();
+  })();
+
   async ngOnInit() {
     await this.cargarPerfil();
   }
@@ -197,7 +223,15 @@ export class PerfilPage implements OnInit {
     this.changeDetectorRef.detectChanges();
 
     try {
-      const perfil = await this.perfilCache.perfil(forzar);
+      let perfil = await this.perfilCache.perfil(forzar);
+
+      // Seguro anti-caché vieja: al registrarse por primera vez, la caché se
+      // llena al iniciar sesión con la fila todavía sin RUT/fecha/dirección.
+      // Si lo que llega no incluye esos campos (que el registro SIEMPRE
+      // guarda), se reintenta UNA vez contra la base antes de pintar vacíos.
+      if (perfil && PerfilPage.faltanDatosDelRegistro(perfil)) {
+        perfil = await this.perfilCache.perfil(true);
+      }
 
       if (!perfil) {
         console.warn('No se pudo obtener el perfil del usuario');
@@ -430,6 +464,9 @@ export class PerfilPage implements OnInit {
       console.error('Error eliminando foto:', error);
     } finally {
       this.cargandoFoto = false;
+      // Sin esto el spinner quedaba girando: el finally cambia estado
+      // después del último detectChanges y la vista no se actualizaba.
+      this.changeDetectorRef.detectChanges();
     }
   }
 
@@ -453,6 +490,9 @@ export class PerfilPage implements OnInit {
       await toast.present();
       return;
     }
+    // Al entrar a editar: la lista de regiones y comunas llega en segundo
+    // plano (la primera vez descarga; después sale de la caché local).
+    void this.cargarRegionesComunas();
     this.modoEditar = !this.modoEditar;
   }
 
@@ -461,6 +501,97 @@ export class PerfilPage implements OnInit {
     this.mensajeError = '';
     this.usuario = JSON.parse(JSON.stringify(this.usuarioOriginal));
     this.modoEditar = false;
+    // La comuna restaurada puede no estar en la lista visible: se repuebla.
+    this.comunasDisponibles = this.listaRegiones
+      .find((r) => r.nombre === this.usuario?.direccion?.region)?.comunas ?? [];
+  }
+
+  /** Carga las regiones y comunas desde el JSON embebido en assets. */
+  private async cargarRegionesComunas() {
+    try {
+      this.listaRegiones = await this.regionesService.regiones();
+      this.errorRegiones = '';
+      const actual = this.usuario?.direccion?.region ?? '';
+      this.comunasDisponibles = this.listaRegiones
+        .find((r) => r.nombre === actual)?.comunas ?? [];
+    } catch {
+      this.errorRegiones = 'No se pudieron cargar las regiones y comunas.';
+    } finally {
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  /** Al elegir región: se repueblan las comunas y se limpia la comuna. */
+  alCambiarRegion(ev: any) {
+    if (this.usuario?.direccion) {
+      const valor = String(ev?.detail?.value ?? this.usuario.direccion.region ?? '');
+      this.usuario.direccion.region = valor;
+      const region = this.listaRegiones.find((r) => r.nombre === valor);
+      this.comunasDisponibles = region ? region.comunas : [];
+      this.usuario.direccion.comuna = '';
+    }
+    delete this.errores.region;
+    delete this.errores.comuna;
+    this.changeDetectorRef.detectChanges();
+  }
+
+  alCambiarComuna(ev: any) {
+    if (this.usuario?.direccion) {
+      this.usuario.direccion.comuna =
+        String(ev?.detail?.value ?? this.usuario.direccion.comuna ?? '');
+    }
+    delete this.errores.comuna;
+    this.changeDetectorRef.detectChanges();
+  }
+
+  /**
+   * Valida la fecha de nacimiento con las MISMAS reglas del registro:
+   * obligatoria, real/no futura, desde 1900 (abuelos de más de 100 años)
+   * y al menos 18 años de edad.
+   */
+  private validarFecha(): boolean {
+    const fecha = this.usuario?.fecha_nacimiento ?? '';
+    if (!fecha) {
+      this.errores.fecha_nacimiento = 'La fecha de nacimiento es obligatoria.';
+      return false;
+    }
+    if (!validarFechaNacimiento(fecha)) {
+      this.errores.fecha_nacimiento = 'Ingresa una fecha válida en el pasado.';
+      return false;
+    }
+    if (!esMayorDeEdad(fecha)) {
+      this.errores.fecha_nacimiento = 'Debes tener al menos 18 años para usar la app.';
+      return false;
+    }
+    delete this.errores.fecha_nacimiento;
+    return true;
+  }
+
+  abrirSelectorFecha() {
+    this.mostrarModalFecha = true;
+  }
+
+  cerrarSelectorFecha() {
+    this.mostrarModalFecha = false;
+    this.validarFecha();
+    this.changeDetectorRef.detectChanges();
+  }
+
+  onFechaSeleccionada(event: any) {
+    const valor = event?.detail?.value;
+    if (valor) {
+      this.usuario.fecha_nacimiento = String(valor).split('T')[0];
+      this.validarFecha();
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  /** La fecha en pantalla como dd/mm/aaaa, igual que en el registro. */
+  get fechaFormateada(): string {
+    const fecha = this.usuario?.fecha_nacimiento ?? '';
+    if (!fecha) return '';
+    const partes = fecha.split('-');
+    return partes.length === 3 ? `${partes[2]}/${partes[1]}/${partes[0]}` : fecha;
   }
 
   validarCampos(): boolean {
@@ -486,9 +617,8 @@ export class PerfilPage implements OnInit {
       this.errores.telefono = 'Ingresa un teléfono chileno válido (9 dígitos, ej: 912345678).';
     }
 
-    if (!validarFechaNacimiento(u.fecha_nacimiento ?? '')) {
-      this.errores.fecha_nacimiento = 'Ingresa una fecha de nacimiento válida (no futura).';
-    }
+    // Mismas reglas que el registro: válida, no futura, desde 1900 y 18+.
+    this.validarFecha();
 
     if (!validarTextoBasico(dir.region ?? '', 2)) {
       this.errores.region = 'La región es requerida.';
@@ -570,7 +700,15 @@ export class PerfilPage implements OnInit {
     this.exitoCorreo = '';
     this.bloqueadoCorreo = false;
     this.mensajeBloqueoCorreo = '';
+    this.nuevoCorreo = '';
+    this.codigoVerificacion = '';
+    this.pasoCambioCorreo = 'formulario';
 
+    // Abrir el modal de inmediato para no bloquear la interfaz.
+    this.mostrarModalCorreo = true;
+    this.changeDetectorRef.detectChanges();
+
+    // La verificación de cooldown corre en segundo plano.
     try {
       const supabase = this.supabaseService.getClient();
       const { data: perfil } = await supabase
@@ -578,6 +716,8 @@ export class PerfilPage implements OnInit {
         .select('ultimo_cambio_correo')
         .eq('id', this.usuario.id)
         .single();
+
+      if (!this.mostrarModalCorreo) return; // el usuario ya lo cerró
 
       if (perfil?.ultimo_cambio_correo) {
         const ultimoCambio = new Date(perfil.ultimo_cambio_correo);
@@ -590,19 +730,15 @@ export class PerfilPage implements OnInit {
           const fechaDisponible = cuatroMesesDespues.toLocaleDateString('es-CL', opciones);
           this.bloqueadoCorreo = true;
           this.mensajeBloqueoCorreo = `Solo puedes cambiar tu correo una vez cada 4 meses. Podrás cambiarlo nuevamente el ${fechaDisponible}.`;
-          this.mostrarModalCorreo = true;
-          this.changeDetectorRef.detectChanges();
-          return;
         }
       }
     } catch (error) {
       console.error('Error verificando cooldown de correo:', error);
+    } finally {
+      if (this.mostrarModalCorreo) {
+        this.changeDetectorRef.detectChanges();
+      }
     }
-
-    this.nuevoCorreo = '';
-    this.codigoVerificacion = '';
-    this.pasoCambioCorreo = 'formulario';
-    this.mostrarModalCorreo = true;
   }
 
   cerrarModalCorreo() {
@@ -793,7 +929,7 @@ export class PerfilPage implements OnInit {
       });
 
       if (error) {
-        this.errorContrasena = error.message || 'No se pudo actualizar la contraseña.';
+        this.errorContrasena = mensajeErrorApp(error, 'No se pudo actualizar la contraseña.');
         return;
       }
 
@@ -831,10 +967,30 @@ export class PerfilPage implements OnInit {
     }
 
     if (nombre) {
-      return nombre;
+      return PerfilPage.etiquetaRol(nombre);
     }
 
     return this.usuario?.id_rol === 1 ? 'Adulto Mayor' : 'Cuidador';
+  }
+
+  /**
+   * Los nombres crudos de la BD ('Usuario' / 'Familiar') no se leen bien en
+   * "Estado de cuenta": se traducen a lo que la persona eligió al registrarse.
+   */
+  private static etiquetaRol(nombre: string): string {
+    const clave = nombre.trim().toLowerCase();
+    if (clave === 'usuario') return 'Adulto Mayor';
+    if (clave === 'familiar') return 'Cuidador';
+    return nombre;
+  }
+
+  /**
+   * Marca un perfil que no pasa por el registro completo (RUT, fecha de
+   * nacimiento y dirección los guarda siempre el paso 2). Si alguno falta,
+   * lo que se tiene en la mano es una caché vieja y hay que recargar.
+   */
+  private static faltanDatosDelRegistro(perfil: PerfilResumen): boolean {
+    return !perfil.rut || !perfil.fechaNacimiento || !perfil.idDireccion;
   }
 
   async cerrarSesion() {

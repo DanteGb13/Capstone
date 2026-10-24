@@ -24,6 +24,8 @@ import * as icons from 'ionicons/icons';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
 import { SupabaseService } from '../../../services/supabase/supabase';
+import { ZonaSeguraService } from '../../../services/Backend/zona-segura/zona-segura';
+import { mensajeErrorApp } from '../../../services/utils/mensaje-error';
 
 @Component({
   selector: 'app-adulto-cargo',
@@ -59,7 +61,8 @@ export class AdultoCargoPage implements OnInit {
     private supabaseService: SupabaseService,
     private alertController: AlertController,
     private actionSheetController: ActionSheetController,
-    private toastController: ToastController
+    private toastController: ToastController,
+    private zonaSeguraService: ZonaSeguraService
   ) {
     addIcons(icons);
   }
@@ -206,6 +209,10 @@ export class AdultoCargoPage implements OnInit {
 
       await this.vinculacionService.desvincular(idCuidador, idUsuario);
 
+      // Las zonas del adulto quedan en memoria y en localStorage: sin este
+      // limpiado, una consulta posterior sin conexión seguía devolviéndolas.
+      this.zonaSeguraService.limpiarCache(idUsuario);
+
       const toast = await this.toastController.create({
         message: 'Vinculación eliminada',
         duration: 2000,
@@ -216,11 +223,11 @@ export class AdultoCargoPage implements OnInit {
       this.adultosACargo = [];
       this.changeDetectorRef.detectChanges();
       await this.cargarAdultos();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error al desvincular:', error);
       const alert = await this.alertController.create({
         header: 'Error al desvincular',
-        message: error?.message || 'No se pudo completar la desvinculación. Verifica tu conexión y permisos.',
+        message: mensajeErrorApp(error, 'No se pudo completar la desvinculación. Verifica tu conexión y permisos.'),
         buttons: ['OK']
       });
       await alert.present();

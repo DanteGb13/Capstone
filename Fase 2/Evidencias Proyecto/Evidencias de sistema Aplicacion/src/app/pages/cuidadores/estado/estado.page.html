@@ -17,23 +17,7 @@
   </ion-refresher>
 
   <div class="page-container">
-
-    <div class="header">
-      <h1>Estado de salud</h1>
-      <p>Datos que envía el reloj de cada persona</p>
-    </div>
-
-    <!--
-      Refresco: relee la base. No pide nada al teléfono del adulto mayor,
-      porque ese teléfono es el único que puede leer su reloj. Los datos
-      llegan solos cada 15 minutos; esto sólo evita que la pantalla se quede
-      mirando lo que había la última vez que se abrió.
-    -->
-    <button class="btn-refrescar" type="button" (click)="handleRefresh($event)" [disabled]="cargando">
-      <ion-icon name="refresh-outline" [class.girando]="cargando"></ion-icon>
-      <span>{{ cargando ? 'Consultando...' : 'Actualizar ahora' }}</span>
-    </button>
-
+    
     @if (cargando && adultos.length === 0) {
       <div class="loading-box">
         <ion-icon name="sync-outline" class="spin-icon"></ion-icon>
@@ -46,14 +30,33 @@
         <div class="empty-icon">
           <ion-icon name="people-outline"></ion-icon>
         </div>
-        <h3>Sin personas vinculadas</h3>
-        <p>Vincula un adulto mayor desde el menú principal para ver su estado de salud.</p>
+      </div>
+    }
+
+    @if (adultos.length > 1) {
+      <div class="selector-card">
+        <ion-icon name="people-outline"></ion-icon>
+        <div class="selector-body">
+          <label for="adulto-seleccionado">Consultando a:</label>
+          <ion-select
+            id="adulto-seleccionado"
+            [value]="adultoSeleccionadoId"
+            interface="popover"
+            (ionChange)="onAdultoChange($event)"
+            aria-label="Seleccionar persona">
+            @for (persona of adultos; track persona.id_usuario) {
+              <ion-select-option [value]="persona.id_usuario">
+                {{ nombreAdulto(persona) }}
+              </ion-select-option>
+            }
+          </ion-select>
+        </div>
       </div>
     }
 
     <div class="adultos-list">
 
-      @for (adulto of adultos; track adulto.id_usuario) {
+      @if (adultoSeleccionado; as adulto) {
 
         <div class="salud-card">
 
@@ -94,7 +97,12 @@
           </div>
 
           <!-- AÚN NO HA ENVIADO NADA -->
-          @if (nuncaReporto(adulto)) {
+          @if (cargandoSalud && !adulto.salud) {
+            <div class="salud-loading">
+              <ion-icon name="sync-outline" class="spin-icon"></ion-icon>
+              <span>Consultando datos de salud...</span>
+            </div>
+          } @else if (nuncaReporto(adulto)) {
             <div class="sin-datos">
               <ion-icon name="watch-outline"></ion-icon>
               <p>

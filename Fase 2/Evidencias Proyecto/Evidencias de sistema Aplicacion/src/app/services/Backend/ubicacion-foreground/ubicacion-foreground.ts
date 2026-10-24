@@ -29,6 +29,13 @@ export interface ResultadoBackground {
   requiereForeground?: boolean;
 }
 
+export interface EventoUbicacionForeground {
+  latitud: number;
+  longitud: number;
+  precision: number;
+  timestamp: number;
+}
+
 export interface UbicacionForegroundPlugin {
   iniciar(options?: {
     intervaloMs?: number;
@@ -58,6 +65,11 @@ export interface UbicacionForegroundPlugin {
   addListener(
     eventName: 'saludSync',
     listener: () => void
+  ): Promise<PluginListenerHandle>;
+
+  addListener(
+    eventName: 'ubicacion',
+    listener: (evento: EventoUbicacionForeground) => void
   ): Promise<PluginListenerHandle>;
 
   removeAllListeners(): Promise<void>;

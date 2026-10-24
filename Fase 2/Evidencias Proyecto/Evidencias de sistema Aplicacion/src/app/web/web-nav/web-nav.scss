@@ -207,6 +207,13 @@
   letter-spacing: 0.3px;
 }
 
+/* Mismo círculo que las iniciales, pero con la foto subida desde Mi Perfil.
+   El fondo blanco queda por detrás por si la imagen tarda en cargar. */
+.web-nav__avatar-foto {
+  display: block;
+  object-fit: cover;
+}
+
 .web-nav__perfil-menu {
   position: absolute;
   top: calc(100% + 0.5rem);

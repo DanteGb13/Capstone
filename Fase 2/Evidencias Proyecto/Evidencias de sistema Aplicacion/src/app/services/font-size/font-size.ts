@@ -58,3 +58,20 @@ export class FontSizeService {
     document.body.style.zoom = scale.toString();
   }
 }
+
+/**
+ * Suspende el zoom del tamaño de letra mientras dure una página de juego.
+ *
+ * El zoom de `body` corría las coordenadas de los toques (`elementFromPoint`
+ * de Sopa de letras, el cálculo de pinza del Rompecabezas): el dedo caía en
+ * la celda de al lado. Los juegos son a pantalla completa y no necesitan el
+ * zoom, así que mientras están abiertos se apaga.
+ */
+export function suspenderZoomJuego(): void {
+  document.body.classList.add('sin-zoom-letra');
+}
+
+/** Vuelve a poner el zoom que la persona eligió en Ajustes → Tamaño de letra. */
+export function reanudarZoomJuego(): void {
+  document.body.classList.remove('sin-zoom-letra');
+}

@@ -59,6 +59,8 @@ import { RealtimeService } from '../../../services/realtime/realtime.service';
 import { SaludSyncService } from '../../../services/Backend/salud/salud-sync';
 import { Salud, type ResumenSalud } from '../../../services/Backend/salud/salud';
 import { HistorialEventos } from '../../../services/Backend/historial-eventos/historial-eventos';
+import { UbicacionForeground } from '../../../services/Backend/ubicacion-foreground/ubicacion-foreground';
+import type { PluginListenerHandle } from '@capacitor/core';
 
 /**
  * Cómo se ve el bloque de zona segura del panel del adulto.
@@ -215,6 +217,15 @@ zonaCuidadorAvisado = false;
 private zonaEstadoPrevio: 'dentro' | 'fuera' | null = null;
 
 /**
+ * ¿Sigue habiendo cuidador vinculado? `null` = no se pudo consultar.
+ *
+ * Sin vínculo la tarjeta de zona segura no evalúa ni muestra nada: las zonas
+ * de un cuidador anterior seguían en la base y el bloque decía "estás en tu
+ * zona segura" como si alguien siguiera a cargo.
+ */
+cuidadorVinculado: boolean | null = null;
+
+/**
  * Cada cuánto se vuelve a mirar la zona mientras el panel está a la vista.
  *
  * Antes el estado se calculaba una vez al abrir y quedaba congelado horas: el
@@ -313,6 +324,10 @@ private timerZona: any = null;
   private trackerDesplazamiento = inject(DesplazamientoTracker);
 
   private desplazamientoRevisado = false;
+
+  private escuchaUbicacionBackground: PluginListenerHandle | null = null;
+
+  private iniciandoMonitoreoBackground = false;
 
 
   // =====================================================
@@ -700,6 +715,7 @@ private timerZona: any = null;
     // notificaciones ya no deben seguir apareciendo.
     this.actualizarSonando();
     this.iniciarTimerSonando();
+    void this.iniciarMonitoreoSegundoPlano();
     // La tarjeta de signos vitales se relee también al volver. Antes sólo se
     // armaba en ngOnInit, así que si la app quedaba cargada en segundo plano
     // la tarjeta seguía diciendo "Esperando datos de tu reloj" aunque el
@@ -790,14 +806,44 @@ private timerZona: any = null;
    * avisa a los cuidadores (funciona aunque el panel no esté a la vista).
    */
   private async iniciarMonitoreoSegundoPlano() {
-    if (!Capacitor.isNativePlatform()) return;
+    if (!Capacitor.isNativePlatform() || this.iniciandoMonitoreoBackground) return;
 
+    this.iniciandoMonitoreoBackground = true;
     try {
       const permisos = await this.gpsService.verificarPermisosUbicacion();
       if (!permisos.ubicacionForeground) return;
+
+      if (!this.idUsuarioActual) {
+        const usuario = await this.cuidadoresService.cargarUsuario();
+        this.idUsuarioActual = usuario?.id || '';
+      }
+      if (!this.idUsuarioActual) return;
+
+      if (!this.desplazamientoRevisado) {
+        await this.trackerDesplazamiento.revisarArranque(this.idUsuarioActual);
+        this.desplazamientoRevisado = true;
+      }
+
+      if (!this.escuchaUbicacionBackground) {
+        this.escuchaUbicacionBackground = await UbicacionForeground.addListener(
+          'ubicacion',
+          (ubicacion) => {
+            void this.trackerDesplazamiento.procesar(
+              this.idUsuarioActual,
+              ubicacion.latitud,
+              ubicacion.longitud,
+              ubicacion.precision,
+              ubicacion.timestamp
+            );
+          }
+        );
+      }
+
       await this.gpsService.iniciarUbicacionForeground(30000, 20);
-    } catch {
-      // sin servicio en segundo plano: el chequeo con la app abierta sigue
+    } catch (e) {
+      console.warn('[Actividad] No se pudo iniciar el registro GPS en segundo plano:', e);
+    } finally {
+      this.iniciandoMonitoreoBackground = false;
     }
   }
 
@@ -1011,6 +1057,20 @@ private timerZona: any = null;
   private async verificarZonaSegura(latitud: number, longitud: number) {
     if (!this.idUsuarioActual) return;
 
+    // Sin cuidador vinculado no se evalúa: las zonas que quedaran de un
+    // vínculo anterior no deben pintarse ni disparar avisos.
+    if (this.cuidadorVinculado === false) {
+      if (this.zonaEstado !== 'sin-zona') {
+        this.zonaEstado = 'sin-zona';
+        this.zonaDistanciaM = null;
+        this.zonaNombre = null;
+        this.zonaCuidadorAvisado = false;
+        this.zonaEstadoPrevio = null;
+        this.changeDetectorRef.detectChanges();
+      }
+      return;
+    }
+
     try {
       const antesDentro = this.zonaEstadoPrevio;
       const estado = await this.zonaSeguraService.evaluarYNotificar(
@@ -1101,7 +1161,9 @@ private timerZona: any = null;
       case 'comprobando':
         return 'Buscando tu ubicación...';
       case 'sin-zona':
-        return 'Aún no hay zona segura';
+        return this.cuidadorVinculado === false
+          ? 'Aún no tienes cuidador'
+          : 'Aún no hay zona segura';
       case 'fuera':
         return '¡Estás fuera de tu zona segura!';
       case 'viaje':
@@ -1118,7 +1180,9 @@ private timerZona: any = null;
         return 'Un momento';
 
       case 'sin-zona':
-        return 'Tu cuidador puede crearla desde su app';
+        return this.cuidadorVinculado === false
+          ? 'Vincula un cuidador para tener zona segura'
+          : 'Tu cuidador puede crearla desde su app';
 
       case 'fuera':
         return `${this.zonaNombre ?? 'Tu zona'} · ${this.distanciaCorta()}` +
@@ -1254,6 +1318,8 @@ private timerZona: any = null;
     this.suscripcionSonando?.unsubscribe();
     this.detenerTimerSonando();
     this.detenerVigilanciaPermisos();
+    void this.escuchaUbicacionBackground?.remove();
+    this.escuchaUbicacionBackground = null;
 
   }
 
@@ -1483,7 +1549,7 @@ private timerZona: any = null;
           cuidador.id,
           estado,
           cuerpo,
-          { tipo: 'estado_casa', estado }
+          { tipo: 'estado_casa', estado, canal: 'zona-estado' }
         );
         if (ok) {
           enviados++;
@@ -1773,6 +1839,8 @@ private timerZona: any = null;
         this.nombreCuidadorActivo =
           nombres.join(', ');
 
+        this.cuidadorVinculado = true;
+
         // Cargar foto del primer cuidador vinculado
         await this.cargarFotoCuidador(data[0]?.cuidador?.id_usuario);
 
@@ -1780,6 +1848,21 @@ private timerZona: any = null;
 
         this.nombreCuidadorActivo = '';
         this.cuidadorFotoUrl = null;
+
+        // Lista vacía: ¿de verdad no hay vínculo o falló la consulta?
+        // `hayCuidadorVinculado()` distingue los dos casos (null = sin red),
+        // y `null` se conserva como "se desconoce" para no ocultar zonas.
+        this.cuidadorVinculado =
+          await this.vinculacionService.hayCuidadorVinculado();
+
+        // Confirmado sin cuidador: la tarjeta de zona pasa de inmediato a
+        // "sin zona", sin esperar la próxima evaluación de GPS.
+        if (this.cuidadorVinculado === false) {
+          this.zonaEstado = 'sin-zona';
+          this.zonaDistanciaM = null;
+          this.zonaNombre = null;
+          this.zonaCuidadorAvisado = false;
+        }
 
       }
 

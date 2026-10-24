@@ -26,6 +26,7 @@ import {
 } from 'ionicons/icons';
 import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
 import { TUTORIAL_ROMPECABEZA } from '../juegos/tutoriales';
+import { suspenderZoomJuego, reanudarZoomJuego } from '../../services/font-size/font-size';
 
 /** Cantidad de piezas por lado (tablero de 3 x 3 = 8 piezas + un hueco). */
 const LADO = 3;
@@ -112,6 +113,9 @@ export class RompecabezasPage implements OnDestroy {
 
   constructor(private router: Router, private cdr: ChangeDetectorRef) {
     addIcons({ arrowBack, cameraOutline, imagesOutline, refreshOutline, removeOutline, addOutline, checkmarkDoneOutline, chevronDownOutline, chevronUpOutline, swapHorizontalOutline, helpCircleOutline });
+    // El arrastre y la pinza se calculan con coordenadas del viewport: el
+    // zoom de letra las corría y las piezas se movían al lugar equivocado.
+    suspenderZoomJuego();
     this.imagen = this.generarImagen();
     this.jugarDeNuevo();
   }
@@ -304,8 +308,14 @@ export class RompecabezasPage implements OnDestroy {
   soltarRecorte(evento: PointerEvent): void {
     this.punteros.delete(evento.pointerId);
 
-    if (this.punteros.size < 2) {
-      // Se reinicia la base para que el próximo pellizco parta desde el zoom actual.
+    if (this.punteros.size === 2) {
+      // Quedan (o acaban de quedar) dos dedos: se reparte la base del pellizco
+      // desde AHORA. Si se seguía usando la base de cuando empezó el pellizco
+      // (p. ej. al soltar un tercer dedo), la foto saltaba a un zoom raro.
+      const [p1, p2] = [...this.punteros.values()];
+      this.distanciaPellizco = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      this.zoomPellizco = this.zoom;
+    } else if (this.punteros.size < 2) {
       this.distanciaPellizco = 0;
     }
     if (this.punteros.size === 1) {
@@ -560,5 +570,6 @@ export class RompecabezasPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.destruido = true;
+    reanudarZoomJuego();
   }
 }

@@ -44,3 +44,34 @@
   line-height: 1.5;
 }
 
+/* ---------------- Contadores del resumen ---------------- */
+.panel-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.panel-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid #e2ddf2;
+  border-radius: 12px;
+  background-color: #ffffff;
+}
+
+.panel-kpi__valor {
+  color: #241b38;
+  font-size: 1.9rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.panel-kpi__etiqueta {
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+

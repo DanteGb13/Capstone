@@ -55,6 +55,18 @@ body {
   zoom: var(--font-scale);
 }
 
+/*
+ * Los juegos miden los toques con coordenadas del viewport (elementFromPoint
+ * en Sopa de letras, la pinza del Rompecabezas), y el zoom de body corría
+ * esas coordenadas: el dedo caía en la celda de al lado. Mientras la página
+ * activa sea un juego (las cinco pantallas de juegos suman esta clase desde
+ * su ciclo de vida), el zoom se suspende. Ver suspenderZoomJuego() en
+ * services/font-size/font-size.ts.
+ */
+body.sin-zoom-letra {
+  zoom: 1 !important;
+}
+
 /* =====================================================
    FILTRO PARA DALTÓNICOS
    ===================================================== */
@@ -408,6 +420,20 @@ ion-app {
   background-color: #f8f7fc;
 }
 
+/* El modal se mueve al nivel de ion-app, por eso su geometría debe ser global. */
+ion-modal.modal-contacto-cuidador,
+ion-modal.modal-contacto-adulto {
+  --height: 90%;
+  --max-height: 760px;
+  --width: calc(100% - 32px);
+  --max-width: 460px;
+  --border-radius: 24px;
+  --background: #f8f7fc;
+  --overflow: hidden;
+  --box-shadow: 0 14px 36px rgba(26, 29, 38, 0.2);
+  --backdrop-opacity: 0.24;
+}
+
 /* =====================================================
    PÁGINAS PÚBLICAS DE LA WEB
 
@@ -599,8 +625,37 @@ app-web-nav {
    página: `.panel-accesos`/`.panel-acceso*` (Panel), `.panel-aviso`,
    `.panel-tarjetas`, `.panel-tarjeta__valor`, `.panel-ranking*`
    (Analítica), `.panel-tabla*`/`.panel-estado*` (Usuarios),
-   `.panel-boton` (Reportes), `.panel-lista` (Configuración).
+   `.panel-boton` (Reportes), `.panel-lista` (Configuración),
+   `.gestion-*` (Gestión de usuarios).
    ===================================================== */
+
+/* ---------------- Segmento de slides del panel ----------------
+   Las secciones del panel se dividen en "slides" con `ion-segment` para no
+   amontonar todo en una pantalla y, sobre todo, para no tener que meter
+   nada en el navbar de la web: el control vive dentro del contenido de cada
+   página y la barra superior queda exactamente como está. Va acá y no en un
+   `.scss` de página porque lo usan Panel, Gestión de usuarios,
+   Configuración, Analítica y Reportes. */
+.web-segment {
+  --background: var(--sc-surface-alt);
+  --background-checked: var(--sc-primary);
+  --color: var(--sc-ink-2);
+  --color-checked: var(--sc-ink-invert);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius-pill);
+  padding: 3px;
+  margin-bottom: 1.1rem;
+}
+
+.web-segment ion-segment-button {
+  --border-radius: var(--sc-radius-pill);
+  min-height: 36px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 .panel-cabecera {
   margin-bottom: 1.75rem;
 }

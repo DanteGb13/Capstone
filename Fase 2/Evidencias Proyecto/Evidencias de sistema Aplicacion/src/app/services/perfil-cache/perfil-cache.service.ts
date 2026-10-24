@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { Observable, Subject } from 'rxjs';
 import { SupabaseService } from '../supabase/supabase';
 
 /** Lo mínimo que se necesita para pintar la cabecera de cualquier panel. */
@@ -71,6 +72,18 @@ const TTL_FOTO_MS = 60 * 60 * 1000;
 @Injectable({ providedIn: 'root' })
 export class PerfilCacheService {
 
+  /**
+   * Avisa de que el perfil o la foto cambiaron.
+   *
+   * Sin esto, quien cambia su foto desde Mi Perfil seguía viendo la anterior
+   * en la barra superior hasta navegar a otra página (cada página monta su
+   * propio `app-web-nav`, y sólo se crea uno nuevo al cambiar de ruta).
+   */
+  private readonly notificador = new Subject<void>();
+
+  /** Emite cada vez que se invalida o se actualiza el perfil. */
+  readonly cambios$: Observable<void> = this.notificador.asObservable();
+
   private supabaseService = inject(SupabaseService);
 
   /** Perfil ya cargado en memoria. */
@@ -130,6 +143,10 @@ export class PerfilCacheService {
       const vigente = Date.now() - guardada.guardadoEn < TTL_PERFIL_MS;
       if (vigente) {
         this.enMemoria = guardada;
+        // La caché se guarda ANTES de resolver la foto, así que en la segunda
+        // carga el perfil viene sin ella: se pide igual y se pinta cuando
+        // llegue. Sin esto el avatar del navbar nunca mostraría la foto.
+        this.completarFoto(guardada.perfil);
         return guardada.perfil;
       }
     }
@@ -226,11 +243,7 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
       this.guardarCache(this.enMemoria);
 
       // La foto se resuelve después y no bloquea al nombre.
-      this.cargarFoto(id).then((url) => {
-        if (url && this.enMemoria?.perfil.id === id) {
-          this.enMemoria = { ...this.enMemoria, perfil: { ...this.enMemoria.perfil, fotoUrl: url } };
-        }
-      });
+      this.completarFoto(perfil);
 
       return perfil;
     } catch (e) {
@@ -242,6 +255,34 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
   // =====================================================
   // FOTO
   // =====================================================
+
+  /**
+   * Completa la foto de un perfil que ya se entregó al llamador.
+   *
+   * Antes la URL se escribía sólo en `enMemoria`, con un objeto nuevo, así que
+   * el objeto que el navbar o la página de perfil tenían en la mano seguía con
+   * `fotoUrl: null` para siempre y la foto jamás aparecía. Ahora se actualiza
+   * en el sitio.
+   */
+  private completarFoto(perfil: PerfilResumen): void {
+    if (perfil.fotoUrl) return;
+
+    void this.cargarFoto(perfil.id).then((url) => {
+      if (!url) return;
+
+      // El mismo objeto que ya tiene el llamador.
+      perfil.fotoUrl = url;
+
+      if (this.enMemoria?.perfil.id !== perfil.id) return;
+
+      this.enMemoria = { ...this.enMemoria, perfil: { ...this.enMemoria.perfil, fotoUrl: url } };
+      // Se vuelve a guardar para que la próxima carga no arranque de cero.
+      this.guardarCache(this.enMemoria);
+      // La barra ya tiene el perfil en la mano y se va a enterar sólo si se
+      // le avisa: la foto llegó DESPUÉS de haberla pintado sin ella.
+      this.notificador.next();
+    });
+  }
 
   /**
    * URL firmada de la foto de perfil.
@@ -325,6 +366,7 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
     } catch {
       // sin almacenamiento local no hay nada que borrar
     }
+    this.notificador.next();
   }
 
   /**

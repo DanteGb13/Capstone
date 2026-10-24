@@ -1,4 +1,23 @@
-<ion-content [fullscreen]="true">
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>
+      <div class="header-content">
+        <div class="user-info">
+          <div>
+            <h1>Hola, {{ nombreUsuario || 'Cuidador' }}</h1>
+            <p>Panel de cuidador</p>
+          </div>
+          <button class="avatar" type="button" (click)="abrirPerfil()">
+            <img *ngIf="fotoUrl" [src]="fotoUrl" alt="Foto de perfil" class="avatar-img">
+            <ion-icon *ngIf="!fotoUrl" name="person"></ion-icon>
+          </button>
+        </div>
+      </div>
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
 
   <!-- Refresco manual: sin esto, una vinculación aceptada sólo aparecía
        al esperar el sondeo, y sólo si la pantalla estaba abierta. -->
@@ -8,62 +27,30 @@
 
   <div class="app-container">
 
-    <!-- Aviso de permisos: no bloquea, sólo informa -->
-    <app-aviso-permisos
-      [titulo]="avisoPermisos?.titulo || ''"
-      [detalle]="avisoPermisos?.detalle || ''"
-      [visible]="!!avisoPermisos"
-      [urgente]="avisoPermisosUrgente"
-      (corregir)="corregirPermisos()"
-      (cerrado)="avisoPermisosOculto = true">
-    </app-aviso-permisos>
+    <!-- Resumen de protección -->
+    <div class="status-card">
 
-    <!-- Header -->
-    <div class="header">
-
-      <div class="user-info">
-
-        <div>
-          <h1>Hola, {{ nombreUsuario || 'Cuidador' }}</h1>
-          <p>Panel de Cuidador</p>
-        </div>
-
-        <button
-          class="avatar"
-          type="button"
-          (click)="abrirPerfil()">
-          <img *ngIf="fotoUrl" [src]="fotoUrl" alt="Foto de perfil" class="avatar-img">
-          <ion-icon *ngIf="!fotoUrl" name="person"></ion-icon>
-        </button>
-
+      <div class="status-icon">
+        <ion-icon name="shield-checkmark"></ion-icon>
       </div>
 
-      <!-- Resumen de protección -->
-      <div class="status-card">
+      <div class="status-text">
 
-        <div class="status-icon">
-          <ion-icon name="shield-checkmark"></ion-icon>
-        </div>
+        <strong>
+          @if (adultosACargo.length > 0) {
+            Cuidando a {{ adultosACargo.length }} {{ adultosACargo.length === 1 ? 'persona' : 'personas' }}
+          } @else {
+            Sin personas a cargo
+          }
+        </strong>
 
-        <div class="status-text">
-
-          <strong>
-            @if (adultosACargo.length > 0) {
-              Cuidando a {{ adultosACargo.length }} {{ adultosACargo.length === 1 ? 'persona' : 'personas' }}
-            } @else {
-              Sin personas a cargo
-            }
-          </strong>
-
-          <span>
-            @if (adultosACargo.length > 0) {
-              {{ textoResumenConexion }}
-            } @else {
-              Vincula un adulto mayor para comenzar.
-            }
-          </span>
-
-        </div>
+        <span>
+          @if (adultosACargo.length > 0) {
+            {{ textoResumenConexion }}
+          } @else {
+            Vincula un adulto mayor para comenzar.
+          }
+        </span>
 
       </div>
 
@@ -343,3 +330,12 @@
   </ion-modal>
 
 </ion-content>
+
+<app-aviso-permisos
+  [titulo]="avisoPermisos?.titulo || ''"
+  [detalle]="avisoPermisos?.detalle || ''"
+  [visible]="!!avisoPermisos"
+  [urgente]="avisoPermisosUrgente"
+  (corregir)="corregirPermisos()"
+  (cerrado)="avisoPermisosOculto = true">
+</app-aviso-permisos>

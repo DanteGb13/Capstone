@@ -1,0 +1,297 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <div class="web-page">
+
+    <div class="panel-cabecera">
+      <h1>Gestión de usuarios</h1>
+      <p class="descripcion">Roles, estado de las cuentas y actividad de cada cuenta.</p>
+    </div>
+
+    <!--
+      Cada cosa vive en su propio slide. Se usa `ion-segment` y no un acordeón
+      ni más tarjetas en la página principal: el navbar y el resto del panel
+      quedan intactos, y la persona puede saltar directo a lo que vino a hacer.
+    -->
+    <ion-segment class="web-segment" [value]="vista" (ionChange)="alCambiarVista($event)">
+      <ion-segment-button value="listado">
+        <ion-label>Listado</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="acciones">
+        <ion-label>Acciones</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="actividad">
+        <ion-label>Actividad</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    @if (mensaje) {
+      <p class="gestion-aviso" role="status">{{ mensaje }}</p>
+    }
+
+    <!-- ===================================================== -->
+    <!-- SLIDE 1: LISTADO                                       -->
+    <!-- ===================================================== -->
+    @if (vista === 'listado') {
+
+      <div class="gestion-filtros">
+        <input
+          class="gestion-campo"
+          type="search"
+          placeholder="Buscar por nombre o correo"
+          aria-label="Buscar por nombre o correo"
+          [(ngModel)]="busqueda"
+          (ngModelChange)="alFiltrar()" />
+
+        <select
+          class="gestion-campo"
+          aria-label="Filtrar por rol"
+          [(ngModel)]="filtroRol"
+          (ngModelChange)="alFiltrar()">
+          <option value="">Todos los roles</option>
+          @for (rol of roles; track rol.id) {
+            <option [value]="rol.nombre">{{ rol.nombre }}</option>
+          }
+        </select>
+
+        <select
+          class="gestion-campo"
+          aria-label="Filtrar por estado"
+          [(ngModel)]="filtroEstado"
+          (ngModelChange)="alFiltrar()">
+          <option value="">Todos los estados</option>
+          <option value="activo">Sólo activos</option>
+          <option value="inactivo">Sólo inactivos</option>
+        </select>
+      </div>
+
+      @if (cargando) {
+        <p class="panel-vacio">Cargando…</p>
+      } @else if (error) {
+        <p class="panel-error">{{ error }}</p>
+      } @else if (!filtrados.length) {
+        <p class="panel-vacio">Ninguna cuenta coincide con esos filtros.</p>
+      } @else {
+
+        <p class="panel-texto panel-texto--menor">
+          {{ filtrados.length }} cuenta(s) · página {{ pagina }} de {{ paginas }}
+        </p>
+
+        <div class="panel-tabla-envoltura">
+          <table class="panel-tabla">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Rol</th>
+                <th>Estado</th>
+                <th>Última actividad</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (usuario of visibles; track usuario.id) {
+                <tr>
+                  <td class="panel-tabla__fuerte">{{ usuario.nombre }}</td>
+                  <td>{{ usuario.correo }}</td>
+                  <td>{{ usuario.rol }}</td>
+                  <td>
+                    <span
+                      class="panel-estado"
+                      [class.panel-estado--inactivo]="!usuario.activo">
+                      {{ usuario.activo ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </td>
+                  <td>{{ haceCuanto(usuario.ultimoVisto) }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="gestion-enlace"
+                      (click)="seleccionar(usuario, 'acciones')">
+                      Gestionar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (paginas > 1) {
+          <div class="gestion-paginacion">
+            <button
+              type="button"
+              class="gestion-boton"
+              [disabled]="pagina <= 1"
+              (click)="irPagina(pagina - 1)">
+              Anterior
+            </button>
+            <span class="gestion-paginacion__numero">{{ pagina }} / {{ paginas }}</span>
+            <button
+              type="button"
+              class="gestion-boton"
+              [disabled]="pagina >= paginas"
+              (click)="irPagina(pagina + 1)">
+              Siguiente
+            </button>
+          </div>
+        }
+
+      }
+
+    }
+
+    <!-- ===================================================== -->
+    <!-- SLIDE 2: ACCIONES                                      -->
+    <!-- ===================================================== -->
+    @if (vista === 'acciones') {
+
+      @if (!seleccion) {
+        <p class="panel-vacio">
+          Elige una cuenta desde el listado para cambiarle el rol o el estado.
+        </p>
+        <button type="button" class="gestion-boton" (click)="irAlListado()">
+          Ir al listado
+        </button>
+      } @else {
+
+        <div class="panel-tarjeta panel-tarjeta--bloque">
+          <h2 class="panel-subtitulo">Cuenta elegida</h2>
+          <dl class="panel-datos">
+            <div class="panel-datos__fila">
+              <dt>Nombre</dt>
+              <dd>{{ seleccion.nombre }}</dd>
+            </div>
+            <div class="panel-datos__fila">
+              <dt>Correo</dt>
+              <dd>{{ seleccion.correo }}</dd>
+            </div>
+            <div class="panel-datos__fila">
+              <dt>Rol actual</dt>
+              <dd>{{ seleccion.rol }}</dd>
+            </div>
+            <div class="panel-datos__fila">
+              <dt>Estado</dt>
+              <dd>{{ seleccion.activo ? 'Activo' : 'Inactivo' }}</dd>
+            </div>
+            <div class="panel-datos__fila">
+              <dt>Última actividad</dt>
+              <dd>{{ haceCuanto(seleccion.ultimoVisto) }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="panel-tarjeta panel-tarjeta--bloque">
+          <h2 class="panel-subtitulo">Rol</h2>
+          <label class="gestion-etiqueta" for="gestion-rol">Nuevo rol</label>
+          <select
+            id="gestion-rol"
+            class="gestion-campo"
+            [value]="seleccion.idRol ?? ''"
+            [disabled]="guardando"
+            (change)="cambiarRol($any($event.target).value)">
+            <option value="" disabled>Elige un rol</option>
+            @for (rol of roles; track rol.id) {
+              <option [value]="rol.id">{{ rol.nombre }}</option>
+            }
+          </select>
+          <p class="panel-texto panel-texto--menor">
+            La base se niega a cambiar el rol de tu propia cuenta y a dejar el
+            panel sin ningún administrador activo.
+          </p>
+        </div>
+
+        <div class="panel-tarjeta panel-tarjeta--bloque">
+          <h2 class="panel-subtitulo">Estado de la cuenta</h2>
+
+          @if (seleccion.activo) {
+            <button
+              type="button"
+              class="gestion-boton gestion-boton--peligro"
+              [disabled]="guardando"
+              (click)="cambiarEstado(false)">
+              Desactivar cuenta
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="gestion-boton gestion-boton--ok"
+              [disabled]="guardando"
+              (click)="cambiarEstado(true)">
+              Activar cuenta
+            </button>
+          }
+
+          <p class="panel-texto panel-texto--menor">
+            Desactivar impide que la cuenta vuelva a entrar. La base se niega
+            también a desactivar al último administrador activo.
+          </p>
+        </div>
+
+        <div class="gestion-filtros">
+          <button type="button" class="gestion-boton" (click)="seleccionar(seleccion, 'actividad')">
+            Ver actividad
+          </button>
+          <button type="button" class="gestion-boton" (click)="irAlListado()">
+            Elegir otra cuenta
+          </button>
+        </div>
+
+      }
+
+    }
+
+    <!-- ===================================================== -->
+    <!-- SLIDE 3: ACTIVIDAD                                     -->
+    <!-- ===================================================== -->
+    @if (vista === 'actividad') {
+
+      @if (!seleccion) {
+        <p class="panel-vacio">
+          Elige una cuenta desde el listado para ver su actividad.
+        </p>
+        <button type="button" class="gestion-boton" (click)="irAlListado()">
+          Ir al listado
+        </button>
+      } @else {
+
+        <p class="panel-texto">
+          Actividad registrada de <strong>{{ seleccion.nombre }}</strong>.
+        </p>
+
+        @if (cargandoActividad) {
+          <p class="panel-vacio">Cargando…</p>
+        } @else if (!actividad.length) {
+          <p class="panel-vacio">Todavía no hay eventos registrados para esta cuenta.</p>
+        } @else {
+
+          <ul class="gestion-eventos">
+            @for (evento of actividad; track evento.id) {
+              <li class="gestion-evento">
+                <span class="gestion-evento__accion">{{ etiquetaAccion(evento.accion) }}</span>
+                <span class="gestion-evento__fecha">{{ fechaLegible(evento.fecha) }}</span>
+                @if (resumenDetalle(evento.detalle)) {
+                  <span class="gestion-evento__detalle">{{ resumenDetalle(evento.detalle) }}</span>
+                }
+                <span class="gestion-evento__actor">Por: {{ evento.actor }}</span>
+              </li>
+            }
+          </ul>
+
+        }
+
+        <div class="gestion-filtros">
+          <button type="button" class="gestion-boton" (click)="seleccionar(seleccion, 'acciones')">
+            Volver a acciones
+          </button>
+          <button type="button" class="gestion-boton" (click)="irAlListado()">
+            Elegir otra cuenta
+          </button>
+        </div>
+
+      }
+
+    }
+
+  </div>
+</ion-content>

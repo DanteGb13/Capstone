@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonContent,
@@ -13,6 +13,7 @@ import { addIcons } from 'ionicons';
 import { arrowBack, chevronDownOutline, chevronUpOutline, helpCircleOutline } from 'ionicons/icons';
 import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
 import { TUTORIAL_SOPA } from '../juegos/tutoriales';
+import { suspenderZoomJuego, reanudarZoomJuego } from '../../services/font-size/font-size';
 
 /** Una celda de la sopa de letras. */
 export interface CeldaSopa {
@@ -96,7 +97,7 @@ const ALFABETO = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     TutorialJuegoComponent
   ]
 })
-export class SopaLetrasPage {
+export class SopaLetrasPage implements OnDestroy {
 
   /** True mientras se muestra el tutorial de "Cómo jugar". */
   mostrarTutorial = true;
@@ -124,7 +125,14 @@ export class SopaLetrasPage {
 
   constructor(private router: Router) {
     addIcons({ arrowBack, chevronDownOutline, chevronUpOutline, helpCircleOutline });
+    // La selección de letras usa elementFromPoint(clientX, clientY): el zoom
+    // de letra corría esas coordenadas y el toque caía en otra celda.
+    suspenderZoomJuego();
     this.regenerar();
+  }
+
+  ngOnDestroy(): void {
+    reanudarZoomJuego();
   }
 
   /** Tema que se está jugando. */

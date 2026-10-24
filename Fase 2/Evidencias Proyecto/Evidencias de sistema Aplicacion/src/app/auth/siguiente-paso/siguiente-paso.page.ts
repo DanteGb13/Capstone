@@ -6,7 +6,10 @@ import {
   IonInput,
   IonModal,
   IonDatetime,
-  NavController
+  IonSelect,
+  IonSelectOption,
+  NavController,
+  AlertController
 } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -31,6 +34,7 @@ import {
 import { registro } from '../../services/guards/registro/registro';
 import { SupabaseService } from '../../services/supabase/supabase';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
+import { PerfilCacheService } from '../../services/perfil-cache/perfil-cache.service';
 import {
   validarNombreOApellido,
   validarRutChileno,
@@ -38,9 +42,12 @@ import {
   validarTelefonoChileno,
   formatearTelefonoChileno,
   validarFechaNacimiento,
+  esMayorDeEdad,
   validarTextoBasico,
   validarPassword
 } from '../../services/utils/validators';
+import { mensajeErrorApp } from '../../services/utils/mensaje-error';
+import { RegionesComunasService, RegionChile } from '../../services/utils/regiones-comunas.service';
 
 @Component({
   selector: 'app-siguiente-paso',
@@ -53,6 +60,8 @@ import {
     IonInput,
     IonModal,
     IonDatetime,
+    IonSelect,
+    IonSelectOption,
     CommonModule,
     FormsModule
   ]
@@ -71,6 +80,13 @@ export class SiguientePasoPage implements OnInit {
   calle: string = '';
   numero: string = '';
 
+  /** Las 16 regiones con sus comunas (API de CNT.cl con respaldo oficial). */
+  listaRegiones: RegionChile[] = [];
+  /** Comunas de la región elegida; vacías hasta que se elija región. */
+  comunasDisponibles: string[] = [];
+  /** Mensaje de la lista de regiones si falla la descarga. */
+  errorRegiones: string = '';
+
   tipoCuenta: 'Usuario' | 'Familiar' = 'Usuario';
   mensajeError: string = '';
   cargando: boolean = false;
@@ -82,7 +98,12 @@ export class SiguientePasoPage implements OnInit {
   mostrarContrasenaConfirmacion: boolean = false;
 
   mostrarModalFecha: boolean = false;
-  fechaMaxima: string = new Date().toISOString();
+  /** El selector no ofrece fechas que dejen a la persona con menos de 18 años. */
+  fechaMaxima: string = (() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - 18);
+    return d.toISOString();
+  })();
 
   errores: {
     rut?: string;
@@ -107,7 +128,10 @@ export class SiguientePasoPage implements OnInit {
     private router: Router,
     private navCtrl: NavController,
     private changeDetectorRef: ChangeDetectorRef,
-    private navRol: NavegacionRolService
+    private navRol: NavegacionRolService,
+    private alertController: AlertController,
+    private perfilCache: PerfilCacheService,
+    private regionesService: RegionesComunasService
   ) {
     addIcons({
       arrowBackOutline,
@@ -128,6 +152,10 @@ export class SiguientePasoPage implements OnInit {
   }
 
   async ngOnInit() {
+    // No bloquea la pantalla: la lista llega en segundo plano y se pinta
+    // con detectChanges cuando está lista.
+    void this.cargarRegionesComunas();
+
     try {
       const supabase = this.supabaseService.getClient();
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -232,6 +260,40 @@ export class SiguientePasoPage implements OnInit {
     }
   }
 
+  /** Carga las regiones y comunas desde el JSON embebido en assets. */
+  private async cargarRegionesComunas() {
+    try {
+      this.listaRegiones = await this.regionesService.regiones();
+      // Si la región ya estaba elegida (al reintentar el formulario), las
+      // comunas se repueblan sin borrar la comuna elegida.
+      if (this.region) {
+        this.comunasDisponibles = this.listaRegiones
+          .find((r) => r.nombre === this.region)?.comunas ?? [];
+      }
+    } catch {
+      this.errorRegiones = 'No se pudieron cargar las regiones y comunas.';
+    } finally {
+      this.changeDetectorRef.detectChanges();
+    }
+  }
+
+  /** Al elegir región: se repueblan las comunas y se limpia la comuna. */
+  alCambiarRegion(ev: any) {
+    this.region = String(ev?.detail?.value ?? this.region);
+    const region = this.listaRegiones.find((r) => r.nombre === this.region);
+    this.comunasDisponibles = region ? region.comunas : [];
+    this.comuna = '';
+    delete this.errores.comuna;
+    this.validarCampoRegion();
+    this.changeDetectorRef.detectChanges();
+  }
+
+  alCambiarComuna(ev: any) {
+    this.comuna = String(ev?.detail?.value ?? this.comuna);
+    this.validarCampoComuna();
+    this.changeDetectorRef.detectChanges();
+  }
+
   validarCampoRut() {
     if (!this.rut || this.rut.trim().length === 0) {
       this.errores.rut = 'El RUT es obligatorio.';
@@ -259,6 +321,11 @@ export class SiguientePasoPage implements OnInit {
     }
     if (!validarFechaNacimiento(this.fechaNacimiento)) {
       this.errores.fechaNacimiento = 'Ingresa una fecha válida en el pasado.';
+      return false;
+    }
+    // El selector ya limita a 18+, pero el dato puede venir pegado o manipulado.
+    if (!esMayorDeEdad(this.fechaNacimiento)) {
+      this.errores.fechaNacimiento = 'Debes tener al menos 18 años para usar la app.';
       return false;
     }
     delete this.errores.fechaNacimiento;
@@ -436,10 +503,12 @@ export class SiguientePasoPage implements OnInit {
 
     if (!this.validarFormularioCompleto()) {
       this.mensajeError = 'Por favor completa y corrige los campos señalados en rojo.';
+      this.changeDetectorRef.detectChanges();
       return;
     }
 
     this.cargando = true;
+    this.changeDetectorRef.detectChanges();
 
     try {
       const telLimpio = this.telefono.replace(/[\s\-\+]/g, '');
@@ -465,10 +534,18 @@ export class SiguientePasoPage implements OnInit {
         });
         if (passError) {
           console.error('Error al guardar contraseña:', passError);
-          this.mensajeError = 'Perfil guardado, pero no se pudo establecer la contraseña. Puedes intentar más tarde desde ajustes.';
+          await this.alertaError(
+            'Contraseña no guardada',
+            'El perfil se guardó, pero no se pudo establecer la contraseña. Puedes intentarlo más tarde desde ajustes.'
+          );
         }
       }
 
+      // La caché del perfil se llenó al iniciar sesión, con la fila todavía
+      // incompleta (sin RUT, fecha ni dirección). Si no se limpia acá, el
+      // panel y la pantalla de Perfil sirven esos datos viejos durante
+      // 5 minutos aunque la base ya tenga lo recién guardado.
+      this.perfilCache.limpiar();
       this.navRol.limpiarCache();
 
       if (resultado.tipoCuenta === 'Usuario') {
@@ -479,11 +556,30 @@ export class SiguientePasoPage implements OnInit {
         await this.navCtrl.navigateRoot('/adulto-mayor', { replaceUrl: true });
       }
 
-    } catch (error: any) {
-      this.mensajeError = error?.message || 'No se pudieron guardar los datos. Inténtalo de nuevo.';
+    } catch (error) {
+      // El error llega traducido (p. ej. RUT repetido → "Este RUT ya está en
+      // uso.") y se muestra como alerta; un toast o texto pequeño se pierde.
+      console.error('Error guardando el perfil del paso 2:', error);
+      await this.alertaError(
+        'No se pudo guardar tu perfil',
+        mensajeErrorApp(error, 'No se pudieron guardar los datos. Inténtalo de nuevo.')
+      );
     } finally {
+      // Sin detectChanges el spinner quedaba girando para siempre: el cambio
+      // de `cargando` ocurría después del último repintado (app zoneless).
       this.cargando = false;
+      this.changeDetectorRef.detectChanges();
     }
+  }
+
+  /** Alerta visible para errores del servidor (nunca texto técnico crudo). */
+  private async alertaError(titulo: string, mensaje: string) {
+    const alert = await this.alertController.create({
+      header: titulo,
+      message: mensaje,
+      buttons: ['Entendido']
+    });
+    await alert.present();
   }
 
 }

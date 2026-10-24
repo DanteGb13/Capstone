@@ -5,25 +5,65 @@
 
     <div class="panel-cabecera">
       <h1>Reportes</h1>
-      <p class="descripcion">Exporta los datos de uso para llevarlos a una planilla.</p>
+      <p class="descripcion">Exporta los datos del panel para llevarlos a una planilla.</p>
     </div>
 
+    <!--
+      Dos controles del contenido, no del navbar: cuántos días y qué se
+      exporta. El botón de abajo se adapta a lo elegido acá.
+    -->
+    <ion-segment class="web-segment" [value]="dias" (ionChange)="alCambiarRango($event)">
+      @for (rango of rangos; track rango) {
+        <ion-segment-button [value]="rango">
+          <ion-label>{{ rango }} días</ion-label>
+        </ion-segment-button>
+      }
+    </ion-segment>
+
+    <ion-segment class="web-segment" [value]="reporte" (ionChange)="alCambiarReporte($event)">
+      <ion-segment-button value="uso">
+        <ion-label>Uso</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="cuentas">
+        <ion-label>Cuentas</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
     <div class="panel-tarjeta panel-tarjeta--bloque">
-      <h2 class="panel-subtitulo">Eventos de analítica</h2>
-      <p class="panel-texto">
-        Últimos 30 días: fecha, página, tipo de evento y plataforma.
-        Se descarga en formato CSV, que se abre en Excel o Google Sheets.
-      </p>
-      <button
-        type="button"
-        class="panel-boton"
-        [disabled]="exportando"
-        (click)="exportarEventos()">
-        {{ exportando ? 'Preparando…' : 'Descargar CSV' }}
-      </button>
+      @if (reporte === 'uso') {
+        <h2 class="panel-subtitulo">Eventos de analítica</h2>
+        <p class="panel-texto">
+          Últimos {{ dias }} días: fecha, página, tipo de evento y plataforma.
+          Se descarga en formato CSV, que se abre en Excel o Google Sheets.
+        </p>
+        <button
+          type="button"
+          class="panel-boton"
+          [disabled]="exportando"
+          (click)="exportar()">
+          {{ exportando ? 'Preparando…' : 'Descargar CSV de uso' }}
+        </button>
+      } @else {
+        <h2 class="panel-subtitulo">Cuentas registradas</h2>
+        <p class="panel-texto">
+          Todas las cuentas: nombre, correo, teléfono, rol, estado y cuándo
+          entraron por última vez. No incluye contraseña ni dirección.
+        </p>
+        <button
+          type="button"
+          class="panel-boton"
+          [disabled]="exportando"
+          (click)="exportar()">
+          {{ exportando ? 'Preparando…' : 'Descargar CSV de cuentas' }}
+        </button>
+      }
       @if (mensaje) {
         <p class="panel-texto panel-texto--menor">{{ mensaje }}</p>
       }
+      <p class="panel-texto panel-texto--menor">
+        Toda exportación queda registrada en la bitácora de seguridad con quién
+        la hizo, cuándo y cuántas filas llevaba.
+      </p>
     </div>
 
   </div>

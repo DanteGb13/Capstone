@@ -18,12 +18,14 @@ import {
 import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
+import { mensajeErrorApp } from '../../../services/utils/mensaje-error';
 import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
 import { SupabaseService } from '../../../services/supabase/supabase';
 import { PermisosExtra } from '../../../services/Backend/permisos-extra/permisos-extra';
 import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
 import { estaEnLinea } from '../../../services/Backend/presencia/presencia';
 import { HistorialEventos } from '../../../services/Backend/historial-eventos/historial-eventos';
+import { ZonaSeguraService } from '../../../services/Backend/zona-segura/zona-segura';
 import { Capacitor } from '@capacitor/core';
 
 @Component({
@@ -60,6 +62,7 @@ export class CuidadoPage implements OnInit {
     private supabaseService: SupabaseService,
     private alertController: AlertController,
     private historialService: HistorialEventos,
+    private zonaSeguraService: ZonaSeguraService,
     private toastController: ToastController
   ) {
     addIcons(icons);
@@ -258,6 +261,10 @@ async confirmarDesvincular(item: any) {
 
       await this.vinculacionService.desvincular(idCuidador, idUsuario);
 
+      // Las zonas del adulto quedan en memoria y en localStorage: sin este
+      // limpiado, una consulta posterior sin conexión seguía devolviéndolas.
+      this.zonaSeguraService.limpiarCache(idUsuario);
+
       const toast = await this.toastController.create({
         message: 'Vinculación eliminada',
         duration: 2000,
@@ -268,11 +275,11 @@ async confirmarDesvincular(item: any) {
       this.adultosACargo = [];
       this.cdr.detectChanges();
       await this.cargarAdultos();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error al desvincular:', error);
       const alert = await this.alertController.create({
         header: 'Error al desvincular',
-        message: error?.message || 'No se pudo completar la desvinculación. Verifica tu conexión y permisos.',
+        message: mensajeErrorApp(error, 'No se pudo completar la desvinculación. Verifica tu conexión y permisos.'),
         buttons: ['OK']
       });
       await alert.present();

@@ -147,23 +147,27 @@
         </div>
       }
 
-      <button
-        type="button"
-        class="btn-grande btn-agregar"
-        [disabled]="guardando || esperandoPicker"
-        (click)="agregarDeTelefono()">
-        <ion-icon name="person-add-outline"></ion-icon>
-        <span>{{ guardando ? 'Guardando…' : 'Añadir de mi teléfono' }}</span>
-      </button>
+      <!-- Pegados al pie de la pantalla: con la lista larga los botones se
+           iban con el scroll y había que bajar mucho para añadir. -->
+      <div class="acciones-lista">
+        <button
+          type="button"
+          class="btn-grande btn-agregar"
+          [disabled]="guardando || esperandoPicker"
+          (click)="agregarDeTelefono()">
+          <ion-icon name="person-add-outline"></ion-icon>
+          <span>{{ guardando ? 'Guardando…' : 'Añadir de mi teléfono' }}</span>
+        </button>
 
-      <button
-        type="button"
-        class="btn-grande btn-manual"
-        [disabled]="guardando"
-        (click)="abrirFormularioManual()">
-        <ion-icon name="add"></ion-icon>
-        <span>Añadir manualmente</span>
-      </button>
+        <button
+          type="button"
+          class="btn-grande btn-manual"
+          [disabled]="guardando"
+          (click)="abrirFormularioManual()">
+          <ion-icon name="add"></ion-icon>
+          <span>Añadir manualmente</span>
+        </button>
+      </div>
 
     </section>
 
@@ -191,7 +195,7 @@
   <!-- FORMULARIO: AÑADIR CONTACTO (IGUAL QUE EL TELÉFONO) -->
   <!-- ================================================= -->
 
-  <ion-modal class="modal-contacto" [isOpen]="mostrarFormulario" (didDismiss)="cerrarFormulario()">
+  <ion-modal class="modal-contacto-adulto" [isOpen]="mostrarFormulario" (didDismiss)="cerrarFormulario()">
 
     <ng-template>
 
@@ -329,6 +333,9 @@
 
         </div>
 
+      </ion-content>
+
+      <ion-footer class="footer-formulario">
         <div class="acciones-formulario">
           <button
             type="button"
@@ -351,8 +358,7 @@
             Cancelar
           </button>
         </div>
-
-      </ion-content>
+      </ion-footer>
 
     </ng-template>
 

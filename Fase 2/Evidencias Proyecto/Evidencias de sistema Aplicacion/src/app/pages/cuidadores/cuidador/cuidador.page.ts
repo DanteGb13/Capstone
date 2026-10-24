@@ -26,6 +26,7 @@ import { App } from '@capacitor/app';
 
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { CuidadoresService } from '../../../services/Backend/cuidadores/cuidadores';
+import { mensajeErrorApp } from '../../../services/utils/mensaje-error';
 import { FooterComponent } from '../../../components/footer/footer.component';
 import { AvisoPermisosComponent } from '../../../components/aviso-permisos/aviso-permisos.component';
 import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
@@ -565,8 +566,8 @@ export class CuidadorPage implements OnInit, OnDestroy {
 
       // Refrescar lista
       await this.cargarAdultos();
-    } catch (error: any) {
-      this.mensajeError = error?.message ?? 'No se pudo realizar la vinculación.';
+    } catch (error) {
+      this.mensajeError = mensajeErrorApp(error, 'No se pudo realizar la vinculación.');
     } finally {
       this.vinculando = false;
       this.changeDetectorRef.detectChanges();

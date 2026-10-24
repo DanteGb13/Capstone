@@ -5,12 +5,38 @@
 
     <div class="panel-cabecera">
       <h1>Analítica</h1>
-      <p class="descripcion">Uso real de la aplicación en los últimos 30 días.</p>
+      <p class="descripcion">Uso real de la aplicación en los últimos {{ dias }} días.</p>
       <p class="panel-aviso">
         Las rutas del panel de administración no se registran: mirar tu propio
         panel no es uso de la app y contaminaría el ranking.
       </p>
     </div>
+
+    <!--
+      Los dos segmentos viven fuera del bloque de "cargando" a propósito:
+      cambiar de rango o de plataforma tiene que ser posible incluso mientras
+      se carga, y no empujan el resto de la página porque son controles del
+      contenido, no del navbar.
+    -->
+    <ion-segment class="web-segment" [value]="dias" (ionChange)="alCambiarRango($event)">
+      @for (rango of rangos; track rango) {
+        <ion-segment-button [value]="rango">
+          <ion-label>{{ rango }} días</ion-label>
+        </ion-segment-button>
+      }
+    </ion-segment>
+
+    <ion-segment class="web-segment" [value]="filtroPlataforma" (ionChange)="alCambiarPlataforma($event)">
+      <ion-segment-button value="">
+        <ion-label>Todas</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="web">
+        <ion-label>Web</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="app">
+        <ion-label>App</ion-label>
+      </ion-segment-button>
+    </ion-segment>
 
     @if (cargando) {
       <p class="panel-vacio">Cargando…</p>
@@ -31,14 +57,18 @@
           <span class="panel-tarjeta__valor">{{ usuariosActivos }}</span>
           <span class="panel-tarjeta__etiqueta">Usuarios activos</span>
         </div>
-        <div class="panel-tarjeta">
-          <span class="panel-tarjeta__valor">{{ visitasWeb }}</span>
-          <span class="panel-tarjeta__etiqueta">Desde la web</span>
-        </div>
-        <div class="panel-tarjeta">
-          <span class="panel-tarjeta__valor">{{ visitasApp }}</span>
-          <span class="panel-tarjeta__etiqueta">Desde la app</span>
-        </div>
+        <!-- Estos dos sólo tienen sentido cuando no hay plataforma filtrada:
+             con el filtro puesto, el que no corresponde queda siempre en 0. -->
+        @if (!filtroPlataforma) {
+          <div class="panel-tarjeta">
+            <span class="panel-tarjeta__valor">{{ visitasWeb }}</span>
+            <span class="panel-tarjeta__etiqueta">Desde la web</span>
+          </div>
+          <div class="panel-tarjeta">
+            <span class="panel-tarjeta__valor">{{ visitasApp }}</span>
+            <span class="panel-tarjeta__etiqueta">Desde la app</span>
+          </div>
+        }
       </div>
 
       <h2 class="panel-subtitulo">Páginas más usadas</h2>
@@ -59,8 +89,8 @@
         </ul>
       } @else {
         <p class="panel-vacio">
-          Todavía no hay eventos registrados. Entra a una página desde la web o
-          desde la app y recarga.
+          No hay eventos registrados en ese rango. Entra a una página desde la
+          web o desde la app y recarga.
         </p>
       }
 

@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
+import { mensajeErrorApp } from '../../utils/mensaje-error';
 
 const TABLA = 'contacto_emergencia';
 
@@ -159,7 +160,7 @@ export class ContactosEmergenciaService {
       }
 
       if (consulta.error) {
-        this.ultimoError = consulta.error.message;
+        this.ultimoError = mensajeErrorApp(consulta.error);
         console.error('Error listando contactos de emergencia:', consulta.error.message);
         return [];
       }
@@ -248,7 +249,7 @@ export class ContactosEmergenciaService {
       }
 
       if (consulta.error) {
-        this.ultimoError = consulta.error.message;
+        this.ultimoError = mensajeErrorApp(consulta.error);
         console.error('Error guardando contacto de emergencia:', consulta.error.message, consulta.error);
         return null;
       }
@@ -328,7 +329,7 @@ export class ContactosEmergenciaService {
         .maybeSingle();
 
       if (error) {
-        this.ultimoError = error.message;
+        this.ultimoError = mensajeErrorApp(error);
         console.error('Error guardando parentesco:', error.message);
         return null;
       }
@@ -361,7 +362,7 @@ export class ContactosEmergenciaService {
         .eq('id', id);
 
       if (error) {
-        this.ultimoError = error.message;
+        this.ultimoError = mensajeErrorApp(error);
         console.error('Error eliminando contacto de emergencia:', error.message);
         return false;
       }

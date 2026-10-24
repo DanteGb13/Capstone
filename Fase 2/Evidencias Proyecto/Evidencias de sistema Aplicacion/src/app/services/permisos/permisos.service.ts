@@ -809,11 +809,20 @@ export class PermisosService {
   // AJUSTES DEL SISTEMA
   // =====================================================
 
-  async abrirAjustesApp(): Promise<void> {
+  /**
+   * Abre la ficha de la app en Ajustes del sistema.
+   *
+   * Devuelve true si de verdad se abrió: el llamador puede avisar si el
+   * intento falló (algunos fabricantes bloquean intents hacia Ajustes).
+   */
+  async abrirAjustesApp(): Promise<boolean> {
     try {
-      if (this.isNative) await UbicacionForeground.abrirAjustes();
+      if (!this.isNative) return false;
+      await UbicacionForeground.abrirAjustes();
+      return true;
     } catch (e) {
       console.warn('No se pudo abrir Ajustes:', e);
+      return false;
     }
   }
 
@@ -822,12 +831,16 @@ export class PermisosService {
    * Es lo correcto cuando lo que está apagado es un canal: en los ajustes
    * generales no hay forma de llegar al canal.
    */
-  async abrirAjustesNotificaciones(): Promise<void> {
+  async abrirAjustesNotificaciones(): Promise<boolean> {
     try {
-      if (this.isNative) await SiempreCerca.abrirAjustesNotificaciones();
-      else await this.abrirAjustesApp();
+      if (this.isNative) {
+        await SiempreCerca.abrirAjustesNotificaciones();
+        return true;
+      }
+      return await this.abrirAjustesApp();
     } catch (e) {
       console.warn('No se pudieron abrir los ajustes de notificaciones:', e);
+      return false;
     }
   }
 
@@ -908,6 +921,23 @@ export class PermisosService {
       }
     }
     await this.abrirAjustesApp();
+  }
+
+  /**
+   * Pantalla correcta para DESACTIVAR un permiso que está concedido.
+   *
+   * No es la misma que para activarlo: apagar notificaciones se hace en los
+   * ajustes de notificaciones de la app (donde está el interruptor general y
+   * los canales), mientras que el resto (ubicación, batería, cámara…) se
+   * apagan desde la ficha de la app en Ajustes.
+   *
+   * Igual que `abrirAjustesApp`, devuelve true si se logró abrir.
+   */
+  async abrirAjustesParaApagar(id: string): Promise<boolean> {
+    if (id === 'notificaciones') {
+      return await this.abrirAjustesNotificaciones();
+    }
+    return await this.abrirAjustesApp();
   }
 
 }

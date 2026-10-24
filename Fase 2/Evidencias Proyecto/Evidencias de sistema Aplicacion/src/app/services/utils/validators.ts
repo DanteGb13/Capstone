@@ -2,17 +2,44 @@
  * Utilidades de validación y formateo para autenticación y registro
  */
 
+/** Por qué un nombre o apellido no pasa la validación. `null` si pasa. */
+export type MotivoNombreInvalido = 'vacio' | 'numeros' | 'caracteres' | 'espacios' | 'corto';
+
+/**
+ * Explica QUÉ está mal en un nombre o apellido.
+ *
+ * `validarNombreOApellido` sólo dice bien o mal, y con eso la pantalla no
+ * puede decir nada más preciso que "debe tener al menos 2 letras" aunque el
+ * problema sea un número. Acá se devuelve el motivo para que cada campo
+ * muestre el mensaje que corresponde.
+ *
+ * Con `apellido: true` se prohíben los espacios: un apellido es una sola
+ * palabra. El nombre sí los admite, porque hay personas con dos nombres.
+ */
+export function motivoNombreInvalido(
+  texto: string,
+  opciones: { apellido?: boolean } = {}
+): MotivoNombreInvalido | null {
+  const limpio = (texto ?? '').trim();
+
+  if (!limpio) return 'vacio';
+  // El orden importa para el mensaje: "1" es un número, no un nombre corto.
+  if (/\d/.test(limpio)) return 'numeros';
+  // Letras con o sin tilde, ñ, ü, mayúsculas y minúsculas (+ espacios).
+  if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/.test(limpio)) return 'caracteres';
+  if (opciones.apellido && limpio.includes(' ')) return 'espacios';
+  if (limpio.length < 2) return 'corto';
+  return null;
+}
+
 /**
  * Valida nombres y apellidos: solo letras (incluyendo acentos y ñ/ü) y espacios.
  * No permite números ni caracteres especiales.
+ *
+ * Para pedir apellidos sin espacios está `motivoNombreInvalido({ apellido })`.
  */
 export function validarNombreOApellido(texto: string): boolean {
-  if (!texto) return false;
-  const limpio = texto.trim();
-  if (limpio.length < 2) return false;
-  // Letras con o sin tilde, ñ, ü, mayúsculas, minúsculas y espacios simples
-  const regex = /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/;
-  return regex.test(limpio);
+  return motivoNombreInvalido(texto) === null;
 }
 
 /**
@@ -148,7 +175,9 @@ export function formatearRut(rut: string): string {
 }
 
 /**
- * Valida fecha de nacimiento (debe ser fecha válida en el pasado, no futura, edad razonable 0-120 años).
+ * Valida fecha de nacimiento: tiene que ser una fecha real, no futura y no
+ * anterior a 1900. El piso es amplio a propósito — hay personas mayores de
+ * 100 años y antes se les cortaba el registro.
  */
 export function validarFechaNacimiento(fechaStr: string): boolean {
   if (!fechaStr) return false;
@@ -158,11 +187,29 @@ export function validarFechaNacimiento(fechaStr: string): boolean {
   const hoy = new Date();
   if (fecha > hoy) return false;
 
-  const anio = fecha.getFullYear();
-  const anioActual = hoy.getFullYear();
-  if (anio < anioActual - 120 || anio > anioActual) return false;
+  if (fecha.getFullYear() < 1900) return false;
 
   return true;
+}
+
+/**
+ * ¿La persona tiene al menos `edadMinima` años según su fecha de nacimiento?
+ * Se usa en el registro: la app es solo para personas mayores de edad.
+ */
+export function esMayorDeEdad(fechaStr: string, edadMinima = 18): boolean {
+  if (!fechaStr) return false;
+  const fecha = new Date(fechaStr);
+  if (isNaN(fecha.getTime())) return false;
+
+  const hoy = new Date();
+  if (fecha > hoy) return false;
+
+  const fechaLimite = new Date(
+    fecha.getFullYear() + edadMinima,
+    fecha.getMonth(),
+    fecha.getDate()
+  );
+  return fechaLimite <= hoy;
 }
 
 /**

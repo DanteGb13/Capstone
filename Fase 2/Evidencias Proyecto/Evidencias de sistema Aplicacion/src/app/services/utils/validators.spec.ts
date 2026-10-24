@@ -1,4 +1,5 @@
 import {
+  motivoNombreInvalido,
   validarNombreOApellido,
   validarEmail,
   validarPassword,
@@ -38,6 +39,30 @@ describe('validators', () => {
       expect(validarNombreOApellido('Maria1')).toBe(false);
       expect(validarNombreOApellido('O\'Brien')).toBe(false);
       expect(validarNombreOApellido('Perez-Smith')).toBe(false);
+    });
+  });
+
+  describe('motivoNombreInvalido', () => {
+    it('dice que el problema son los numeros, no el largo', () => {
+      expect(motivoNombreInvalido('Siempre1')).toBe('numeros');
+      expect(motivoNombreInvalido('1')).toBe('numeros');
+    });
+
+    it('acepta dos nombres separados por espacio', () => {
+      expect(motivoNombreInvalido('Maria Jose')).toBeNull();
+      expect(motivoNombreInvalido('  Ana  María  ')).toBeNull();
+    });
+
+    it('prohibe espacios en los apellidos, que son una sola palabra', () => {
+      expect(motivoNombreInvalido('Cer ca', { apellido: true })).toBe('espacios');
+      expect(motivoNombreInvalido('Perez', { apellido: true })).toBeNull();
+    });
+
+    it('distingue vacio, corto y simbolos', () => {
+      expect(motivoNombreInvalido('')).toBe('vacio');
+      expect(motivoNombreInvalido('   ')).toBe('vacio');
+      expect(motivoNombreInvalido('A')).toBe('corto');
+      expect(motivoNombreInvalido('O\'Brien')).toBe('caracteres');
     });
   });
 

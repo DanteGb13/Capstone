@@ -1,5 +1,9 @@
 import { TestBed } from '@angular/core/testing';
-import { FontSizeService } from './font-size';
+import {
+  FontSizeService,
+  suspenderZoomJuego,
+  reanudarZoomJuego
+} from './font-size';
 
 describe('FontSizeService', () => {
   let service: FontSizeService;
@@ -7,6 +11,7 @@ describe('FontSizeService', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.style.removeProperty('--font-scale');
+    document.documentElement.style.removeProperty('font-size');
     document.body.style.removeProperty('zoom');
 
     TestBed.configureTestingModule({});
@@ -16,6 +21,7 @@ describe('FontSizeService', () => {
   afterEach(() => {
     localStorage.clear();
     document.documentElement.style.removeProperty('--font-scale');
+    document.documentElement.style.removeProperty('font-size');
     document.body.style.removeProperty('zoom');
   });
 
@@ -50,6 +56,16 @@ describe('FontSizeService', () => {
       service.guardar('pequeno');
       expect(document.documentElement.style.getPropertyValue('--font-scale')).toBe('0.85');
       expect(document.body.style.zoom).toBe('0.85');
+    });
+
+    it('suspende el zoom para los juegos y lo reanuda al salir', () => {
+      service.guardar('grande');
+
+      suspenderZoomJuego();
+      expect(document.body.classList.contains('sin-zoom-letra')).toBe(true);
+
+      reanudarZoomJuego();
+      expect(document.body.classList.contains('sin-zoom-letra')).toBe(false);
     });
 
     it('sobrevive a que se vuelva a crear el servicio', () => {

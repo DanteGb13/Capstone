@@ -3,6 +3,7 @@ import { SupabaseService } from '../../supabase/supabase';
 import { Gps } from '../gps/gps';
 import { SOSService } from '../sos/sos';
 import { PushNotificationService } from '../push-notification/push-notification';
+import { mensajeErrorApp } from '../../utils/mensaje-error';
 
 export interface ZonaSegura {
   id: string;
@@ -150,6 +151,30 @@ export class ZonaSeguraService {
     }
   }
 
+  /**
+   * Borra TODA la memoria local de zonas de un usuario.
+   *
+   * Hace falta al desvincular: el vínculo se corta en `cuidador_usuario`,
+   * pero las zonas quedan en la tabla y en estas cachés. Sin este limpiado,
+   * la próxima consulta sin conexión (o con error) devolvía las zonas del
+   * cuidador anterior y el adulto seguía viendo "su zona" de alguien que ya
+   * no lo cuida.
+   */
+  limpiarCache(idUsuario: string): void {
+    if (!idUsuario) return;
+
+    this.zonasCache.delete(idUsuario);
+
+    try {
+      localStorage.removeItem(CLAVE_ALERTA + idUsuario);
+      localStorage.removeItem(CLAVE_ESTADO + idUsuario);
+      localStorage.removeItem(CLAVE_REINTENTO + idUsuario);
+      localStorage.removeItem(CLAVE_VIAJE + idUsuario);
+    } catch {
+      // sin almacenamiento local: alcanza con la caché en memoria
+    }
+  }
+
   async contarZonas(idUsuario: string): Promise<number> {
     try {
       const { count } = await this.supabase
@@ -202,7 +227,7 @@ export class ZonaSeguraService {
       }
 
       if (error) {
-        this.ultimoError = error.message;
+        this.ultimoError = mensajeErrorApp(error);
         console.error('Error creando zona segura:', error.message, error);
         return null;
       }
@@ -252,7 +277,7 @@ export class ZonaSeguraService {
       }
 
       if (error) {
-        this.ultimoError = error.message;
+        this.ultimoError = mensajeErrorApp(error);
         console.error('Error actualizando zona segura:', error.message);
         return false;
       }
@@ -275,7 +300,7 @@ export class ZonaSeguraService {
         .eq('id', id);
 
       if (error) {
-        this.ultimoError = error.message;
+        this.ultimoError = mensajeErrorApp(error);
         console.error('Error eliminando zona segura:', error.message);
         return false;
       }
@@ -343,7 +368,7 @@ export class ZonaSeguraService {
       });
 
       if (error) {
-        this.ultimoError = error.message;
+        this.ultimoError = mensajeErrorApp(error);
         console.error('Error activando el modo viaje:', error.message);
         return false;
       }
@@ -369,7 +394,7 @@ export class ZonaSeguraService {
         .eq('id_usuario', idAdulto);
 
       if (error) {
-        this.ultimoError = error.message;
+        this.ultimoError = mensajeErrorApp(error);
         console.error('Error cancelando el modo viaje:', error.message);
         return false;
       }

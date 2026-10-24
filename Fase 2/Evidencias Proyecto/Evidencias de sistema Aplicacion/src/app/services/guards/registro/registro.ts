@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
+import { mensajeErrorApp } from '../../utils/mensaje-error';
 
 
 
@@ -59,6 +60,14 @@ export class registro {
 
     if (error) {
       throw error;
+    }
+
+    // Con la confirmación de correo activada, Supabase NO devuelve error cuando
+    // el correo ya existe: devuelve un usuario con la lista `identities` vacía.
+    // Sin revisar esto, la app avanzaba al paso 2 como si el registro hubiera
+    // salido bien y al final fallaba sin explicar nada.
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      throw new Error('Ese correo ya está registrado. Usa otro correo o inicia sesión.');
     }
 
     return data;
@@ -147,7 +156,7 @@ export class registro {
 
     if (dirError) {
       console.error('Error creando dirección:', dirError);
-      throw new Error(`Error al guardar dirección: ${dirError.message}`);
+      throw new Error(mensajeErrorApp(dirError, 'No se pudo guardar la dirección. Inténtalo de nuevo.'));
     }
 
     // 4. Buscar rol en la tabla rol
@@ -159,7 +168,7 @@ export class registro {
 
     if (rolError || !rol) {
       console.error('Error buscando rol:', rolError);
-      throw new Error(`Error buscando el rol ${tipoCuenta}`);
+      throw new Error('No se pudo encontrar tu tipo de cuenta. Inténtalo de nuevo.');
     }
 
     // 5. Guardar o actualizar en la tabla usuario
@@ -168,6 +177,20 @@ export class registro {
       .select('id')
       .eq('id', user.id)
       .maybeSingle();
+
+    // Chequeo previo: si el RUT ya pertenece a OTRA cuenta, se avisa antes
+    // de llegar a la base. Así el mensaje siempre nombra el dato correcto,
+    // sin depender del nombre del constraint que devuelva Postgres.
+    const { data: rutEnUso } = await supabase
+      .from('usuario')
+      .select('id')
+      .eq('rut', datos.rut)
+      .neq('id', user.id)
+      .maybeSingle();
+
+    if (rutEnUso) {
+      throw new Error('Este RUT ya está en uso por otra cuenta.');
+    }
 
     const datosUsuario = {
       id: user.id,
@@ -191,7 +214,9 @@ export class registro {
 
       if (updateError) {
         console.error('Error actualizando usuario:', updateError);
-        throw new Error(`No se pudo actualizar el perfil: ${updateError.message}`);
+        // Aquí aparece el "duplicate key ... usuario_rut_key" cuando el RUT
+        // ya existe: mensajeErrorApp lo traduce a "Este RUT ya está en uso."
+        throw new Error(mensajeErrorApp(updateError, 'No se pudo actualizar el perfil. Inténtalo de nuevo.'));
       }
     } else {
       const { error: insertError } = await supabase
@@ -200,7 +225,7 @@ export class registro {
 
       if (insertError) {
         console.error('Error insertando usuario:', insertError);
-        throw new Error(`No se pudo crear el perfil: ${insertError.message}`);
+        throw new Error(mensajeErrorApp(insertError, 'No se pudo crear el perfil. Inténtalo de nuevo.'));
       }
     }
 

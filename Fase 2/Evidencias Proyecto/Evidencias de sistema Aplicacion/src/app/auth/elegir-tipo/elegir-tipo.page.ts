@@ -60,6 +60,9 @@ export class ElegirTipoPage implements OnInit {
     this.cargando = true;
     try {
       await this.loginService.completarRegistroGoogle(tipo);
+      // La fila de usuario acaba de crearse: la caché del perfil (llena al
+      // iniciar sesión) ya no representa lo que hay en la base.
+      this.perfilCache.limpiar();
       this.navRol.limpiarCache();
       this.router.navigate(['/siguiente-paso'], { replaceUrl: true });
     } catch (error: any) {

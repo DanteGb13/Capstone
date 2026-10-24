@@ -5,44 +5,142 @@
 
     <div class="panel-cabecera">
       <h1>Configuración</h1>
-      <p class="descripcion">Cuenta de administración y datos que se registran.</p>
+      <p class="descripcion">Cuenta de administración, sistema y datos que se registran.</p>
     </div>
 
-    @if (!cargando && perfil) {
+    <!--
+      Tres slides en vez de una página larga: la cuenta de arriba, el estado
+      del sistema y la política de datos son cosas distintas y no se pisan
+      entre ellas. El navbar queda igual que siempre.
+    -->
+    <ion-segment class="web-segment" [value]="vista" (ionChange)="alCambiarVista($event)">
+      <ion-segment-button value="cuenta">
+        <ion-label>Cuenta</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="sistema">
+        <ion-label>Sistema</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="privacidad">
+        <ion-label>Datos</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    <!-- ===================================================== -->
+    <!-- SLIDE 1: CUENTA                                        -->
+    <!-- ===================================================== -->
+    @if (vista === 'cuenta') {
+
+      @if (cargando) {
+        <p class="panel-vacio">Cargando…</p>
+      } @else if (!perfil) {
+        <p class="panel-vacio">No se pudo leer la cuenta.</p>
+      } @else {
+        <div class="panel-tarjeta panel-tarjeta--bloque">
+          <h2 class="panel-subtitulo">Cuenta</h2>
+          <dl class="panel-datos">
+            <div class="panel-datos__fila">
+              <dt>Nombre</dt>
+              <dd>{{ perfil.nombreCompleto || 'Sin nombre' }}</dd>
+            </div>
+            <div class="panel-datos__fila">
+              <dt>Correo</dt>
+              <dd>{{ perfil.correo || '—' }}</dd>
+            </div>
+            <div class="panel-datos__fila">
+              <dt>Rol</dt>
+              <dd>{{ perfil.rol || '—' }}</dd>
+            </div>
+          </dl>
+          <p class="panel-texto panel-texto--menor">
+            Para cambiar tu contraseña o tu foto, hazlo desde la aplicación
+            móvil: esta web no expone esas acciones.
+          </p>
+        </div>
+      }
+
+    }
+
+    <!-- ===================================================== -->
+    <!-- SLIDE 2: SISTEMA                                      -->
+    <!-- ===================================================== -->
+    @if (vista === 'sistema') {
+
       <div class="panel-tarjeta panel-tarjeta--bloque">
-        <h2 class="panel-subtitulo">Cuenta</h2>
+        <h2 class="panel-subtitulo">Instalación</h2>
         <dl class="panel-datos">
           <div class="panel-datos__fila">
-            <dt>Nombre</dt>
-            <dd>{{ perfil.nombreCompleto || 'Sin nombre' }}</dd>
+            <dt>Plataforma</dt>
+            <dd>{{ plataforma }}</dd>
           </div>
           <div class="panel-datos__fila">
-            <dt>Correo</dt>
-            <dd>{{ perfil.correo || '—' }}</dd>
+            <dt>Entorno</dt>
+            <dd>{{ entorno }}</dd>
           </div>
           <div class="panel-datos__fila">
-            <dt>Rol</dt>
-            <dd>{{ perfil.rol || '—' }}</dd>
+            <dt>Base de datos</dt>
+            <dd>{{ hostSupabase }}</dd>
+          </div>
+          <div class="panel-datos__fila">
+            <dt>Cierre de sesión</dt>
+            <dd>Local: sólo sale de este dispositivo</dd>
           </div>
         </dl>
       </div>
+
+      <div class="panel-tarjeta panel-tarjeta--bloque">
+        <h2 class="panel-subtitulo">Cambios de base de datos</h2>
+        <p class="panel-texto">
+          Cada cambio de esquema vive versionado en
+          <strong>supabase/migrations/</strong> con fecha, y se aplica con la
+          Supabase CLI. Ninguna política RLS se toca a mano desde el panel.
+        </p>
+        <ul class="panel-lista">
+          <li>La bitácora de seguridad es de sólo-append: no se edita ni se borra.</li>
+          <li>Los roles y estados se cambian por función validada, no por una
+              política UPDATE abierta sobre la tabla de usuarios.</li>
+          <li>Nadie puede cambiar su propio rol ni desactivar su propia cuenta.</li>
+          <li>No se puede dejar al panel sin un administrador activo.</li>
+        </ul>
+      </div>
+
     }
 
-    <div class="panel-tarjeta panel-tarjeta--bloque">
-      <h2 class="panel-subtitulo">Analítica</h2>
-      <p class="panel-texto">
-        Cada pantalla que se abre en la web o en la app deja un evento con la
-        ruta, la plataforma y la hora. Si hay sesión iniciada, también el
-        usuario.
-      </p>
-      <ul class="panel-lista">
-        <li>No se registran las pantallas de este panel.</li>
-        <li>No se registran datos personales ni escritos en formularios.</li>
-        <li>No se usan cookies de terceros ni servicios externos: los datos
-            viven en la base del proyecto.</li>
-        <li>Sólo la cuenta con rol Administrador puede leerlos.</li>
-      </ul>
-    </div>
+    <!-- ===================================================== -->
+    <!-- SLIDE 3: DATOS                                         -->
+    <!-- ===================================================== -->
+    @if (vista === 'privacidad') {
+
+      <div class="panel-tarjeta panel-tarjeta--bloque">
+        <h2 class="panel-subtitulo">Analítica</h2>
+        <p class="panel-texto">
+          Cada pantalla que se abre en la web o en la app deja un evento con la
+          ruta, la plataforma y la hora. Si hay sesión iniciada, también el
+          usuario.
+        </p>
+        <ul class="panel-lista">
+          <li>No se registran las pantallas de este panel.</li>
+          <li>No se registran datos personales ni escritos en formularios.</li>
+          <li>No se usan cookies de terceros ni servicios externos: los datos
+              viven en la base del proyecto.</li>
+          <li>Sólo la cuenta con rol Administrador puede leerlos.</li>
+        </ul>
+      </div>
+
+      <div class="panel-tarjeta panel-tarjeta--bloque">
+        <h2 class="panel-subtitulo">Bitácora de seguridad</h2>
+        <p class="panel-texto">
+          Cambios de rol, cambios de estado y exportaciones de reporte quedan
+          registrados con quién, sobre quién y cuándo.
+        </p>
+        <ul class="panel-lista">
+          <li>Es de sólo-append: nadie puede editar ni borrar lo ya registrado.</li>
+          <li>El cliente no escribe en ella: los eventos entran por función
+              validada en la base.</li>
+          <li>Sólo el Administrador puede leerla.</li>
+        </ul>
+      </div>
+
+    }
 
   </div>
 </ion-content>

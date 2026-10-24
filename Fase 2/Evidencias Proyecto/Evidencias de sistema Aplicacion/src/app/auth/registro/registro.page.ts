@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
-import { IonButton, IonContent, IonIcon, IonInput, IonSpinner, NavController } from '@ionic/angular';
+import { AlertController, IonButton, IonContent, IonIcon, IonInput, IonSpinner, NavController } from '@ionic/angular';
 import { Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -27,6 +27,7 @@ import {
   validarTelefonoChileno,
   formatearTelefonoChileno
 } from '../../services/utils/validators';
+import { mensajeErrorApp } from '../../services/utils/mensaje-error';
 
 @Component({
   selector: 'app-registro',
@@ -69,12 +70,23 @@ export class RegistroPage implements OnInit, OnDestroy {
   } = {};
 
   private cdr = inject(ChangeDetectorRef);
+  private alertController = inject(AlertController);
 
   // La app corre SIN zone.js (zoneless): cambiar `mensajeError` o `cargando`
   // después de un await NO repinta la vista por sí solo, así que los errores
   // de registro quedaban invisibles hasta que el usuario tocaba la pantalla.
   private refrescar() {
     this.cdr.markForCheck();
+  }
+
+  /** Alerta visible para errores del servidor (nunca texto técnico crudo). */
+  private async alertaError(titulo: string, mensaje: string) {
+    const alert = await this.alertController.create({
+      header: titulo,
+      message: mensaje,
+      buttons: ['Entendido']
+    });
+    await alert.present();
   }
 
   formularioIntentado: boolean = false;
@@ -245,9 +257,13 @@ export class RegistroPage implements OnInit, OnDestroy {
       localStorage.removeItem('tipo_cuenta_google');
       this.navRol.limpiarCache();
       await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error completando registro con Google:', error);
+      await this.alertaError(
+        'No se pudo completar el registro',
+        mensajeErrorApp(error, 'No se pudo completar el registro con Google.')
+      );
       this.procesandoGoogle = false;
-      this.mensajeError = error?.message || 'No se pudo completar el registro con Google.';
       this.refrescar();
     } finally {
       this.cargando = false;
@@ -386,14 +402,14 @@ export class RegistroPage implements OnInit, OnDestroy {
           'Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión.';
       }
 
-    } catch (error: any) {
-      if (error?.message?.includes('User already registered') || error?.message?.includes('already exists')) {
-        this.mensajeError = 'Este correo electrónico ya está registrado. Intenta iniciar sesión.';
-      } else if (error?.message?.includes('Password should be')) {
-        this.mensajeError = 'La contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un carácter especial.';
-      } else {
-        this.mensajeError = error?.message || 'No se pudo registrar el usuario. Revisa tu conexión.';
-      }
+    } catch (error) {
+      // mensajeErrorApp traduce los errores crudos de Supabase (correo ya
+      // registrado, contraseña débil, red caída…) a mensajes entendibles.
+      console.error('Error en registro:', error);
+      await this.alertaError(
+        'No se pudo crear la cuenta',
+        mensajeErrorApp(error, 'No se pudo registrar el usuario. Revisa tu conexión.')
+      );
       this.refrescar();
     } finally {
       this.cargando = false;
@@ -405,8 +421,12 @@ export class RegistroPage implements OnInit, OnDestroy {
     this.mensajeError = '';
     try {
       await this.registroService.registrarConGoogle();
-    } catch (error: any) {
-      this.mensajeError = error?.message || 'No se pudo conectar con Google.';
+    } catch (error) {
+      console.error('Error en registro con Google:', error);
+      await this.alertaError(
+        'No se pudo conectar con Google',
+        mensajeErrorApp(error, 'No se pudo conectar con Google.')
+      );
       this.refrescar();
     }
   }

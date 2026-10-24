@@ -109,7 +109,23 @@ export class SupabaseService {
       this.sincronizarSesionNativa();
 
       this.supabase.auth.onAuthStateChange((_evento, sesion) => {
-        this.guardarSesionNativa(sesion);
+        if (sesion) {
+          this.ultimaExpiracionWeb = sesion.expires_at || 0;
+          this.guardarSesionNativa(sesion);
+          return;
+        }
+        // La sesión del cliente web murió. Casi siempre es un cierre real
+        // (se baja también la copia nativa), pero a veces NO: si el servicio
+        // en segundo plano rotó los tokens con la app cerrada, el refresh
+        // token local quedó obsoleto y Supabase expulsa al cliente web
+        // aunque la sesión nativa siga vigente. Antes de bajar la copia
+        // nativa se intenta recuperarla.
+        void (async () => {
+          const recuperada = await this.recuperarSesionNativaSiMasNueva();
+          if (!recuperada) {
+            this.guardarSesionNativa(null);
+          }
+        })();
       });
 
       App.addListener('resume', () => {
@@ -117,6 +133,14 @@ export class SupabaseService {
       });
     }
   }
+
+  /**
+   * Última expiración (`expires_at`) de la sesión que el cliente web tuvo
+   * válida. Permite distinguir un cierre de sesión real (la copia nativa no
+   * es más nueva) de un token perdido por la rotación del servicio en
+   * segundo plano (la copia nativa sí es más nueva).
+   */
+  private ultimaExpiracionWeb = 0;
 
   /**
    * Pasa la sesión al plugin nativo para que el servicio en segundo plano
@@ -181,6 +205,32 @@ export class SupabaseService {
 
       this.guardarSesionNativa(local);
     } catch { /* sin sesión utilizable */ }
+  }
+
+  /**
+   * Cuando el cliente web pierde la sesión, reactiva la copia nativa sólo si
+   * ésta sigue vigente Y es más nueva que la que se perdió. Un cierre de
+   * sesión real (logout) deja ambas copias con la misma expiración, así que
+   * en ese caso NO se reactiva y el usuario queda realmente fuera.
+   */
+  private async recuperarSesionNativaSiMasNueva(): Promise<boolean> {
+    try {
+      const nativa = await SiempreCerca.obtenerSesionBackend();
+      if (!nativa?.refreshToken) return false;
+
+      const expiraNativa = Math.floor((nativa.expiresAt || 0) / 1000);
+      const nativaVigente = (nativa.expiresAt || 0) > Date.now() + 60_000;
+      const nativaEsMasNueva = expiraNativa > this.ultimaExpiracionWeb + 120;
+      if (!nativaVigente || !nativaEsMasNueva) return false;
+
+      await this.supabase.auth.setSession({
+        access_token: nativa.accessToken,
+        refresh_token: nativa.refreshToken
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   getClient(): SupabaseClient {

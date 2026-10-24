@@ -13,10 +13,16 @@
 
   <div class="permisos-container">
 
-    <div class="permiso-nota-recordatorios">
-      <ion-icon name="notifications-outline"></ion-icon>
-      <span><strong>Para que los recordatorios suenen</strong> (aunque cierres la app o apagues la pantalla) activa estos 3: Notificaciones, Alarma exacta y Batería.</span>
-    </div>
+    <!--
+      Sólo se pide lo que FALTA. Antes este bloque estaba sin condición y
+      aparecía "activa estos 3" aunque los tres estuvieran activos.
+    -->
+    @if (!cargando && faltanParaRecordatorios.length > 0) {
+      <div class="permiso-nota-recordatorios">
+        <ion-icon name="notifications-outline"></ion-icon>
+        <span><strong>Para que los recordatorios suenen</strong> (aunque cierres la app o apagues la pantalla) falta activar: {{ nombresFaltantesRecordatorio }}.</span>
+      </div>
+    }
 
     @if (!cargando && faltanCriticos > 0) {
       <div class="permiso-aviso-faltan">

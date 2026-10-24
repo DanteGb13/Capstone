@@ -1,0 +1,110 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <div class="web-page web-page--centrado">
+  
+
+    <div class="panel-tarjeta cambiar-tarjeta">
+        <h1>Cambiar contraseña</h1>
+        <br>
+
+      @if (exito) {
+        <p class="cambiar-aviso" role="status">{{ exito }}</p>
+        <p class="panel-texto panel-texto--menor">
+          Usa la nueva la próxima vez que entres.
+        </p>
+      } @else {
+
+        <div class="cambiar-campo-envoltura">
+          <label class="cambiar-etiqueta" for="k-actual">Contraseña actual</label>
+          <div class="cambiar-contrasena__fila">
+            <input
+              id="k-actual"
+              class="cambiar-campo"
+              [type]="mostrarActual ? 'text' : 'password'"
+              autocomplete="current-password"
+              [disabled]="cargando"
+              [(ngModel)]="contrasenaActual" />
+            <button
+              type="button"
+              class="cambiar-contrasena__ojo"
+              [attr.aria-pressed]="mostrarActual"
+              (click)="mostrarActual = !mostrarActual">
+              {{ mostrarActual ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="cambiar-campo-envoltura">
+          <label class="cambiar-etiqueta" for="k-nueva">Nueva contraseña</label>
+          <div class="cambiar-contrasena__fila">
+            <input
+              id="k-nueva"
+              class="cambiar-campo"
+              [type]="mostrarNueva ? 'text' : 'password'"
+              autocomplete="new-password"
+              [disabled]="cargando"
+              [(ngModel)]="nuevaContrasena" />
+            <button
+              type="button"
+              class="cambiar-contrasena__ojo"
+              [attr.aria-pressed]="mostrarNueva"
+              (click)="mostrarNueva = !mostrarNueva">
+              {{ mostrarNueva ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="cambiar-campo-envoltura">
+          <label class="cambiar-etiqueta" for="k-confirmar">Repetir nueva contraseña</label>
+          <div class="cambiar-contrasena__fila">
+            <input
+              id="k-confirmar"
+              class="cambiar-campo"
+              [type]="mostrarConfirmar ? 'text' : 'password'"
+              autocomplete="new-password"
+              [disabled]="cargando"
+              [(ngModel)]="confirmarContrasena"
+              (keyup.enter)="cambiar()" />
+            <button
+              type="button"
+              class="cambiar-contrasena__ojo"
+              [attr.aria-pressed]="mostrarConfirmar"
+              (click)="mostrarConfirmar = !mostrarConfirmar">
+              {{ mostrarConfirmar ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
+        </div>
+
+        @if (error) {
+          <p class="cambiar-error" role="alert">{{ error }}</p>
+        }
+
+        <div class="cambiar-acciones cambiar-contrasena__acciones">
+          <button
+            type="button"
+            class="cambiar-boton"
+            [disabled]="cargando"
+            (click)="cambiar()">
+            {{ cargando ? 'Guardando…' : 'Guardar contraseña' }}
+          </button>
+        </div>
+
+      }
+
+      <div class="cambiar-pie">
+        <span class="panel-texto panel-texto--menor">
+          Mínimo 8 caracteres, con número, mayúscula, minúscula y símbolo.
+        </span>
+        <button
+          type="button"
+          class="cambiar-boton cambiar-boton--secundario"
+          [disabled]="cargando"
+          routerLink="/mi-perfil">
+          Volver a Mi Perfil
+        </button>
+      </div>
+
+    </div>
+  </div>
+</ion-content>

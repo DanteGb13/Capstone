@@ -1,7 +1,7 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AlertController } from '@ionic/angular';
+import { AlertController, ToastController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import {
   IonContent,
@@ -83,6 +83,14 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
 
   readonly limiteDescripcion = LIMITE_DESCRIPCION;
 
+  /**
+   * Cuántos caracteres de la descripción se muestran en la lista antes de
+   * cortarlos con "..." (el detalle completo se ve con el botón de abajo).
+   */
+  readonly limiteVisibleDescripcion = 40;
+
+  @ViewChild('inputNombre') inputNombre?: IonInput;
+
   sesionRueda = 0;
 
   modoFlechas: boolean = localStorage.getItem('sc_modo_hora_v1') === 'flechas';
@@ -102,6 +110,7 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   constructor(
     private alarmasService: AlarmasService,
     private alertController: AlertController,
+    private toastController: ToastController,
     private changeDetectorRef: ChangeDetectorRef,
     private router: Router,
     private navRol: NavegacionRolService
@@ -265,13 +274,15 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   async prepararAlarma(): Promise<'ok' | 'sinNotif' | 'inexacta'> {
+    // `false` = denegado de verdad. `null` = no se pudo consultar el permiso,
+    // y eso no debe ni bloquear ni apagar nada: se sigue de largo.
     const notif = await this.alarmasService.notifPermitidas();
-    if (!notif) {
+    if (notif === false) {
       return 'sinNotif';
     }
 
     const exacta = await this.alarmasService.checarAlarmaExacta();
-    return exacta ? 'ok' : 'inexacta';
+    return exacta === false ? 'inexacta' : 'ok';
   }
 
 
@@ -285,7 +296,9 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.nuevaHoraSel = 0;
     this.nuevoMinutoSel = 0;
     this.nuevaDescripcion = '';
-    this.nuevosDias = [...DIAS_SEMANA_TODOS];
+    // Sin días: "una sola vez". Se puede elegir algún día si se quiere que
+    // se repita, en vez de imponer "todos" y que nadie lo note.
+    this.nuevosDias = [];
     this.errorNombre = false;
     this.errorDescripcion = false;
     this.sesionRueda++;
@@ -298,9 +311,9 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.nuevaHoraSel = alarma.hora;
     this.nuevoMinutoSel = alarma.minuto;
     this.nuevaDescripcion = alarma.descripcion;
-    this.nuevosDias = (alarma.dias && alarma.dias.length > 0)
-      ? [...alarma.dias]
-      : [...DIAS_SEMANA_TODOS];
+    // Se respeta tal cual: vacío = una sola vez (antes se rellenaba con
+    // "todos los días" y un recordatorio de una vez pasaba a sonar a diario).
+    this.nuevosDias = [...(alarma.dias ?? [])];
     this.errorNombre = false;
     this.errorDescripcion = false;
     this.sesionRueda++;
@@ -381,11 +394,10 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   // =====================================================
 
   get previstaTexto(): string {
-    const dias = this.nuevosDias.length > 0
-      ? this.nuevosDias
-      : DIAS_SEMANA_TODOS;
+    // Sin días el servicio calcula la próxima hora elegida (hoy o mañana),
+    // que es cuando sonará un recordatorio de una sola vez.
     const fecha = this.alarmasService.proximaSonara(
-      dias,
+      this.nuevosDias,
       this.nuevaHoraSel,
       this.nuevoMinutoSel
     );
@@ -444,18 +456,18 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
     this.errorNombre = !this.nombreValido(nombre);
     this.errorDescripcion = descripcion.length > LIMITE_DESCRIPCION;
     if (this.errorNombre || this.errorDescripcion) {
+      if (this.errorNombre) {
+        await this.enfocarNombre();
+      }
       this.changeDetectorRef.detectChanges();
       return;
     }
 
-    // Elige al menos un dia: la pantalla nunca deja quitarlos todos, pero un
-    // recordatorio sin dias se queda sin ninguna ocurrencia que programar y
-    // aparece en la lista sin sonar nunca.
-    let dias = [...this.nuevosDias];
-    if (dias.length === 0) {
-      const hoy = new Date().getDay() + 1;
-      dias = [hoy];
-    }
+    // Sin días = una sola vez: se guarda tal cual y el servicio de alarmas le
+    // asigna la próxima hora elegida, la sonará una vez y se apagará sola.
+    // Antes se rellenaba con "hoy" a escondidas, y el recordatorio seguía
+    // sonando todos los días.
+    const dias = [...this.nuevosDias];
 
     const problemas = validarAlarma(nombre, this.nuevaHoraSel, this.nuevoMinutoSel, descripcion, dias);
     if (problemas.length > 0) {
@@ -553,6 +565,27 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   /**
+   * El nombre es el campo obligatorio, pero su error quedaba muchas veces
+   * fuera de la vista (abajo del modal, tapado por el teclado): la persona
+   * pulsaba "Guardar" y no pasaba nada. Se trae el campo a la vista y se avisa.
+   */
+  private async enfocarNombre() {
+    try {
+      const elemento = await this.inputNombre?.getInputElement();
+      elemento?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch {
+      // sin elemento: el aviso de abajo igual se ve
+    }
+
+    const toast = await this.toastController.create({
+      message: 'Escribe un nombre para el recordatorio.',
+      duration: 3000,
+      color: 'warning'
+    });
+    await toast.present();
+  }
+
+  /**
    * La hora se muestra en 24 h en toda la pantalla: lista, vista previa y
    * editor.
    *
@@ -570,6 +603,11 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   diasTexto(alarma: AlarmaRecordatorio): string {
+    // Sin días: sonó (o sonará) una sola vez, no se repite.
+    if (!alarma.dias || alarma.dias.length === 0) {
+      return 'Una sola vez';
+    }
+
     const todos = DIAS_SEMANA_TODOS.every((d) => alarma.dias.includes(d));
     if (todos) {
       return 'Todos los días';
@@ -597,10 +635,10 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
   }
 
   alternarDia(valor: number) {
+    // Se puede quitar también el último día: sin días, el recordatorio suena
+    // una sola vez (antes no se podía, y por eso nunca se veía esa opción).
     if (this.nuevosDias.includes(valor)) {
-      if (this.nuevosDias.length > 1) {
-        this.nuevosDias = this.nuevosDias.filter((d) => d !== valor);
-      }
+      this.nuevosDias = this.nuevosDias.filter((d) => d !== valor);
     } else {
       this.nuevosDias = [...this.nuevosDias, valor];
     }
@@ -612,11 +650,31 @@ export class RecordatoriosPage implements OnInit, OnDestroy {
 
   alternarTodos() {
     if (this.todosLosDias()) {
-      const hoy = new Date().getDay() + 1;
-      this.nuevosDias = [hoy];
+      // Quitar todos: queda "una sola vez".
+      this.nuevosDias = [];
     } else {
       this.nuevosDias = [...DIAS_SEMANA_TODOS];
     }
+  }
+
+
+  // =====================================================
+  // DESCRIPCIÓN COMPLETA
+  // =====================================================
+
+  /**
+   * La descripción se corta con "..." en la lista (una sola línea, para no
+   * estirar cada tarjeta). Este botón la muestra entera, en letra grande y en
+   * un solo bloque: es el texto que más se necesita leer completo y el que
+   * menos se veía.
+   */
+  async verDescripcionCompleta(alarma: AlarmaRecordatorio) {
+    const alerta = await this.alertController.create({
+      header: alarma.nombre,
+      message: alarma.descripcion,
+      buttons: [{ text: 'Cerrar', role: 'cancel' }]
+    });
+    await alerta.present();
   }
 
 

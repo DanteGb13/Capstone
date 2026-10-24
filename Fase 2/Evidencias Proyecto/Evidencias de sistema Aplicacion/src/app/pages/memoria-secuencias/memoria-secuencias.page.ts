@@ -13,6 +13,7 @@ import { addIcons } from 'ionicons';
 import { arrowBack, helpCircleOutline, refreshOutline, play } from 'ionicons/icons';
 import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
 import { TUTORIAL_SECUENCIAS } from '../juegos/tutoriales';
+import { suspenderZoomJuego, reanudarZoomJuego } from '../../services/font-size/font-size';
 
 /** Fase actual del juego. */
 export type FaseSimon = 'listo' | 'mostrando' | 'entrada' | 'fin';
@@ -63,13 +64,16 @@ export class MemoriaSecuenciasPage implements OnDestroy {
   private secuenciasUsadas: string[] = [];
   private timers: any[] = [];
   private readonly CLAVE_MEJOR = 'sc_simon_mejor_v1';
+  private readonly CLAVE_PARTIDAS = 'sc_simon_partidas_v1';
 
   constructor(
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {
     addIcons({ arrowBack, helpCircleOutline, refreshOutline, play });
+    suspenderZoomJuego();
     this.cargarMejor();
+    this.cargarPartidas();
   }
 
   /** Ejecuta `fn` después de `ms` y fuerza el renderizado al completarse. */
@@ -119,6 +123,7 @@ export class MemoriaSecuenciasPage implements OnDestroy {
     this.puntaje = 0;
     this.activo = null;
     this.partidas++;
+    this.guardarPartidas();
     this.fase = 'mostrando';
     // Aviso inicial para que el inicio de la partida sea evidente.
     this.preparando = true;
@@ -261,6 +266,29 @@ export class MemoriaSecuenciasPage implements OnDestroy {
     }
   }
 
+  /**
+   * Las partidas jugadas se guardan en el dispositivo: antes empezaban en 0
+   * cada vez que se abría el juego, y el contador no servía para nada.
+   */
+  private guardarPartidas(): void {
+    try {
+      localStorage.setItem(this.CLAVE_PARTIDAS, String(this.partidas));
+    } catch {
+      // Almacenamiento no disponible.
+    }
+  }
+
+  private cargarPartidas(): void {
+    try {
+      const valor = localStorage.getItem(this.CLAVE_PARTIDAS);
+      if (valor !== null) {
+        this.partidas = Number(valor) || 0;
+      }
+    } catch {
+      this.partidas = 0;
+    }
+  }
+
   /** Vuelve a la lista de juegos. */
   volver(): void {
     void this.router.navigate(['/juegos']);
@@ -280,5 +308,6 @@ export class MemoriaSecuenciasPage implements OnDestroy {
 
   ngOnDestroy(): void {
     this.limpiarTimers();
+    reanudarZoomJuego();
   }
 }

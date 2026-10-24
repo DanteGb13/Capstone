@@ -59,6 +59,15 @@ export const routes: Routes = [
     canActivate: [rolGuard(['Administrador'])]
   },
   {
+    // Sección propia para cambiar rol y estado de una cuenta. Va aparte de
+    // /usuarios a propósito: la lista es de sólo lectura, y las acciones que
+    // tocan la tabla `usuario` se separan para que nadie las ejecute sin
+    // darse cuenta desde una tabla.
+    path: 'gestion-usuarios',
+    loadComponent: () => import('./web/gestion-usuarios/gestion-usuarios.page').then((m) => m.GestionUsuariosPage),
+    canActivate: [rolGuard(['Administrador'])]
+  },
+  {
     path: 'reportes',
     loadComponent: () => import('./web/reportes/reportes.page').then((m) => m.ReportesPage),
     canActivate: [rolGuard(['Administrador'])]
@@ -71,6 +80,11 @@ export const routes: Routes = [
   {
     path: 'mi-perfil',
     loadComponent: () => import('./web/mi-perfil/mi-perfil.page').then((m) => m.MiPerfilPage),
+    canActivate: [rolGuard(['Administrador'])]
+  },
+  {
+    path: 'cambiar-contrasena',
+    loadComponent: () => import('./web/cambiar-contrasena/cambiar-contrasena.page').then((m) => m.CambiarContrasenaPage),
     canActivate: [rolGuard(['Administrador'])]
   },
   {

@@ -28,6 +28,7 @@ export class PrivacidadPage {
   readonly documentos = DOCUMENTOS_PRIVACIDAD;
   readonly total = TOTAL_DOCUMENTOS;
   readonly actualizacion = formatearActualizacion(VERSION_APP);
+  readonly anioActual = new Date().getFullYear();
 
   constructor(private router: Router) {
     addIcons({ chevronBackOutline, chevronForwardOutline, shieldCheckmarkOutline });

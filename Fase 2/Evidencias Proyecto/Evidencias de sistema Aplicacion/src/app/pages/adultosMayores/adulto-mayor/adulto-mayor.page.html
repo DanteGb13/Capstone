@@ -1,4 +1,22 @@
-<ion-content [fullscreen]="true">
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>
+      <div class="header-content">
+        <div class="user-info">
+          <div>
+            <h1>Hola, {{ nombreUsuario || 'bienvenido' }}</h1>
+          </div>
+          <button class="avatar" type="button" (click)="abrirPerfil()">
+            <img *ngIf="fotoUrl" [src]="fotoUrl" alt="Foto de perfil" class="avatar-img">
+            <ion-icon *ngIf="!fotoUrl" name="person"></ion-icon>
+          </button>
+        </div>
+      </div>
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
 
   <!--
     Refresco manual: con sólo el sondeo de 30 s, si estabas en otra pantalla
@@ -9,37 +27,6 @@
   </ion-refresher>
 
   <div class="app-container">
-
-    <!-- Aviso de permisos: no bloquea, sólo informa -->
-    <app-aviso-permisos
-      [titulo]="avisoPermisos?.titulo || ''"
-      [detalle]="avisoPermisos?.detalle || ''"
-      [visible]="!!avisoPermisos"
-      [urgente]="avisoPermisosUrgente"
-      [ocupado]="corrigiendoPermisos"
-      (corregir)="corregirPermisos()"
-      (cerrado)="avisoPermisosOculto = true">
-    </app-aviso-permisos>
-
-    <!-- Header -->
-    <div class="header">
-
-      <div class="user-info">
-
-        <div>
-          <h1>Hola, {{ nombreUsuario || 'bienvenido' }}</h1>
-          <p>Tu familia te cuida</p>
-        </div>
-
-        <button class="avatar" type="button" (click)="abrirPerfil()">
-
-          <img *ngIf="fotoUrl" [src]="fotoUrl" alt="Foto de perfil" class="avatar-img">
-          <ion-icon *ngIf="!fotoUrl" name="person"></ion-icon>
-
-        </button>
-
-      </div>
-
 
     <!-- ================================================= -->
     <!-- ALARMA SONANDO (RECORDATORIOS) -->
@@ -82,7 +69,6 @@
     </div>
 
     }
-
 
       <!-- Botón vincular cuidador -->
       <div class="vincular-cuidador">
@@ -165,8 +151,6 @@
         </div>
 
       </div>
-
-    </div>
 
 
     <!-- ================================================= -->
@@ -283,6 +267,8 @@
 
 
 
+
+
       <div class="menu-card ripple" (click)="abrirEstoyAqui()" style="
           background: linear-gradient(135deg, #FFD54F, #FFC107);
           box-shadow: 0 10px 25px rgba(191, 199, 191, 0.35);
@@ -299,6 +285,8 @@
 
 
 
+
+
       <div class="menu-card ripple" (click)="abrirMiUbicacion()" style="
           background: linear-gradient(135deg, #2196f3, #64b5f6);
           box-shadow: 0 10px 25px rgba(33, 150, 243, 0.35);
@@ -312,6 +300,7 @@
         </h3>
 
       </div>
+
 
 
 
@@ -360,8 +349,8 @@
       </div>
 
       <div class="menu-card ripple" (click)="abrirJuegos()" style="
-          background: linear-gradient(135deg, #7715c7, #9c3ded);
-          box-shadow: 0 10px 25px rgba(119, 21, 199, 0.35);
+          background: linear-gradient(135deg, #8b5cf6, #a78bfa);
+          box-shadow: 0 10px 25px rgba(139, 92, 246, 0.35);
           border:none
         ">
 
@@ -377,41 +366,34 @@
 
   </div>
 
-
-
   <!-- ================================================= -->
   <!-- MODAL DE VINCULACIÓN -->
   <!-- ================================================= -->
 
-  <ion-modal [isOpen]="mostrarModal" (didDismiss)="cerrarModal()">
+<ion-modal [isOpen]="mostrarModal" (didDismiss)="cerrarModal()">
 
     <ng-template>
 
-      <!-- Header del modal -->
+      <!-- Header del modal (usando ion-toolbar directamente, sin ion-header anidado) -->
 
-      <ion-header>
+      <ion-toolbar>
 
-        <ion-toolbar>
+        <ion-title>
+          Vincular cuidador
+        </ion-title>
 
-          <ion-title>
-            Vincular cuidador
-          </ion-title>
+        <ion-buttons slot="end">
 
-          <ion-buttons slot="end">
+          <ion-button (click)="cerrarModal()">
 
-            <ion-button (click)="cerrarModal()">
+            <ion-icon name="close-outline">
+            </ion-icon>
 
-              <ion-icon name="close-outline">
-              </ion-icon>
+          </ion-button>
 
-            </ion-button>
+        </ion-buttons>
 
-          </ion-buttons>
-
-        </ion-toolbar>
-
-      </ion-header>
-
+      </ion-toolbar>
 
       <!-- Contenido -->
 
@@ -440,7 +422,6 @@
           </p>
 
 
-
           <!-- ===================================== -->
           <!-- QR -->
           <!-- ===================================== -->
@@ -454,16 +435,10 @@
                 margin: 20px 0;
               ">
 
-            <img [src]="qrCodeUrl" alt="Código QR de vinculación" style="
-                  width: 230px;
-                  height: 230px;
-                  max-width: 100%;
-                " />
-
+            <img [src]="qrCodeUrl" alt="Código QR de vinculación" style="width: 230px; height: 230px; max-width: 100%;" />
           </div>
 
           }
-
 
           <!-- ===================================== -->
           <!-- GENERANDO -->
@@ -597,7 +572,6 @@
 
           </ion-button>
 
-
         </div>
 
       </ion-content>
@@ -605,6 +579,7 @@
     </ng-template>
 
   </ion-modal>
+
 
 
 
@@ -671,12 +646,14 @@
         <ion-button expand="block" fill="solid" class="estoy-aqui-sali" (click)="marcarSaliDeCasa()">
           Salí de casa
         </ion-button>
+
       </div>
 
       <div class="sos-acciones" style="padding-top: 0;">
         <ion-button expand="block" fill="solid" class="estoy-aqui-cancelar" (click)="cerrarModalEstoyAqui()">
           Cancelar
         </ion-button>
+
       </div>
 
     </ng-template>
@@ -684,3 +661,13 @@
   </ion-modal>
 
 </ion-content>
+
+<app-aviso-permisos
+  [titulo]="avisoPermisos?.titulo || ''"
+  [detalle]="avisoPermisos?.detalle || ''"
+  [visible]="!!avisoPermisos"
+  [urgente]="avisoPermisosUrgente"
+  [ocupado]="corrigiendoPermisos"
+  (corregir)="corregirPermisos()"
+  (cerrado)="avisoPermisosOculto = true">
+</app-aviso-permisos>

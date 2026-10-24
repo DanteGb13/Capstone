@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   IonContent,
@@ -9,14 +9,16 @@ import {
   IonButton,
   IonIcon,
   IonRefresher,
-  IonRefresherContent
+  IonRefresherContent,
+  IonSelect,
+  IonSelectOption
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
 import { Vinculacion } from '../../../services/Backend/vinculacion/vinculacion';
 import { Salud, type ResumenSalud } from '../../../services/Backend/salud/salud';
 import { NavegacionRolService } from '../../../services/navegacion-rol/navegacion-rol';
-import { SupabaseService } from '../../../services/supabase/supabase';
+import { PerfilCacheService } from '../../../services/perfil-cache/perfil-cache.service';
 import { EstadoConexionComponent } from '../../../components/estado-conexion/estado-conexion.component';
 
 /** Una persona a cargo con su estado de salud ya resuelto. */
@@ -55,17 +57,21 @@ const MINUTOS_PARA_AVISAR_RANCIO = 180;
     IonIcon,
     IonRefresher,
     IonRefresherContent,
+    IonSelect,
+    IonSelectOption,
     CommonModule,
     EstadoConexionComponent
   ]
 })
 export class EstadoPage implements OnInit, OnDestroy {
 
-  @ViewChild(IonRefresher) refresher!: IonRefresher;
-
   adultos: AdultoConSalud[] = [];
 
+  adultoSeleccionadoId = '';
+
   cargando = false;
+
+  cargandoSalud = false;
 
   /** Pasa a `true` cuando ya se intentó leer y no hay datos: distingue "cargando" de "no hay". */
   private cargoAlMenosUnaVez = false;
@@ -74,11 +80,15 @@ export class EstadoPage implements OnInit, OnDestroy {
 
   private saludService = inject(Salud);
 
-  private supabaseService = inject(SupabaseService);
+  private perfilCache = inject(PerfilCacheService);
 
   private navRol = inject(NavegacionRolService);
 
   private cdr = inject(ChangeDetectorRef);
+
+  private cargaVersion = 0;
+
+  private destruida = false;
 
   constructor() {
     addIcons(icons);
@@ -98,36 +108,34 @@ export class EstadoPage implements OnInit, OnDestroy {
 
   /** El temporizador se detiene al salir de la pantalla: si no, sigue consultando en segundo plano. */
   ngOnDestroy() {
+    this.destruida = true;
     this.detenerAutoRefresh();
   }
 
-  /**
-   * Refresca desde el botón o desde el pull-to-refresher.
-   *
-   * Se llama desde los dos lados, así que `event` no siempre es el
-   * `IonRefresher`: si viene de un botón es un click y no tiene
-   * `complete()`. Antes de llamar sin optional chaining reventaba.
-   */
+  /** Refresca la información con el gesto de deslizar hacia abajo. */
   async handleRefresh(event?: any) {
     await this.cargar();
     event?.target?.complete?.();
   }
 
   async cargar() {
+    const version = ++this.cargaVersion;
     this.cargando = true;
     this.cdr.detectChanges();
 
     try {
       const vinculos = await this.vinculacionService.obtenerAdultosACargo();
-      await this.cargarFotos(vinculos);
 
       const ids = vinculos
         .map((v: any) => v?.id_usuario)
         .filter(Boolean) as string[];
 
-      // Una sola consulta para todos: leer persona por persona multiplicaba
-      // los viajes a la base por el mismo pantallazo.
-      const saludPorUsuario = await this.saludService.obtenerSaludVinculados(ids);
+      // Las fotos no deben bloquear la primera lectura de salud: storage puede
+      // necesitar dos viajes por persona y la salud se consulta en lote.
+      const fotosPendientes = this.cargarFotos(vinculos);
+      const saludPendiente = this.saludService.obtenerSaludVinculados(ids);
+
+      if (version !== this.cargaVersion || this.destruida) return;
 
       this.adultos = vinculos.map((v: any) => ({
         id_usuario: v.id_usuario,
@@ -136,30 +144,62 @@ export class EstadoPage implements OnInit, OnDestroy {
         fotoUrl: v.adulto_mayor?.foto_url || null,
         ultimoVisto: v.adulto_mayor?.ultimo_visto || null,
         comuna: v.adulto_mayor?.direccion?.comuna || null,
-        salud: saludPorUsuario.get(v.id_usuario) || null
+        salud: this.adultos.find((adulto) => adulto.id_usuario === v.id_usuario)?.salud || null
       }));
+
+      if (!this.adultos.some((adulto) => adulto.id_usuario === this.adultoSeleccionadoId)) {
+        this.adultoSeleccionadoId = this.adultos[0]?.id_usuario || '';
+      }
+
+      this.cargandoSalud = true;
+      this.cdr.detectChanges();
+
+      const saludPorUsuario = await saludPendiente;
+
+      if (version !== this.cargaVersion || this.destruida) return;
+
+      this.adultos = this.adultos.map((adulto) => ({
+        ...adulto,
+        salud: saludPorUsuario.get(adulto.id_usuario) || null
+      }));
+      this.cargandoSalud = false;
+
+      void fotosPendientes
+        .then((fotos) => {
+          if (version !== this.cargaVersion || this.destruida) return;
+
+          this.adultos = this.adultos.map((adulto) => ({
+            ...adulto,
+            fotoUrl: fotos.get(adulto.id_usuario) ?? adulto.fotoUrl
+          }));
+          this.cdr.detectChanges();
+        })
+        .catch((e) => {
+          console.warn('[Estado] no se pudieron cargar las fotos de perfil:', e);
+        });
     } catch (e) {
       console.error('Error cargando el estado de salud:', e);
     } finally {
-      this.cargando = false;
-      this.cargoAlMenosUnaVez = true;
-      this.cdr.detectChanges();
+      if (version === this.cargaVersion && !this.destruida) {
+        this.cargando = false;
+        this.cargandoSalud = false;
+        this.cargoAlMenosUnaVez = true;
+        this.cdr.detectChanges();
+      }
     }
   }
 
-  /**
-   * Pide datos frescos a una persona.
-   *
-   * SE RETIRA A PROPÓSITO. La primera versión tenía un botón "Pedir datos
-   * frescos" porque parecía que el cuidador iba a necesitar empujar la
-   * sincronización. En la práctica estorba: la subida es automática y pedirla
-   * sólo producía un botón que se quedaba en "Actualización solicitada" sin
-   * que nada mejorara, porque el teléfono del adulto mayor es el único que
-   * puede leer su reloj.
-   *
-   * Lo que sí hace falta es que esta pantalla no se quede mirando un dato
-   * viejo, y eso se resuelve refrescando sola (ver `iniciarAutoRefresh`).
-   */
+  onAdultoChange(event: any): void {
+    const id = event.detail.value;
+    if (this.adultos.some((adulto) => adulto.id_usuario === id)) {
+      this.adultoSeleccionadoId = id;
+    }
+  }
+
+  get adultoSeleccionado(): AdultoConSalud | null {
+    return this.adultos.find((adulto) => adulto.id_usuario === this.adultoSeleccionadoId) || null;
+  }
+
   /**
    * Recarga SOLO los datos de salud, sin volver a pedir la lista de adultos.
    *
@@ -213,32 +253,17 @@ export class EstadoPage implements OnInit, OnDestroy {
 
   private timerRefresco: any = null;
 
-  private async cargarFotos(vinculos: any[]): Promise<void> {
-    const supabase = this.supabaseService.getClient();
+  private async cargarFotos(vinculos: any[]): Promise<Map<string, string | null>> {
+    const fotos = await Promise.all(
+      vinculos.map(async (item): Promise<[string, string | null] | null> => {
+        const userId = item?.id_usuario || item?.adulto_mayor?.id;
+        if (!userId) return null;
 
-    await Promise.all(
-      vinculos.map(async (item) => {
-        const userId = item?.adulto_mayor?.id;
-        if (!userId) return;
-
-        try {
-          const { data } = await supabase.storage
-            .from('fotos-perfil')
-            .list(`${userId}/`, { limit: 1 });
-
-          if (data && data.length > 0) {
-            const { data: signedUrlData } = await supabase.storage
-              .from('fotos-perfil')
-              .createSignedUrl(`${userId}/${data[0].name}`, 3600);
-            item.adulto_mayor.foto_url = signedUrlData?.signedUrl || null;
-          } else {
-            item.adulto_mayor.foto_url = null;
-          }
-        } catch {
-          item.adulto_mayor.foto_url = null;
-        }
+        return [userId, await this.perfilCache.cargarFoto(userId)];
       })
     );
+
+    return new Map(fotos.filter((foto): foto is [string, string | null] => foto !== null));
   }
 
   // =====================================================

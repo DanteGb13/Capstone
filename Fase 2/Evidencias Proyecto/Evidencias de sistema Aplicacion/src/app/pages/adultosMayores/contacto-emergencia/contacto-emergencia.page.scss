@@ -18,7 +18,7 @@ ion-toolbar {
 .contactos-container {
   min-height: 100%;
   background: var(--background);
-  padding: 16px 16px 32px;
+  padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
 }
 
 .seccion {
@@ -367,7 +367,22 @@ ion-toolbar {
   background: var(--primary);
   color: #ffffff;
   box-shadow: 0 10px 22px rgba(119, 21, 199, 0.3);
-  margin-bottom: 10px;
+}
+
+/* Barra pegada al pie: los botones de añadir siempre visibles aunque la
+   lista sea larga. Los márgenes negativos llegan al borde físico de la
+   pantalla (y al safe-area de iPhone) como en el formulario del modal. */
+.acciones-lista {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 16px -16px calc(-32px - env(safe-area-inset-bottom));
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: #ffffff;
+  box-shadow: 0 -10px 26px rgba(26, 29, 38, 0.08);
 }
 
 .btn-manual {
@@ -380,11 +395,9 @@ ion-toolbar {
 /* MODAL Y FORMULARIO DE NUEVO CONTACTO                  */
 /* ===================================================== */
 
-/* Hoja inferior con las esquinas de arriba redondeadas y cabecera en
-   degradado: se ve como una "mini ventana" y no como una página suelta. */
-ion-modal.modal-contacto {
-  --border-radius: 26px 26px 0 0;
-  --box-shadow: 0 -16px 44px rgba(26, 29, 38, 0.28);
+ion-modal.modal-contacto-adulto ion-header {
+  padding-top: 0;
+  background: linear-gradient(135deg, #7715c7 0%, #9d4edd 100%);
 }
 
 ion-toolbar.toolbar-formulario {
@@ -392,12 +405,22 @@ ion-toolbar.toolbar-formulario {
   --color: #ffffff;
   font-weight: 400;
   border-bottom: none;
-  padding-top: 18px;
-  padding-bottom: 16px;
+  --min-height: 72px;
+  padding: 6px 12px 8px;
 }
 
 ion-content.contenido-formulario {
   --background: #f8f7fc;
+  --padding-bottom: 0;
+  flex: 1 1 0%;
+  height: 0;
+  min-height: 0;
+}
+
+ion-footer.footer-formulario {
+  flex: 0 0 auto;
+  background: #f8f7fc;
+  border-top: 1px solid rgba(26, 29, 38, 0.08);
 }
 
 .encabezado-formulario {
@@ -535,16 +558,14 @@ ion-content.contenido-formulario {
   }
 }
 
-/* Los botones quedan pegados abajo del modal, siempre visibles. */
+/* El ion-footer mantiene las acciones visibles mientras el formulario se desplaza. */
 .acciones-formulario {
-  position: sticky;
-  bottom: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 16px calc(18px + env(safe-area-inset-bottom));
-  background: #ffffff;
-  box-shadow: 0 -10px 26px rgba(26, 29, 38, 0.08);
+  padding: 12px 16px 16px;
+  background: #f8f7fc;
+  box-shadow: 0 -6px 18px rgba(26, 29, 38, 0.06);
 }
 
 .btn-form {

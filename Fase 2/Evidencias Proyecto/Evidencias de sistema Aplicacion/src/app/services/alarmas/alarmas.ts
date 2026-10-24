@@ -63,10 +63,9 @@ export interface ProblemaAlarma {
  *
  *  - `hora`/`minuto` fuera de rango entran en generarOcurrencias() y el Date se
  *    desborda a otro dia, asi que la alarma salta en un momento que nadie pidio.
- *  - Un dia de la semana que no es 1..7 no coincide jamas con `getDay() + 1`, y
- *    una alarma con dias vacios o invalidos se queda sin ninguna ocurrencia:
- *    aparece en la lista, se puede activar, y no suena nunca. Es el fallo mas
- *    silencioso de los tres.
+ *  - Un dia de la semana que no es 1..7 no coincide jamas con `getDay() + 1`,
+ *    y un dia invalido se colaba en generarOcurrencias() sin encontrar su dia.
+ *    Dias vacios SI son validos: significan "una sola vez" (ver mas abajo).
  */
 export function validarAlarma(
   nombre: string,
@@ -103,10 +102,11 @@ export function validarAlarma(
     });
   }
 
+  // Dias vacios = "una sola vez": es un caso valido y se trata aparte
+  // (generarOcurrencias() le asigna la proxima hora elegida y una vez sonada
+  // se apaga sola).
   const lista = dias ?? [];
-  if (lista.length === 0) {
-    problemas.push({ campo: 'dias', mensaje: 'Elige al menos un dia de la semana.' });
-  } else if (lista.some((d) => !Number.isInteger(d) || d < 1 || d > 7)) {
+  if (lista.some((d) => !Number.isInteger(d) || d < 1 || d > 7)) {
     problemas.push({ campo: 'dias', mensaje: 'Los dias de la semana no son validos.' });
   }
 
@@ -117,15 +117,18 @@ export function validarAlarma(
  * Deja los dias en 1..7, sin repetir y ordenados.
  *
  * Aplicarlo en un solo sitio evita depender de que cada quien filtre: un `dias`
- * con 0, con 8 o con duplicados se guardaba tal cual y hacia que la alarma
- * nunca encontrara su dia.
+ * con 0 o con 8 se guardaba tal cual y hacia que la alarma nunca encontrara su
+ * dia.
+ *
+ * Un `dias` vacio NO se rellena: vacio significa "una sola vez" y se respeta
+ * tal cual (antes se convertia en "todos los dias", que sonaba a diario sin
+ * que nadie lo pidiera).
  */
 export function normalizarDias(dias: number[]): number[] {
   const validos = (dias ?? []).filter(
     (d) => Number.isInteger(d) && d >= 1 && d <= 7
   );
-  const unicos = [...new Set(validos)].sort((a, b) => a - b);
-  return unicos.length > 0 ? unicos : [...DIAS_SEMANA_TODOS];
+  return [...new Set(validos)].sort((a, b) => a - b);
 }
 
 @Injectable({
@@ -261,11 +264,12 @@ export class AlarmasService {
       }
 
       this.redConectada = true;
+      // `dias` vacio significa "una sola vez" y se conserva tal cual. Solo un
+      // `dias` nulo (filas viejas) se interpreta como "todos los dias", que
+      // era el valor por defecto de esas versiones.
       const filas = (data || []).map((row: any) => ({
         ...row,
-        dias: Array.isArray(row.dias) && row.dias.length > 0
-          ? row.dias
-          : [...DIAS_SEMANA_TODOS]
+        dias: Array.isArray(row.dias) ? row.dias : [...DIAS_SEMANA_TODOS]
       }));
       const resultado = this.aplicarCambiosPendientes(filas)
         // Última barrera contra la fuga entre cuentas: por muy filtrada que
@@ -769,7 +773,29 @@ export class AlarmasService {
     ahora = new Date()
   ): Date | null {
     if (!dias || dias.length === 0) {
-      return null;
+      // Una sola vez: suena en la proxima hora elegida (hoy si ainda no paso,
+      // manana si ya paso).
+      const hoy = new Date(
+        ahora.getFullYear(),
+        ahora.getMonth(),
+        ahora.getDate(),
+        hora,
+        minuto,
+        0,
+        0
+      );
+      if (hoy.getTime() > ahora.getTime()) {
+        return hoy;
+      }
+      return new Date(
+        ahora.getFullYear(),
+        ahora.getMonth(),
+        ahora.getDate() + 1,
+        hora,
+        minuto,
+        0,
+        0
+      );
     }
 
     for (let offset = 0; offset <= 7; offset++) {
@@ -847,11 +873,11 @@ export class AlarmasService {
 
     let ocurrencia = this.fechaOcurrencia(alarma, ahora);
     if (ocurrencia.getTime() > ahora.getTime()) {
-      // La de hoy todavía no llegó, así que solo puede estar sonando la de ayer.
-      // OJO: esto antes se aplicaba siempre, y devolvía la de ayer aunque la
-      // alarma no estuviera sonando: ahí nacía el "apago la clave y el id
+      // La de hoy todavia no llego, asi que solo puede estar sonando la de ayer.
+      // OJO: esto antes se aplicaba siempre, y devolvia la de ayer aunque la
+      // alarma no estuviera sonando: ahi nacia el "apago la clave y el id
       // equivocados". Ahora solo se acepta la de ayer si el sistema confirma que
-      // esa alarma sigue sonando, que es el único caso en que la de ayer es la
+      // esa alarma sigue sonando, que es el unico caso en que la de ayer es la
       // correcta (la alarma no tiene tope y puede sonar muchas horas).
       if (!this.sonandoNativo.has(alarma.id)) {
         return null;
@@ -868,7 +894,10 @@ export class AlarmasService {
     }
 
     const dia = ocurrencia.getDay() + 1;
-    if (!alarma.dias.includes(dia)) {
+    // Dias vacios = una sola vez: no hay filtro de dia, la ocurrencia es la
+    // proxima hora elegida (puede ser la de ayer si la alarma anoche no se
+    // apago).
+    if (alarma.dias.length > 0 && !alarma.dias.includes(dia)) {
       return null;
     }
 
@@ -968,6 +997,56 @@ export class AlarmasService {
 
 
   // =====================================================
+  // RECORDATORIO "UNA SOLA VEZ"
+  // =====================================================
+
+  /**
+   * Ocurrencia pendiente de cada recordatorio sin dias (una sola vez): el
+   * instante (ms) para el que quedo programado.
+   *
+   * Sin esta marca no habia forma de saber, en la siguiente sincronizacion, si
+   * la unica ocurrencia ya sonó o todavia estaba pendiente: se generaba la de
+   * manana y el recordatorio volvia a sonar cada dia.
+   */
+  private readonly CLAVE_UNA_VEZ = 'alarmas.once.v1';
+
+  private leerMarcasUnaVez(): Record<string, number> {
+    try {
+      return JSON.parse(localStorage.getItem(this.CLAVE_UNA_VEZ) || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  private marcaUnaVez(id: string): number | null {
+    const valor = this.leerMarcasUnaVez()[id];
+    return typeof valor === 'number' ? valor : null;
+  }
+
+  private guardarMarcaUnaVez(id: string, fechaMs: number) {
+    try {
+      const mapa = this.leerMarcasUnaVez();
+      mapa[id] = fechaMs;
+      localStorage.setItem(this.CLAVE_UNA_VEZ, JSON.stringify(mapa));
+    } catch {
+      // sin persistencia: la autocancelacion queda en manos del apagado
+    }
+  }
+
+  private quitarMarcaUnaVez(id: string) {
+    try {
+      const mapa = this.leerMarcasUnaVez();
+      if (id in mapa) {
+        delete mapa[id];
+        localStorage.setItem(this.CLAVE_UNA_VEZ, JSON.stringify(mapa));
+      }
+    } catch {
+      // sin persistencia
+    }
+  }
+
+
+  // =====================================================
   // IDS DE NOTIFICACIÓN POR OCURRENCIA
   // =====================================================
 
@@ -1061,7 +1140,22 @@ export class AlarmasService {
   ): Date[] {
     const ocurrencias: Date[] = [];
 
+    // Dias vacios = una sola vez: no se filtra por dia y la OCURRENCIA UNICA
+    // es la proxima hora elegida. Si la de hoy todavia no paso, es la de hoy;
+    // si ya paso (mas alla de la tolerancia), la de manana. Una vez sonada se
+    // apaga sola (ver programar() y apagarAlarma()).
+    const unaVez = alarma.dias.length === 0;
+
     for (let i = 0; i < ventanaDias; i++) {
+      // Una sola vez: maximo dos candidatas (hoy o manana) y se para en la
+      // primera que sirva, para no programar ocurrencias repetidas.
+      if (unaVez && ocurrencias.length > 0) {
+        break;
+      }
+      if (unaVez && i > 1) {
+        break;
+      }
+
       const fecha = new Date(
         base.getFullYear(),
         base.getMonth(),
@@ -1079,7 +1173,7 @@ export class AlarmasService {
       // Peor: ocurrenciaEnCurso() sí valida los días, así que la tarjeta
       // "Apagar alarma" no aparecía y no había forma de pararla desde la app.
       const dia = fecha.getDay() + 1;
-      if (!alarma.dias.includes(dia)) {
+      if (!unaVez && !alarma.dias.includes(dia)) {
         continue;
       }
 
@@ -1179,7 +1273,17 @@ export class AlarmasService {
           this.getAlarmasLocales().find((a) => a.id === fila.idAlarma);
         if (alarma) {
           // El servidor guarda el dia, asi que se le manda el dia de la ocurrencia.
-          await this.actualizarAlarma(alarma.id, { confirmado: this.fechaClave(fecha) });
+          //
+          // Un recordatorio sin dias (una sola vez) queda apagado al
+          // confirmarse: no hay otra ocurrencia que esperar.
+          const cambios: { confirmado: string; activa?: boolean } = {
+            confirmado: this.fechaClave(fecha)
+          };
+          if (alarma.dias.length === 0) {
+            cambios.activa = false;
+            this.quitarMarcaUnaVez(alarma.id);
+          }
+          await this.actualizarAlarma(alarma.id, cambios);
         }
       }
     } catch (e) {
@@ -1196,12 +1300,22 @@ export class AlarmasService {
     const fecha = this.fechaClave(ocurrencia);
     this.marcarApagada(`${alarma.id}:${this.claveOcurrencia(ocurrencia)}`);
 
+    // Un recordatorio sin dias suena una sola vez: al apagarse se queda
+    // apagado, para que la proxima sincronizacion no le genere otra ocurrencia
+    // (antes seguía "activa" y volvía a sonar al dia siguiente).
+    const unaVez = alarma.dias.length === 0;
+    if (unaVez) {
+      this.quitarMarcaUnaVez(alarma.id);
+    }
+
     // Avisar ANTES de tocar la red: si no hay internet el aviso igual tiene que
     // llegar, o la tarjeta "Apagar alarma" se quedaría visible en las páginas.
     this.alarmaApagada$.next(alarma.id);
 
     this.alarmasCache = this.alarmasCache.map((a) =>
-      a.id === alarma.id ? { ...a, confirmado: fecha } : a
+      a.id === alarma.id
+        ? (unaVez ? { ...a, confirmado: fecha, activa: false } : { ...a, confirmado: fecha })
+        : a
     );
 
     this.sonandoActual.delete(alarma.id);
@@ -1209,7 +1323,10 @@ export class AlarmasService {
     await this.quitarNotificacion(alarma.id, ocurrencia);
 
     try {
-      await this.actualizarAlarma(alarma.id, { confirmado: fecha });
+      await this.actualizarAlarma(
+        alarma.id,
+        unaVez ? { confirmado: fecha, activa: false } : { confirmado: fecha }
+      );
     } catch (e) {
       // El sonido ya se corto: si la red falla, la alarma queda marcada solo en
       // el telefono y se sincroniza en la proxima conexion.
@@ -1259,13 +1376,18 @@ export class AlarmasService {
     }
   }
 
-  notifPermitidas(): Promise<boolean> {
+  /**
+   * `false` = denegado (se puede avisar y pedir activar). `null` = no se pudo
+   * consultar (el plugin falló): no es lo mismo que "denegado", y tratarlo
+   * como tal mostraba "no tienes permiso" y apagaba alarmas sin motivo.
+   */
+  notifPermitidas(): Promise<boolean | null> {
     if (!Capacitor.isNativePlatform()) {
       return Promise.resolve(true);
     }
     return LocalNotifications.checkPermissions()
       .then((p) => p.display === 'granted')
-      .catch(() => false);
+      .catch(() => null);
   }
 
   async pedirPermisoNotif(): Promise<boolean> {
@@ -1281,13 +1403,18 @@ export class AlarmasService {
     }
   }
 
-  checarAlarmaExacta(): Promise<boolean> {
+  /**
+   * Igual que `notifPermitidas`: `null` = no se pudo consultar, que no es
+   * "denegado". Quien programe alarmas con `null` sigue haciéndolo en modo
+   * inexacto, que es el peor caso conocido.
+   */
+  checarAlarmaExacta(): Promise<boolean | null> {
     if (Capacitor.getPlatform() !== 'android') {
       return Promise.resolve(true);
     }
     return LocalNotifications.checkExactNotificationSetting()
       .then((s) => s.exact_alarm === 'granted')
-      .catch(() => false);
+      .catch(() => null);
   }
 
   async abrirAjustesAlarmaExacta(): Promise<boolean> {
@@ -1296,7 +1423,7 @@ export class AlarmasService {
     }
     try {
       await LocalNotifications.changeExactNotificationSetting();
-      return await this.checarAlarmaExacta();
+      return (await this.checarAlarmaExacta()) === true;
     } catch (e) {
       console.error('No se pudo abrir el ajuste de alarma exacta', e);
       return false;
@@ -1333,12 +1460,30 @@ export class AlarmasService {
       return;
     }
 
+    // Recordatorio sin dias (una sola vez): si su unica ocurrencia ya sonó,
+    // se apaga solo. Con margen de una hora para no apagarla mientras aun
+    // pueda estar sonando (la tarjeta "Apagar alarma" depende de `activa`).
+    const unaVez = alarma.dias.length === 0;
+    if (unaVez) {
+      const marcada = this.marcaUnaVez(alarma.id);
+      if (marcada !== null && marcada + this.VENTANA_SONANDO_MS <= Date.now()) {
+        await this.refrescarSonandoNativo();
+        if (this.sonandoNativo.has(alarma.id) || this.sonandoActual.has(alarma.id)) {
+          return;
+        }
+        this.quitarMarcaUnaVez(alarma.id);
+        await this.cancelarAlarma(alarma);
+        await this.actualizarAlarma(alarma.id, { activa: false });
+        return;
+      }
+    }
+
     const ok = await this.asegurarPermisos();
     if (!ok) {
       return;
     }
 
-    const exacta = await this.checarAlarmaExacta();
+    const exacta = (await this.checarAlarmaExacta()) === true;
 
     const ocurrencias = this.generarOcurrencias(
       alarma,
@@ -1372,6 +1517,10 @@ export class AlarmasService {
 
       if (resultado.programadas === 0) {
         console.warn('Ninguna alarma quedo programada', alarma.id);
+      } else if (unaVez) {
+        // Anota para qué instante quedó la unica ocurrencia: en la proxima
+        // sincronizacion, si esa hora ya paso, el recordatorio se apaga solo.
+        this.guardarMarcaUnaVez(alarma.id, ocurrencias[0].getTime());
       }
     } catch (e) {
       console.error('No se pudo programar la alarma', e);
@@ -1379,6 +1528,8 @@ export class AlarmasService {
   }
 
   async cancelarAlarma(alarma: AlarmaRecordatorio) {
+    this.quitarMarcaUnaVez(alarma.id);
+
     if (!Capacitor.isNativePlatform()) {
       return;
     }

@@ -323,8 +323,39 @@ export class PermisosPage implements OnInit, OnDestroy {
       this.mostrarAviso(
         `Para desactivar ${permiso.nombre} tienes que hacerlo en los ajustes de tu teléfono.`
       );
-      await this.permisosService.abrirAjustesApp();
+      // Cada permiso tiene SU pantalla de ajustes: notificaciones abre los
+      // ajustes de notificaciones de la app (ahí está el interruptor), el
+      // resto la ficha de la app. Antes todos iban a la ficha genérica, y si
+      // el intento fallaba el error quedaba en consola y el usuario no veía
+      // ninguna redirección.
+      const abrio = await this.permisosService.abrirAjustesParaApagar(permiso.id);
+      if (!abrio) {
+        this.mostrarAviso(
+          `No se pudieron abrir los ajustes. Ábrelos tú: Ajustes → Aplicaciones → SiempreCerca, y ahí apaga ${permiso.nombre}.`
+        );
+      }
     }
+  }
+
+  /**
+   * Los permisos que los recordatorios necesitan y siguen apagados.
+   *
+   * La nota "para que los recordatorios suenen, activa estos 3" era
+   * incondicional: se veía aunque los tres estuvieran activos, y la persona
+   * leía una petición que ya había atendido.
+   */
+  get faltanParaRecordatorios(): PermisoInfo[] {
+    const necesarios = ['notificaciones', 'alarma-exacta', 'bateria'];
+    return this.permisos.filter(
+      (p) => necesarios.includes(p.id) && (p.estado === 'denegado' || p.estado === 'bloqueado')
+    );
+  }
+
+  /** Nombres de los que faltan, para la nota: "A, B y C". */
+  get nombresFaltantesRecordatorio(): string {
+    const nombres = this.faltanParaRecordatorios.map((p) => p.nombre);
+    if (nombres.length <= 1) return nombres[0] ?? '';
+    return `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`;
   }
 
   /**
@@ -361,29 +392,55 @@ export class PermisosPage implements OnInit, OnDestroy {
   async activar(permiso: PermisoInfo) {
     if (this.permisoProcesando) return;
 
+    // No hay nada que pedir: el sistema no conoce este permiso acá.
+    if (permiso.estado === 'no-aplica') {
+      this.mostrarAviso(`${permiso.nombre} no aplica en este dispositivo.`);
+      return;
+    }
+
     this.permisoProcesando = permiso.id;
     this.cdr.detectChanges();
 
     try {
-      if (permiso.estado === 'bloqueado' || !permiso.puedePedir) {
-        // Se pregunta POR QUÉ no se puede pedir, en vez de mostrar un mensaje
-        // genérico. Con notificaciones hay tres motivos distintos y cada uno va
-        // a una pantalla de Ajustes diferente.
-        const motivo = await this.permisosService.motivoFallo(permiso.id);
-        this.mostrarAviso(motivo.texto || `Android no deja pedir ${permiso.nombre}.`);
-        await this.permisosService.abrirAjustesPara(permiso.id);
-        return;
-      }
-
+      // Se intenta SIEMPRE el diálogo del sistema, aunque el estado diga
+      // "bloqueado" o `puedePedir` sea false. BUG: al apagar un permiso
+      // desde los ajustes del sistema, Android devuelve
+      // `shouldShowRequestPermissionRationale = false` y el cálculo nativo lo
+      // clasifica como bloqueado, pero el diálogo SÍ se vuelve a mostrar
+      // (la marca "no volver a preguntar" es otra). Cortar acá era el bug:
+      // la persona apagaba el permiso en Ajustes, venía a reactivarlo y la
+      // app le contestaba un error sin siquiera preguntar.
+      //
+      // Si el permiso está bloqueado DE VERDAD, la solicitud se descarta sola
+      // sin ventana y el resultado lo refleja: recién ahí se avisa y se abren
+      // los ajustes.
       const resultado = await this.permisosService.pedir(permiso.id);
 
       if (resultado && this.activo(resultado)) {
         this.mostrarAviso(`${permiso.nombre} activado.`);
-      } else {
-        // Sigue sin activarse: se informa el motivo real en vez de un
-        // "no se pudo activar" que no dice nada.
-        const motivo = await this.permisosService.motivoFallo(permiso.id);
-        this.mostrarAviso(motivo.texto || `No se pudo activar ${permiso.nombre}.`);
+        return;
+      }
+
+      // No se activó: se informa el motivo real en vez de un "no se pudo
+      // activar" que no dice nada. Con notificaciones hay tres motivos
+      // distintos y cada uno va a una pantalla de Ajustes diferente.
+      const motivo = await this.permisosService.motivoFallo(permiso.id);
+      this.mostrarAviso(
+        motivo.texto ||
+        resultado?.nota ||
+        (resultado?.estado === 'bloqueado'
+          ? `Android no deja pedir ${permiso.nombre}: actívalo en los ajustes del sistema.`
+          : `No se pudo activar ${permiso.nombre}.`)
+      );
+
+      // Los ajustes sólo se abren si el sistema confirmó que ya no muestra
+      // la ventana, y NUNCA para los permisos cuya solicitud YA abrió una
+      // pantalla (alarma exacta, ubicación en segundo plano): abrir otra
+      // encima dejaba a la persona en una pantalla que no le servía.
+      const solicitarYaAbrioAjustes =
+        permiso.id === 'alarma-exacta' || permiso.id === 'ubicacion-fondo';
+      if (resultado?.estado === 'bloqueado' && !solicitarYaAbrioAjustes) {
+        await this.permisosService.abrirAjustesPara(permiso.id);
       }
     } catch (e) {
       console.warn('No se pudo activar el permiso:', e);

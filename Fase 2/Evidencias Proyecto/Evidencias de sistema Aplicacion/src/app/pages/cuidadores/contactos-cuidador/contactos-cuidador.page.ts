@@ -1,9 +1,10 @@
-import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
   IonContent,
+  IonFooter,
   IonHeader,
   IonTitle,
   IonToolbar,
@@ -40,7 +41,8 @@ import {
   warning
 } from 'ionicons/icons';
 
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, type PluginListenerHandle } from '@capacitor/core';
+import { Keyboard } from '@capacitor/keyboard';
 
 import {
   ContactosEmergenciaService,
@@ -71,6 +73,7 @@ import { PermisosExtra } from '../../../services/Backend/permisos-extra/permisos
   styleUrls: ['./contactos-cuidador.page.scss'],
   imports: [
     IonContent,
+    IonFooter,
     IonHeader,
     IonTitle,
     IonToolbar,
@@ -89,7 +92,10 @@ import { PermisosExtra } from '../../../services/Backend/permisos-extra/permisos
     FormsModule
   ]
 })
-export class ContactosCuidadorPage implements OnInit {
+export class ContactosCuidadorPage implements OnInit, OnDestroy {
+
+  /** Escucha del teclado nativo mientras el formulario está abierto. */
+  private escuchaTeclado: PluginListenerHandle | null = null;
 
   contactosPublicos: ContactoPublico[] = CONTACTOS_PUBLICOS;
 
@@ -327,6 +333,14 @@ export class ContactosCuidadorPage implements OnInit {
     this.refrescar();
 
     void this.cargarContactos();
+  }
+
+  onAdultoChange(event: any) {
+    const id = event.detail.value;
+    const adulto = this.adultosACargo.find((item) => this.idDe(item) === id);
+    if (adulto) {
+      this.seleccionarAdulto(adulto);
+    }
   }
 
   esSeleccionado(adulto: any): boolean {
@@ -756,6 +770,7 @@ export class ContactosCuidadorPage implements OnInit {
 
     // El parentesco es texto libre, así que el formulario NO espera a la base.
     this.mostrarFormulario = true;
+    void this.escucharTeclado();
     this.refrescar();
   }
 
@@ -766,7 +781,42 @@ export class ContactosCuidadorPage implements OnInit {
 
   cerrarFormulario() {
     this.mostrarFormulario = false;
+    void this.quitarEscuchaTeclado();
     this.refrescar();
+  }
+
+  /**
+   * En algunos dispositivos el teclado queda encima del campo enfocado (y de
+   * la barra Guardar). Cuando el teclado se abre, se vuelve a poner el campo
+   * activo en el centro de la vista un instante después de la animación.
+   * En el navegador el plugin no emite el evento y no hace nada.
+   */
+  private async escucharTeclado(): Promise<void> {
+    await this.quitarEscuchaTeclado();
+    try {
+      this.escuchaTeclado = await Keyboard.addListener('keyboardWillShow', () => {
+        setTimeout(() => {
+          (document.activeElement as HTMLElement | null)?.scrollIntoView?.({
+            block: 'center'
+          });
+        }, 250);
+      });
+    } catch {
+      // Sin teclado nativo (por ej. en el navegador): no hay nada que hacer.
+    }
+  }
+
+  private async quitarEscuchaTeclado(): Promise<void> {
+    try {
+      await this.escuchaTeclado?.remove();
+    } catch {
+      // Ya se había eliminado solo.
+    }
+    this.escuchaTeclado = null;
+  }
+
+  ngOnDestroy() {
+    void this.quitarEscuchaTeclado();
   }
 
   async guardarFormulario() {

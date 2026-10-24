@@ -13,6 +13,7 @@ import { addIcons } from 'ionicons';
 import { arrowBack, albumsOutline, helpCircleOutline, refreshOutline } from 'ionicons/icons';
 import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
 import { TUTORIAL_MEMORIA } from '../juegos/tutoriales';
+import { suspenderZoomJuego, reanudarZoomJuego } from '../../services/font-size/font-size';
 
 /** Una carta del tablero de memoria. */
 export interface CartaMemoria {
@@ -72,6 +73,7 @@ export class MemoriaPage implements OnDestroy {
 
   constructor(private router: Router, private cdr: ChangeDetectorRef) {
     addIcons({ arrowBack, albumsOutline, helpCircleOutline, refreshOutline });
+    suspenderZoomJuego();
     this.iniciar();
   }
 
@@ -200,5 +202,6 @@ export class MemoriaPage implements OnDestroy {
   ngOnDestroy(): void {
     this.destruido = true;
     this.detenerCrono();
+    reanudarZoomJuego();
   }
 }

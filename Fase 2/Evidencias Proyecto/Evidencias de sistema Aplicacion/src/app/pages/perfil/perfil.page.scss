@@ -169,11 +169,25 @@ h1{
 
 
 
+/* min-width:0 deja que el texto se corte en vez de empujar la tarjeta
+   fuera de pantalla; word-break parte correos/largos sin espacio. */
+.dato > div{
+
+  min-width:0;
+
+  flex:1;
+
+}
+
+
+
 .dato span{
 
   font-size:13px;
 
   color:#777;
+
+  overflow-wrap:anywhere;
 
 }
 
@@ -186,6 +200,8 @@ h1{
   font-weight:600;
 
   color:#222;
+
+  overflow-wrap:anywhere;
 
 }
 
@@ -245,6 +261,103 @@ ion-input.ion-invalid {
   --border-color: #dc2626;
   --highlight-color: #dc2626;
   border-bottom: 1px solid #dc2626;
+}
+
+/* El selector de región/comuna hereda el mismo aspecto que los inputs. */
+ion-select.dato-select {
+  width: 100%;
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+  --placeholder-color: #999;
+}
+
+ion-select.ion-invalid {
+  --border-color: #dc2626;
+  --highlight-color: #dc2626;
+  border-bottom: 1px solid #dc2626;
+}
+
+/* =========================
+   SELECTOR DE FECHA (igual al del registro)
+========================= */
+
+.date-picker-trigger {
+  width: 100%;
+  min-height: 44px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: all 0.2s ease-in-out;
+}
+
+.date-picker-trigger:active {
+  background: #f1f5f9;
+}
+
+.date-picker-trigger .trigger-text {
+  font-size: 15px;
+  color: #94a3b8;
+}
+
+.date-picker-trigger.has-value .trigger-text {
+  color: #222;
+  font-weight: 600;
+}
+
+.date-picker-trigger.has-error {
+  border-color: #dc2626 !important;
+  background: #fef2f2 !important;
+}
+
+/* Modal DateTime */
+.datetime-modal {
+  --height: auto;
+  --max-height: 90vh;
+  --border-radius: 16px;
+  --padding-top: 10px;
+  --padding-bottom: 10px;
+}
+
+.datetime-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px 8px;
+}
+
+.datetime-modal .modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.datetime-modal .modal-header ion-button {
+  --color: #64748b;
+  font-size: 22px;
+}
+
+.datetime-modal .modal-content {
+  padding: 0 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.datetime-modal .modal-footer {
+  padding: 10px 20px 18px;
+}
+
+.datetime-modal .modal-confirm-btn {
+  --background: #7715c7;
+  --border-radius: 8px;
+  font-weight: 700;
+  margin: 0;
 }
 
 .perfil-loading {

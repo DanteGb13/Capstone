@@ -183,11 +183,10 @@
   position: absolute;
   inset: 0;
   background: rgba(20, 18, 43, 0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block; /* con scroll propio: en pantallas chicas los botones se cortaban */
   z-index: 60;
-  padding: 8vh 16px 24px;
+  padding: 6vh 16px max(24px, env(safe-area-inset-bottom));
+  overflow-y: auto;
   touch-action: none;
 }
 
@@ -197,6 +196,7 @@
   padding: 28px 16px 16px;
   width: 100%;
   max-width: 360px;
+  margin: auto; /* centra cuando hay lugar; scrollea sin cortar si no */
   text-align: center;
 
   h2 {
@@ -218,7 +218,8 @@
 /* Cuadrado del tamaño que tendrá la imagen en el rompecabeza */
 .crop-cuadro {
   position: relative;
-  width: min(70vw, 250px);
+  /* 45vh evita que el cuadrado empuje los botones fuera de la pantalla */
+  width: min(70vw, 250px, 45vh);
   aspect-ratio: 1;
   margin: 0 auto 10px;
   border-radius: 14px;

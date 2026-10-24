@@ -13,6 +13,7 @@ import { PerfilCacheService } from './services/perfil-cache/perfil-cache.service
 import { RealtimeService } from './services/realtime/realtime.service';
 import { SupabaseService } from './services/supabase/supabase';
 import { AnaliticaService } from './services/analitica/analitica';
+import { NavegacionRolService } from './services/navegacion-rol/navegacion-rol';
 
 @Component({
   selector: 'app-root',
@@ -29,6 +30,7 @@ export class AppComponent {
   private realtimeService = inject(RealtimeService);
   private supabaseService = inject(SupabaseService);
   private analiticaService = inject(AnaliticaService);
+  private navRol = inject(NavegacionRolService);
 
   constructor(
     private router: Router,
@@ -79,6 +81,10 @@ export class AppComponent {
         if (evento === 'SIGNED_OUT' || !sesion) {
           console.log('[App] sesión cerrada: se limpian los datos de la cuenta anterior');
           this.perfilCache.limpiar();
+          // El rol en caché también es de la cuenta que sale. Si se queda, la
+          // siguiente llamada a irAPanelPrincipal() devuelve el panel del rol
+          // viejo y el guard, al no ver sesión, termina mandando al acceso.
+          this.navRol.limpiarCache();
           // Sin reabrir: al cambiar de cuenta no hay que volver a suscribir a
           // la anterior cuando la app vuelva al primer plano.
           void this.realtimeService.cerrarSinReabrir();

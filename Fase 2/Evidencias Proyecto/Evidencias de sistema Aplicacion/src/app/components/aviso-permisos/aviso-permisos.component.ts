@@ -38,21 +38,26 @@ import * as icons from 'ionicons/icons';
     }
   `,
   styles: [`
-    :host { display: block; }
+    :host {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: block;
+      pointer-events: none;
+    }
 
     /*
      * Flotante fijo: no ocupa alto en el flujo, así el menú de abajo
-     * no se mueve. Queda por encima del contenido (z-index 1100 > 1000
-     * del footer) hasta que todos los permisos críticos estén activos.
+     * no se mueve. Queda por encima del header y del contenido hasta que
+     * todos los permisos críticos estén activos.
      */
     .aviso {
-      position: fixed;
+      position: absolute;
       top: calc(env(safe-area-inset-top, 0px) + 12px);
       left: 16px;
       right: 16px;
       margin: 0 auto;
       max-width: 480px;
-      z-index: 1100;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -62,6 +67,7 @@ import * as icons from 'ionicons/icons';
       padding: 10px 10px 10px 12px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
       animation: aparecer 0.28s ease;
+      pointer-events: auto;
     }
 
     .aviso.urgente {

@@ -1,7 +1,8 @@
-import { ChangeDetectorRef, Component, HostListener, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, HostListener, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AlertController } from '@ionic/angular';
-import { Login } from '../../services/guards/login/login';
+import { AccesoService } from '../acceso/acceso.service';
 import { PerfilCacheService, PerfilResumen } from '../../services/perfil-cache/perfil-cache.service';
 
 /**
@@ -61,10 +62,25 @@ export class WebNav implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
   private perfilCache = inject(PerfilCacheService);
-  private loginService = inject(Login);
+  private acceso = inject(AccesoService);
   private alertCtrl = inject(AlertController);
+  private destruccion = inject(DestroyRef);
 
   async ngOnInit() {
+    // Cambiar la foto o el nombre desde Mi Perfil se ve al instante en la
+    // barra, sin tener que navegar a otra página. Cada página monta su propio
+    // `app-web-nav`, así que si no, este seguiría con el perfil viejo.
+    this.perfilCache.cambios$
+      .pipe(takeUntilDestroyed(this.destruccion))
+      .subscribe(() => void this.refrescarPerfil());
+
+    await this.refrescarPerfil();
+    this.cargando = false;
+    this.refrescar();
+  }
+
+  /** Vuelve a leer el perfil desde el caché y repinta la barra. */
+  private async refrescarPerfil(): Promise<void> {
     try {
       const perfil = await this.perfilCache.perfil();
       this.perfil = perfil;
@@ -75,8 +91,6 @@ export class WebNav implements OnInit {
       // Sin perfil no hay rol: se muestra la web pública, que es lo que
       // puede ver cualquiera.
     }
-
-    this.cargando = false;
     this.refrescar();
   }
 
@@ -117,7 +131,7 @@ export class WebNav implements OnInit {
   cerrarSesion() {
     const alerta = this.alertCtrl.create({
       header: 'Cerrar sesión',
-      message: 'Vas a salir de tu cuenta en este dispositivo.',
+      message: '¿Seguro que quieres cerrar sesión?',
       cssClass: 'alerta-cerrar-sesion',
       buttons: [
         { text: 'Cancelar', role: 'cancel' },
@@ -134,20 +148,65 @@ export class WebNav implements OnInit {
     void alerta.then((a) => a.present());
   }
 
+  /**
+   * Cierra la sesión de la web y vuelve a la landing.
+   *
+   * Usa `AccesoService` (el de la web) y no el `Login` de la app: ése libera
+   * primero el token de push con una consulta de red sin timeout, y si esa
+   * consulta se colgaba éste método no llegaba nunca a navegar. La pantalla
+   * quedaba "muda", y al tocar después cualquier enlace del panel el guard,
+   * que ya no veía sesión, mandaba al acceso de la web.
+   *
+   * Con el límite de tiempo nadie se queda esperando: o se cierra y se vuelve
+   * al inicio, o se avisa en pantalla que no se pudo.
+   */
   private async salir() {
     try {
-      // Cierra sesión sólo en este dispositivo (scope 'local') y libera el
-      // token de push: si no, este celular seguiría recibiendo alertas de la
-      // cuenta que salió.
-      await this.loginService.cerrarSesion();
+      await this.conLimite(this.acceso.salir(), 6000);
     } catch (e) {
       console.warn('No se pudo cerrar sesión desde la navegación:', e);
+      await this.avisarQueFallo();
+      return;
     }
 
+    this.menuAbierto = false;
     this.perfilAbierto = false;
+    this.perfil = null;
+    this.esAdmin = false;
+    this.logueado = false;
     this.refrescar();
 
     this.router.navigate(['/inicio'], { replaceUrl: true });
+  }
+
+  /** Rechaza si la promesa no resuelve a tiempo. */
+  private conLimite<T>(promesa: Promise<T>, ms: number): Promise<T> {
+    return new Promise<T>((resolver, rechazar) => {
+      const reloj = setTimeout(() => rechazar(new Error(`sin respuesta en ${ms} ms`)), ms);
+      promesa.then(
+        (valor) => { clearTimeout(reloj); resolver(valor); },
+        (error) => { clearTimeout(reloj); rechazar(error); }
+      );
+    });
+  }
+
+  /**
+   * Aviso visible de que la sesión sigue abierta.
+   *
+   * Sin esto el fallo se iba al `console.warn` y desde fuera se veía exactamente
+   * lo mismo que un cierre que no hace nada.
+   */
+  private async avisarQueFallo(): Promise<void> {
+    try {
+      const alerta = await this.alertCtrl.create({
+        header: 'No se pudo cerrar sesión',
+        message: 'Revisa tu conexión e inténtalo de nuevo.',
+        buttons: ['Entendido']
+      });
+      await alerta.present();
+    } catch {
+      // Si ni siquiera hay overlay, no queda dónde avisar.
+    }
   }
 
   private calcularIniciales(nombreCompleto: string | undefined | null): string {

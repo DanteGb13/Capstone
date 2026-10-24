@@ -1,0 +1,184 @@
+/* ------------------------------------------------------------------
+   Gestión de usuarios de la web (/gestion-usuarios)
+
+   Los filtros, los botones de acción y la lista de eventos. Exclusivos de
+   esta página: la tabla (`.panel-tabla`), las tarjetas (`.panel-tarjeta`)
+   y el segmento de slides (`.web-segment`) son compartidos del panel y
+   viven en global.scss.
+   ------------------------------------------------------------------ */
+
+/* ---------------- Aviso de resultado ---------------- */
+.gestion-aviso {
+  margin: 0 0 var(--sc-gap);
+  padding: 0.7rem 1rem;
+  border-radius: var(--sc-radius);
+  background-color: var(--sc-ok-soft);
+  border: 1px solid #bfe6cd;
+  color: var(--sc-ok-dark);
+  font-size: 0.9rem;
+}
+
+/* ---------------- Filtros ---------------- */
+.gestion-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-gap-sm);
+  align-items: flex-end;
+  margin-bottom: var(--sc-gap);
+}
+
+.gestion-etiqueta {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--sc-ink-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.gestion-campo {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--sc-border-strong);
+  border-radius: var(--sc-radius);
+  background-color: var(--sc-surface);
+  color: var(--sc-ink);
+  font-size: 0.92rem;
+  font-family: inherit;
+}
+
+.gestion-campo:focus-visible {
+  outline: none;
+  border-color: var(--sc-primary);
+  box-shadow: var(--sc-focus-ring);
+}
+
+/* ---------------- Botones ---------------- */
+.gestion-boton {
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--sc-border-strong);
+  border-radius: var(--sc-radius-pill);
+  background-color: var(--sc-surface);
+  color: var(--sc-ink-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.gestion-boton:hover:not(:disabled) {
+  border-color: var(--sc-primary);
+  background-color: var(--sc-primary-soft);
+}
+
+.gestion-boton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gestion-boton--peligro {
+  border-color: #f3c2c2;
+  background-color: var(--sc-danger-soft);
+  color: var(--sc-danger-dark);
+}
+
+.gestion-boton--peligro:hover:not(:disabled) {
+  border-color: var(--sc-danger);
+  background-color: #fbdcdc;
+}
+
+.gestion-boton--ok {
+  border-color: #bfe6cd;
+  background-color: var(--sc-ok-soft);
+  color: var(--sc-ok-dark);
+}
+
+.gestion-boton--ok:hover:not(:disabled) {
+  border-color: var(--sc-ok);
+  background-color: #d8f3e2;
+}
+
+/* Enlace de fila de tabla: se ve como texto, se comporta como botón. */
+.gestion-enlace {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--sc-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ---------------- Paginación ---------------- */
+.gestion-paginacion {
+  display: flex;
+  align-items: center;
+  gap: var(--sc-gap-sm);
+  margin-top: var(--sc-gap);
+}
+
+.gestion-paginacion__numero {
+  color: var(--sc-ink-muted);
+  font-size: 0.88rem;
+  min-width: 4.5rem;
+  text-align: center;
+}
+
+/* ---------------- Lista de eventos ---------------- */
+.gestion-eventos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sc-gap-sm);
+}
+
+.gestion-evento {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.15rem var(--sc-gap);
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  background-color: var(--sc-surface);
+}
+
+.gestion-evento__accion {
+  color: var(--sc-ink);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.gestion-evento__fecha {
+  color: var(--sc-ink-muted);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.gestion-evento__detalle,
+.gestion-evento__actor {
+  grid-column: 1 / -1;
+  color: var(--sc-ink-2);
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+
+.gestion-evento__actor {
+  color: var(--sc-ink-muted);
+  font-size: 0.8rem;
+}
+
+/* En pantalla chica la tabla se desborda como en /usuarios: se envuelve y
+   se scrollea en horizontal. */
+@media (max-width: 720px) {
+  .gestion-evento {
+    grid-template-columns: 1fr;
+  }
+
+  .gestion-evento__fecha {
+    text-align: left;
+  }
+}

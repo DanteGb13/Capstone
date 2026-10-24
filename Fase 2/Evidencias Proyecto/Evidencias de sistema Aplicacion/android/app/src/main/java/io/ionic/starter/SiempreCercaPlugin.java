@@ -43,6 +43,8 @@ public class SiempreCercaPlugin extends Plugin {
     private static final String TAG = "SiempreCerca";
     /** Sonido de los recordatorios, en res/raw (sin extension). */
     static final String ARCHIVO_SONIDO = "alarmmelodia";
+    /** Sonido del SOS, en res/raw (sin extension). */
+    static final String ARCHIVO_SONIDO_SOS = "security_alarm";
 
     // Acción de la notificación que abrió la app cuando ya estaba viva.
     private String accionPendiente = null;
@@ -58,7 +60,7 @@ public class SiempreCercaPlugin extends Plugin {
     // el canal de alarma llevaba su propio "canal_alarma_v3", y subir la version
     // desde aquí no lo recreaba: había que acordarse de subir los dos, o el
     // canal se quedaba con el sonido viejo para siempre.
-    private static final String VERSION_CANALES = "v7";
+    private static final String VERSION_CANALES = "v9";
 
     // =====================================================
     // CANALES DE NOTIFICACIÓN
@@ -87,6 +89,9 @@ public class SiempreCercaPlugin extends Plugin {
         eliminar(nm, CANAL_ZONA_ESTADO_ID);
         eliminar(nm, CANAL_ALARMA_ID);
 
+        // Fallback común: alarma del sistema
+        Uri alarma = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM);
+
         // --- SOS: máxima intensidad (se repite hasta que el cuidador conteste) ---
         NotificationChannel sos = new NotificationChannel(
             CANAL_SOS_ID,
@@ -101,11 +106,18 @@ public class SiempreCercaPlugin extends Plugin {
         sos.setLightColor(Color.RED);
         sos.setLockscreenVisibility(android.app.Notification.VISIBILITY_PUBLIC);
         sos.setBypassDnd(true);
-        Uri alarma = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM);
-        sos.setSound(alarma, new AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build());
+        Uri sonidoSos = sonidoSos(contexto);
+        if (sonidoSos != null) {
+            sos.setSound(sonidoSos, new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build());
+        } else {
+            sos.setSound(alarma, new AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build());
+        }
         nm.createNotificationChannel(sos);
 
         // --- Zona segura: primera salida (alerta intensa) ---
@@ -163,6 +175,21 @@ public class SiempreCercaPlugin extends Plugin {
     @PluginMethod
     public void crearCanalSOS(PluginCall call) {
         crearCanales(getContext());
+        call.resolve();
+    }
+
+    /**
+     * Fuerza la recreación de TODOS los canales ignorando la versión guardada.
+     * Útil si el usuario desactivó el sonido en Ajustes del sistema y lo volvió
+     * a activar: Android no permite cambiar sonido de un canal existente, hay que
+     * borrarlo y recrearlo.
+     */
+    @PluginMethod
+    public void forzarRecrearCanales(PluginCall call) {
+        Context contexto = getContext();
+        SharedPreferences prefs = contexto.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        prefs.edit().remove("version_canales").apply();
+        crearCanales(contexto);
         call.resolve();
     }
 
@@ -454,6 +481,26 @@ public class SiempreCercaPlugin extends Plugin {
                 .authority(paquete)
                 .appendPath("raw")
                 .appendPath(ARCHIVO_SONIDO)
+                .build();
+    }
+
+    /**
+     * Uri del sonido del SOS, en res/raw (sin extension).
+     *
+     * Igual que sonidoAlarma(): usa la forma por nombre para sobrevivir a recompilaciones.
+     * Devuelve null si no se encuentra el archivo.
+     */
+    static Uri sonidoSos(Context contexto) {
+        String paquete = contexto.getPackageName();
+        if (contexto.getResources().getIdentifier(ARCHIVO_SONIDO_SOS, "raw", paquete) == 0) {
+            Log.w(TAG, "No se encontro res/raw/" + ARCHIVO_SONIDO_SOS + ": el canal SOS usara alarma del sistema");
+            return null;
+        }
+        return new Uri.Builder()
+                .scheme("android.resource")
+                .authority(paquete)
+                .appendPath("raw")
+                .appendPath(ARCHIVO_SONIDO_SOS)
                 .build();
     }
 

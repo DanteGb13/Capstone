@@ -210,6 +210,12 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
 
   private inicializado: boolean = false;
 
+  /**
+   * El adulto no tiene cuidador vinculado (se confirmó consultando, no es un
+   * fallo de red). En ese caso la pantalla no muestra ni crea zonas.
+   */
+  sinVinculo: boolean = false;
+
   private estadoPrevioDentro: boolean | null = null;
 
   /** Direcciones calculadas para zonas guardadas sin dirección de texto. */
@@ -267,15 +273,32 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
       this.idAdulto = perfil?.id || (await this.perfilCache.idUsuario()) || '';
       this.nombreAdulto = perfil?.nombreCompleto || 'Tú';
 
-      // Zona predeterminada: la dirección de casa guardada en el perfil
-      // (tabla direccion).
-      await this.prepararZonaCasa();
+      // Sin cuidador vinculado NO se muestran ni se crean zonas. Las zonas
+      // viven en la tabla por el id del adulto, así que después de desvincular
+      // seguían ahí (y en las cachés locales) y el adulto veía "su zona" de un
+      // cuidador que ya no está: parecía que alguien seguía a cargo.
+      //
+      // `null` = no se pudo consultar (sin red): en ese caso se muestra lo
+      // que haya, como antes, en vez de ocultar zonas reales por un fallo de
+      // conexión.
+      const hayCuidador = await this.vinculacionService.hayCuidadorVinculado();
+      this.sinVinculo = hayCuidador === false;
+
+      if (!this.sinVinculo) {
+        // Zona predeterminada: la dirección de casa guardada en el perfil
+        // (tabla direccion).
+        await this.prepararZonaCasa();
+      }
     }
 
     // Esto va DESPUÉS a propósito: `prepararZonaCasa()` puede crear la zona de
     // casa, y listar antes de que exista mostraría una pantalla vacía que se
     // rellenaría sola en la próxima entrada.
-    await this.cargarZonas();
+    if (this.sinVinculo) {
+      this.zonas = [];
+    } else {
+      await this.cargarZonas();
+    }
 
     this.cargando = false;
     this.changeDetectorRef.detectChanges();
@@ -290,13 +313,32 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async ionViewWillEnter() {
+    if (!this.inicializado) return;
+
     // Refresca el menú de personas a cargo: alguien puede haber sido
     // desvinculado mientras la página permanecía en el historial de navegación.
-    if (!this.inicializado || !this.esCuidador || this.cargandoAdultos) {
+    if (this.esCuidador) {
+      if (this.cargandoAdultos) return;
+      await this.cargarAdultos();
       return;
     }
 
-    await this.cargarAdultos();
+    // El vínculo del adulto pudo cambiar mientras la página estaba en el
+    // historial (se agregó o se quitó un cuidador). Sólo se actúa con una
+    // respuesta definida: `null` (sin red) no cambia lo que se muestra.
+    const hayCuidador = await this.vinculacionService.hayCuidadorVinculado();
+
+    if (hayCuidador === false && !this.sinVinculo) {
+      this.sinVinculo = true;
+      this.zonas = [];
+      this.pintarZonas();
+      this.changeDetectorRef.detectChanges();
+    } else if (hayCuidador === true && this.sinVinculo) {
+      this.sinVinculo = false;
+      await this.prepararZonaCasa();
+      await this.cargarZonas();
+      this.changeDetectorRef.detectChanges();
+    }
   }
 
   ngAfterViewInit() {
@@ -387,7 +429,9 @@ export class ZonaSeguraPage implements OnInit, AfterViewInit, OnDestroy {
   // =====================================================
 
   async cargarZonas() {
-    if (!this.idAdulto) {
+    // Sin vínculo no se listan zonas, aunque otra acción (o una caché) llame
+    // a recargar: es lo que evita que reaparezcan las del cuidador anterior.
+    if (!this.idAdulto || (this.sinVinculo && !this.esCuidador)) {
       this.zonas = [];
       return;
     }

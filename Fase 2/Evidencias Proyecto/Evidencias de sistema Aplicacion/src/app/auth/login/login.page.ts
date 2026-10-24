@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { Capacitor } from '@capacitor/core';
-import { IonButton, IonContent, IonIcon, IonInput, IonSpinner, NavController } from '@ionic/angular';
+import { AlertController, IonButton, IonContent, IonIcon, IonInput, IonSpinner, NavController } from '@ionic/angular';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -17,6 +17,7 @@ import { Login } from '../../services/guards/login/login';
 import { SupabaseService } from '../../services/supabase/supabase';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
 import { validarEmail } from '../../services/utils/validators';
+import { mensajeErrorApp } from '../../services/utils/mensaje-error';
 
 @Component({
   selector: 'app-login',
@@ -49,12 +50,23 @@ export class LoginPage implements OnInit, OnDestroy {
   } = {};
 
   private cdr = inject(ChangeDetectorRef);
+  private alertController = inject(AlertController);
 
   // La app corre SIN zone.js (zoneless): cambiar `mensajeError` o `cargando`
   // después de un await NO repinta la vista por sí solo, así que el error
   // quedaba invisible hasta que el usuario tocaba la pantalla.
   private refrescar() {
     this.cdr.markForCheck();
+  }
+
+  /** Alerta visible para errores del servidor (nunca texto técnico crudo). */
+  private async alertaError(titulo: string, mensaje: string) {
+    const alert = await this.alertController.create({
+      header: titulo,
+      message: mensaje,
+      buttons: ['Entendido']
+    });
+    await alert.present();
   }
 
   constructor(
@@ -99,7 +111,10 @@ export class LoginPage implements OnInit, OnDestroy {
           await this.derivarTrasGoogle();
         }
       } else if (res.error) {
-        this.mensajeError = 'No se pudo iniciar con Google: ' + res.error;
+        await this.alertaError(
+          'No se pudo iniciar con Google',
+          mensajeErrorApp(res.error, 'No se pudo iniciar con Google.')
+        );
         this.refrescar();
       }
     });
@@ -166,18 +181,12 @@ export class LoginPage implements OnInit, OnDestroy {
 
       await this.redireccionarSegunRol();
 
-    } catch (error: any) {
-      const msg = error?.message?.toLowerCase() || '';
-
-      if (msg.includes('invalid login credentials') || msg.includes('invalid_grant')) {
-        this.mensajeError = 'Correo o contraseña incorrectos. Por favor verifica tus datos.';
-      } else if (msg.includes('email not confirmed')) {
-        this.mensajeError = 'Debes confirmar tu correo electrónico antes de ingresar.';
-      } else if (msg.includes('network') || msg.includes('fetch')) {
-        this.mensajeError = 'Error de conexión. Comprueba tu acceso a internet.';
-      } else {
-        this.mensajeError = error?.message || 'No se pudo iniciar sesión. Inténtalo nuevamente.';
-      }
+    } catch (error) {
+      console.error('Error iniciando sesión:', error);
+      await this.alertaError(
+        'No se pudo iniciar sesión',
+        mensajeErrorApp(error, 'No se pudo iniciar sesión. Inténtalo nuevamente.')
+      );
       this.refrescar();
     } finally {
       this.cargando = false;
@@ -189,8 +198,12 @@ export class LoginPage implements OnInit, OnDestroy {
     this.mensajeError = '';
     try {
       await this.loginService.iniciarSesionGoogle();
-    } catch (error: any) {
-      this.mensajeError = error?.message || 'No se pudo conectar con Google.';
+    } catch (error) {
+      console.error('Error con Google:', error);
+      await this.alertaError(
+        'No se pudo conectar con Google',
+        mensajeErrorApp(error, 'No se pudo conectar con Google.')
+      );
       this.refrescar();
     }
   }
@@ -202,8 +215,12 @@ export class LoginPage implements OnInit, OnDestroy {
       localStorage.removeItem('tipo_cuenta_google');
       this.navRol.limpiarCache();
       await this.navCtrl.navigateRoot('/siguiente-paso', { replaceUrl: true });
-    } catch (error: any) {
-      this.mensajeError = error?.message || 'No se pudo completar el registro.';
+    } catch (error) {
+      console.error('Error completando registro con Google:', error);
+      await this.alertaError(
+        'No se pudo completar el registro',
+        mensajeErrorApp(error, 'No se pudo completar el registro.')
+      );
       this.refrescar();
     } finally {
       this.cargando = false;
@@ -245,6 +262,10 @@ export class LoginPage implements OnInit, OnDestroy {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session?.user) {
+        // Sin sesión no hay a dónde redirigir: se avisa y se puede reintentar.
+        this.mensajeError =
+          'No se pudo confirmar tu sesión. Intenta entrar de nuevo.';
+        this.refrescar();
         return;
       }
 
@@ -295,6 +316,12 @@ export class LoginPage implements OnInit, OnDestroy {
       await this.navCtrl.navigateRoot(this.navRol.rutaPrincipal(rolNombre), { replaceUrl: true });
 
     } catch (error) {
+      // Antes el catch estaba vacío: si fallaba la consulta del rol, la
+      // pantalla quedaba en blanco (sin mensaje y sin navegación).
+      console.error('Error decidiendo a dónde entrar:', error);
+      this.mensajeError =
+        'No se pudo abrir tu cuenta. Revisa tu conexión e intenta de nuevo.';
+      this.refrescar();
     }
   }
 

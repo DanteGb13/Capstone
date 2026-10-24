@@ -78,6 +78,7 @@
             <div class="modal-content">
               <ion-datetime
                 presentation="date"
+                [min]="'1900-01-01'"
                 [max]="fechaMaxima"
                 [value]="fechaNacimiento || '1960-01-01'"
                 (ionChange)="onFechaSeleccionada($event)"
@@ -172,37 +173,49 @@
           Dirección
         </h2>
 
-        <!-- Región -->
+        <!-- Región (JSON embebido en assets) -->
         <div class="input-group">
-          <ion-input
-            type="text"
-            placeholder="Región (ej: Metropolitana)"
+          <ion-select
+            interface="alert"
             fill="outline"
             class="step-input"
+            placeholder="Elige tu región"
+            okText="Elegir"
+            cancelText="Cancelar"
             [class.has-error]="errores.region"
             [(ngModel)]="region"
-            (ionInput)="validarCampoRegion()"
-            (ionBlur)="validarCampoRegion()">
+            (ionChange)="alCambiarRegion($event)">
             <ion-icon slot="start" name="map-outline"></ion-icon>
-          </ion-input>
+            @for (r of listaRegiones; track r.nombre) {
+              <ion-select-option [value]="r.nombre">{{ r.nombre }}</ion-select-option>
+            }
+          </ion-select>
           @if (errores.region) {
             <span class="field-error">{{ errores.region }}</span>
           }
+          @if (errorRegiones) {
+            <span class="field-error">{{ errorRegiones }}</span>
+          }
         </div>
 
-        <!-- Comuna -->
+        <!-- Comuna (las de la región elegida) -->
         <div class="input-group">
-          <ion-input
-            type="text"
-            placeholder="Comuna (ej: Providencia)"
+          <ion-select
+            interface="alert"
             fill="outline"
             class="step-input"
+            placeholder="Elige tu comuna"
+            okText="Elegir"
+            cancelText="Cancelar"
+            [disabled]="!region || comunasDisponibles.length === 0"
             [class.has-error]="errores.comuna"
             [(ngModel)]="comuna"
-            (ionInput)="validarCampoComuna()"
-            (ionBlur)="validarCampoComuna()">
+            (ionChange)="alCambiarComuna($event)">
             <ion-icon slot="start" name="location-outline"></ion-icon>
-          </ion-input>
+            @for (c of comunasDisponibles; track c) {
+              <ion-select-option [value]="c">{{ c }}</ion-select-option>
+            }
+          </ion-select>
           @if (errores.comuna) {
             <span class="field-error">{{ errores.comuna }}</span>
           }

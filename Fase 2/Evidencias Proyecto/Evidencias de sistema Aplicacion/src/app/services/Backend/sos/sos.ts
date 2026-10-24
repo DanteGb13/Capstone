@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Router } from '@angular/router';
 import { SupabaseService } from '../../supabase/supabase';
 import { PushNotificationService } from '../push-notification/push-notification';
 import { PermisosExtra } from '../permisos-extra/permisos-extra';
@@ -40,7 +41,8 @@ export class SOSService {
   constructor(
     private supabaseService: SupabaseService,
     private pushService: PushNotificationService,
-    private alertCtrl: AlertController
+    private alertCtrl: AlertController,
+    private router: Router
   ) {
     if (this.isNative) {
       // Al volver a la app, si el cuidador ya contestó mientras estábamos
@@ -161,10 +163,25 @@ export class SOSService {
     console.log('SOS: Cuidadores encontrados:', cuidadores.length);
 
     if (cuidadores.length === 0) {
+      // Sin cuidador no hay a quién avisar: en vez de un error sin salida,
+      // se lleva a la pantalla de contactos para agregar uno.
+      // `/contacto-emergencia` es la ruta de contactos del rol adulto mayor
+      // (ver app.routes.ts y RUTAS_ADULTO_MAYOR); con el rol cuidador sería
+      // /contactos-cuidador, pero el SOS sólo existe en el panel del adulto.
       const alert = await this.alertCtrl.create({
-        header: 'SOS Error',
-        message: 'No hay cuidadores vinculados. No se puede enviar la alerta.',
-        buttons: ['OK']
+        header: 'Sin cuidador vinculado',
+        message:
+          'Tu SOS avisa a tu cuidador, pero todavía no tienes a nadie vinculado. ' +
+          'Agrega un contacto de emergencia para poder pedir ayuda.',
+        buttons: [
+          { text: 'Cancelar', role: 'cancel' },
+          {
+            text: 'Ir a contactos',
+            handler: () => {
+              void this.router.navigate(['/contacto-emergencia']);
+            }
+          }
+        ]
       });
       await alert.present();
       return resultado;

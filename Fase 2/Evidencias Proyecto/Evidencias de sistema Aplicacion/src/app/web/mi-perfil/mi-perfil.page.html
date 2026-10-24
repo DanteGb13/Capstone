@@ -1,50 +1,333 @@
 <app-web-nav />
 
 <ion-content class="web-contenido">
-  <div class="web-page web-page--centrado">
-
-    <div class="panel-cabecera">
-      <h1>Perfil</h1>
-      <p class="descripcion">Los datos de tu cuenta de administración.</p>
-    </div>
+  <!--
+    Sin `web-page--centrado`: ese contenedor tiene 620 px y con dos columnas
+    dentro los campos quedaban de 150 px. Con `.web-page` normal hay 960 px
+    y los campos se reparten bien.
+  -->
+  <div class="web-page">
 
     @if (cargando) {
       <p class="panel-vacio">Cargando…</p>
-    } @else if (!perfil) {
+    } @else if (!borrador) {
       <p class="panel-error">No se pudo cargar tu perfil.</p>
     } @else {
 
-      <div class="panel-tarjeta panel-tarjeta--bloque">
-        <dl class="panel-datos">
-          <div class="panel-datos__fila">
-            <dt>Nombre completo</dt>
-            <dd>{{ perfil.nombreCompleto || 'Sin nombre' }}</dd>
+      <!--
+        Todo adentro del card, incluido el título. "Editar datos" queda al
+        pie, debajo de los datos: arriba no se veía hasta después de leer
+        toda la tarjeta.
+      -->
+      <div class="panel-tarjeta perfil-tarjeta">
+
+        <div class="perfil-cabecera">
+          <h1>Perfil</h1>
+        </div>
+
+        @if (mensajeError) {
+          <p class="panel-error" role="alert">{{ mensajeError }}</p>
+        }
+        @if (mensaje) {
+          <p class="perfil-aviso" role="status">{{ mensaje }}</p>
+        }
+
+        <div class="perfil-rejilla-principal">
+
+          <!-- ============ COLUMNA IZQUIERDA: FOTO + CUENTA ============ -->
+          <div class="perfil-columna">
+
+            <!--
+              Sólo una imagen: si hay una foto elegida y todavía sin guardar
+              se muestra ésta en lugar de la actual, nunca las dos juntas.
+              En la columna angosta se apilaban y la previa quedaba chica y
+              deformada.
+            -->
+            <div class="perfil-foto">
+              @if (vistaPrevia) {
+                <img class="perfil-foto__img" [src]="vistaPrevia" alt="Foto elegida, todavía sin guardar" />
+              } @else if (fotoUrl) {
+                <img class="perfil-foto__img" [src]="fotoUrl" alt="Tu foto de perfil" />
+              } @else {
+                <span class="perfil-foto__sin">Sin foto</span>
+              }
+            </div>
+
+            <!--
+              El subtítulo va DEBAJO de la foto, como pie de ésta. Sólo al
+              leer: al editar ya está la etiqueta "Cambiar foto".
+            -->
+            @if (!modoEdicion) {
+              <h2 class="panel-subtitulo">Foto de perfil</h2>
+            }
+
+            <!--
+              Los controles de la foto se ven sólo al editar, igual que los
+              campos de datos: abrir la página no debe dejar cambiar nada.
+              No hay botón aparte para la foto: se elige acá y se sube con
+              "Guardar cambios", junto con el resto de los datos. Cancelar
+              la descarta.
+            -->
+            @if (modoEdicion) {
+
+              @if (errorFoto) {
+                <p class="perfil-error" role="alert">{{ errorFoto }}</p>
+              }
+
+              <label class="perfil-etiqueta" for="p-foto">Cambiar foto (JPG o PNG, hasta 5 MB)</label>
+              <input
+                id="p-foto"
+                class="perfil-archivo"
+                type="file"
+                accept="image/jpeg,image/png"
+                [disabled]="guardando || cargandoFoto"
+                (change)="alElegirFoto($event)" />
+
+              @if (vistaPrevia) {
+                <p class="perfil-aviso perfil-aviso--menor" role="status">
+                  Foto elegida: se sube al guardar los cambios.
+                </p>
+              }
+
+            }
+
+            <dl class="panel-datos perfil-datos">
+              <div class="panel-datos__fila">
+                <dt>Correo</dt>
+                <dd>{{ correo || '—' }}</dd>
+              </div>
+              <div class="panel-datos__fila">
+                <dt>RUT</dt>
+                <dd>{{ rut || '—' }}</dd>
+              </div>
+              <div class="panel-datos__fila">
+                <dt>Rol</dt>
+                <dd>{{ rol || '—' }}</dd>
+              </div>
+            </dl>
           </div>
-          <div class="panel-datos__fila">
-            <dt>Correo electrónico</dt>
-            <dd>{{ perfil.correo || '—' }}</dd>
+
+          <!-- ============ COLUMNA DERECHA: DATOS ============ -->
+          <div class="perfil-columna">
+
+            @if (!modoEdicion) {
+
+              <h2 class="panel-subtitulo">Datos personales</h2>
+
+              <dl class="panel-datos">
+                <div class="panel-datos__fila">
+                  <dt>Nombre completo</dt>
+                  <dd>{{ nombreCompleto || 'Sin nombre' }}</dd>
+                </div>
+                <div class="panel-datos__fila">
+                  <dt>Teléfono</dt>
+                  <dd>{{ borrador.telefono || '—' }}</dd>
+                </div>
+                <div class="panel-datos__fila">
+                  <dt>Fecha de nacimiento</dt>
+                  <dd>{{ borrador.fecha_nacimiento || '—' }}</dd>
+                </div>
+                <div class="panel-datos__fila">
+                  <dt>Dirección</dt>
+                  <dd>{{ direccionLegible }}</dd>
+                </div>
+              </dl>
+
+              <!--
+                Las acciones van justo debajo de la última fila, DENTRO de la
+                columna de datos: al pie de la tarjeta entera dejaban un
+                hueco vacío a la derecha, debajo de "Dirección".
+              -->
+              <div class="perfil-pie">
+                <div class="perfil-pie__acciones">
+                  <button
+                    type="button"
+                    class="perfil-boton perfil-boton--secundario"
+                    routerLink="/cambiar-contrasena">
+                    Cambiar contraseña
+                  </button>
+                </div>
+                <button type="button" class="perfil-boton" (click)="editar()">Editar datos</button>
+              </div>
+
+            } @else {
+
+              <div class="perfil-rejilla">
+
+                <div class="perfil-campo-envoltura">
+                  <label class="perfil-etiqueta" for="p-nombre">Nombre</label>
+                  <input
+                    id="p-nombre"
+                    class="perfil-campo"
+                    [class.perfil-campo--mal]="errores['nombre']"
+                    type="text"
+                    autocomplete="given-name"
+                    [attr.maxlength]="longitudes.nombre"
+                    [disabled]="guardando"
+                    [(ngModel)]="borrador.nombre" />
+                  @if (errores['nombre']) {
+                    <p class="perfil-error">{{ errores['nombre'] }}</p>
+                  }
+                </div>
+
+                <div class="perfil-campo-envoltura">
+                  <label class="perfil-etiqueta" for="p-pat">Apellido paterno</label>
+                  <input
+                    id="p-pat"
+                    class="perfil-campo"
+                    [class.perfil-campo--mal]="errores['apellidopa']"
+                    type="text"
+                    autocomplete="family-name"
+                    [attr.maxlength]="longitudes.apellidopa"
+                    [disabled]="guardando"
+                    [(ngModel)]="borrador.apellidopa" />
+                  @if (errores['apellidopa']) {
+                    <p class="perfil-error">{{ errores['apellidopa'] }}</p>
+                  }
+                </div>
+
+                <div class="perfil-campo-envoltura">
+                  <label class="perfil-etiqueta" for="p-mat">Apellido materno (opcional)</label>
+                  <input
+                    id="p-mat"
+                    class="perfil-campo"
+                    [class.perfil-campo--mal]="errores['apellidoma']"
+                    type="text"
+                    autocomplete="family-name"
+                    [attr.maxlength]="longitudes.apellidoma"
+                    [disabled]="guardando"
+                    [(ngModel)]="borrador.apellidoma" />
+                  @if (errores['apellidoma']) {
+                    <p class="perfil-error">{{ errores['apellidoma'] }}</p>
+                  }
+                </div>
+
+                <div class="perfil-campo-envoltura">
+                  <label class="perfil-etiqueta" for="p-tel">Teléfono</label>
+                  <input
+                    id="p-tel"
+                    class="perfil-campo"
+                    [class.perfil-campo--mal]="errores['telefono']"
+                    type="tel"
+                    inputmode="numeric"
+                    placeholder="912345678"
+                    autocomplete="tel"
+                    [attr.maxlength]="longitudes.telefono"
+                    [disabled]="guardando"
+                    [(ngModel)]="borrador.telefono" />
+                  @if (errores['telefono']) {
+                    <p class="perfil-error">{{ errores['telefono'] }}</p>
+                  }
+                </div>
+
+                <div class="perfil-campo-envoltura">
+                  <label class="perfil-etiqueta" for="p-nac">Fecha de nacimiento</label>
+                  <input
+                    id="p-nac"
+                    class="perfil-campo"
+                    [class.perfil-campo--mal]="errores['fecha_nacimiento']"
+                    type="date"
+                    [disabled]="guardando"
+                    [(ngModel)]="borrador.fecha_nacimiento" />
+                  @if (errores['fecha_nacimiento']) {
+                    <p class="perfil-error">{{ errores['fecha_nacimiento'] }}</p>
+                  }
+                </div>
+              </div>
+
+              <h2 class="panel-subtitulo">Dirección</h2>
+
+              @if (!hayDireccion) {
+                <p class="panel-texto panel-texto--menor">
+                  Aún no tienes dirección registrada. Se completa desde la
+                  aplicación móvil y desde acá no se puede crear.
+                </p>
+              } @else {
+                <div class="perfil-rejilla">
+                  <div class="perfil-campo-envoltura">
+                    <label class="perfil-etiqueta" for="p-region">Región</label>
+                    <input
+                      id="p-region"
+                      class="perfil-campo"
+                      [class.perfil-campo--mal]="errores['region']"
+                      type="text"
+                      [attr.maxlength]="longitudes.region"
+                      [disabled]="guardando"
+                      [(ngModel)]="borrador.region" />
+                    @if (errores['region']) {
+                      <p class="perfil-error">{{ errores['region'] }}</p>
+                    }
+                  </div>
+
+                  <div class="perfil-campo-envoltura">
+                    <label class="perfil-etiqueta" for="p-comuna">Comuna</label>
+                    <input
+                      id="p-comuna"
+                      class="perfil-campo"
+                      [class.perfil-campo--mal]="errores['comuna']"
+                      type="text"
+                      [attr.maxlength]="longitudes.comuna"
+                      [disabled]="guardando"
+                      [(ngModel)]="borrador.comuna" />
+                    @if (errores['comuna']) {
+                      <p class="perfil-error">{{ errores['comuna'] }}</p>
+                    }
+                  </div>
+
+                  <div class="perfil-campo-envoltura">
+                    <label class="perfil-etiqueta" for="p-calle">Calle</label>
+                    <input
+                      id="p-calle"
+                      class="perfil-campo"
+                      [class.perfil-campo--mal]="errores['calle']"
+                      type="text"
+                      autocomplete="address-line1"
+                      [attr.maxlength]="longitudes.calle"
+                      [disabled]="guardando"
+                      [(ngModel)]="borrador.calle" />
+                    @if (errores['calle']) {
+                      <p class="perfil-error">{{ errores['calle'] }}</p>
+                    }
+                  </div>
+
+                  <div class="perfil-campo-envoltura">
+                    <label class="perfil-etiqueta" for="p-numero">Número</label>
+                    <input
+                      id="p-numero"
+                      class="perfil-campo"
+                      [class.perfil-campo--mal]="errores['numero']"
+                      type="text"
+                      [attr.maxlength]="longitudes.numero"
+                      [disabled]="guardando"
+                      [(ngModel)]="borrador.numero" />
+                    @if (errores['numero']) {
+                      <p class="perfil-error">{{ errores['numero'] }}</p>
+                    }
+                  </div>
+                </div>
+              }
+
+              <div class="perfil-acciones">
+                <button
+                  type="button"
+                  class="perfil-boton"
+                  [disabled]="guardando"
+                  (click)="guardar()">
+                  {{ guardando ? 'Guardando…' : 'Guardar cambios' }}
+                </button>
+                <button
+                  type="button"
+                  class="perfil-boton perfil-boton--secundario"
+                  [disabled]="guardando"
+                  (click)="cancelar()">
+                  Cancelar
+                </button>
+              </div>
+
+            }
+
           </div>
-          <div class="panel-datos__fila">
-            <dt>RUT</dt>
-            <dd>{{ perfil.rut || '—' }}</dd>
-          </div>
-          <div class="panel-datos__fila">
-            <dt>Teléfono</dt>
-            <dd>{{ perfil.telefono || '—' }}</dd>
-          </div>
-          <div class="panel-datos__fila">
-            <dt>Fecha de nacimiento</dt>
-            <dd>{{ perfil.fechaNacimiento || '—' }}</dd>
-          </div>
-          <div class="panel-datos__fila">
-            <dt>Dirección</dt>
-            <dd>{{ direccionLegible }}</dd>
-          </div>
-          <div class="panel-datos__fila">
-            <dt>Rol</dt>
-            <dd>{{ perfil.rol || '—' }}</dd>
-          </div>
-        </dl>
+        </div>
       </div>
 
     }

@@ -1,4 +1,4 @@
-<ion-header class="ion-no-border">
+<ion-header class="ion-no-border header-formulario">
   <ion-toolbar>
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/cuidador" text=""></ion-back-button>
@@ -14,7 +14,9 @@
     </ion-refresher-content>
   </ion-refresher>
 
-  <div class="contactos-container">
+  <div
+    class="contactos-container"
+    [class.con-acciones]="!soloPublicos && !cargando && idSesion && adultosACargo.length > 0">
 
     <!-- ================================================= -->
     <!-- BOTÓN APARTE: EMERGENCIAS PÚBLICAS / VOLVER       -->
@@ -94,31 +96,22 @@
 
       <!-- Selector "Cuidando a": sólo con más de un adulto a cargo. -->
       @if (!cargando && adultosACargo.length > 1) {
-        <div class="selector">
-          <p class="selector-label">Cuidando a</p>
-
-          <div class="selector-scroll">
-            @for (adulto of adultosACargo; track adulto.id) {
-              <button
-                type="button"
-                class="chip-adulto"
-                [class.activo]="esSeleccionado(adulto)"
-                (click)="seleccionarAdulto(adulto)">
-
-                <span class="chip-avatar">
-                  @if (adulto.adulto_mayor?.foto_url) {
-                    <img [src]="adulto.adulto_mayor.foto_url" alt="">
-                  } @else {
-                    <span class="chip-iniciales">{{ inicialesAdulto(adulto) }}</span>
-                  }
-                </span>
-
-                <span class="chip-nombre">
+        <div class="selector-card">
+          <ion-icon name="people-outline"></ion-icon>
+          <div class="selector-body">
+            <label for="adulto-contactos">Contactos de:</label>
+            <ion-select
+              id="adulto-contactos"
+              [value]="idAdulto"
+              interface="popover"
+              (ionChange)="onAdultoChange($event)"
+              aria-label="Seleccionar persona">
+              @for (adulto of adultosACargo; track adulto.id) {
+                <ion-select-option [value]="adulto.id_usuario || adulto.adulto_mayor?.id || adulto.id">
                   {{ adulto.adulto_mayor?.nombre }} {{ adulto.adulto_mayor?.apellidopa }}
-                </span>
-
-              </button>
-            }
+                </ion-select-option>
+              }
+            </ion-select>
           </div>
         </div>
       }
@@ -226,23 +219,6 @@
             </div>
           }
 
-          <button
-            type="button"
-            class="btn-grande btn-agregar"
-            [disabled]="guardando || esperandoPicker"
-            (click)="agregarDeTelefono()">
-            <ion-icon name="person-add-outline"></ion-icon>
-            <span>{{ guardando ? 'Guardando…' : 'Añadir de mi teléfono' }}</span>
-          </button>
-
-          <button
-            type="button"
-            class="btn-grande btn-manual"
-            [disabled]="guardando"
-            (click)="abrirFormularioManual()">
-            <ion-icon name="add"></ion-icon>
-            <span>Añadir manualmente</span>
-          </button>
         }
 
       </section>
@@ -250,6 +226,28 @@
     }
 
   </div>
+
+  @if (!soloPublicos && !cargando && idSesion && adultosACargo.length > 0) {
+    <div slot="fixed" class="acciones-lista">
+      <button
+        type="button"
+        class="btn-grande btn-agregar"
+        [disabled]="guardando || esperandoPicker"
+        (click)="agregarDeTelefono()">
+        <ion-icon name="person-add-outline"></ion-icon>
+        <span>{{ guardando ? 'Guardando…' : 'Añadir de mi teléfono' }}</span>
+      </button>
+
+      <button
+        type="button"
+        class="btn-grande btn-manual"
+        [disabled]="guardando"
+        (click)="abrirFormularioManual()">
+        <ion-icon name="add"></ion-icon>
+        <span>Añadir manualmente</span>
+      </button>
+    </div>
+  }
 
   <!-- ================================================= -->
   <!-- AVISO MIENTRAS SE ABRE LA AGENDA DEL TELÉFONO     -->
@@ -273,21 +271,23 @@
   <!-- FORMULARIO: AÑADIR CONTACTO AL ADULTO ELEGIDO     -->
   <!-- ================================================= -->
 
-  <ion-modal class="modal-contacto" [isOpen]="mostrarFormulario" (didDismiss)="cerrarFormulario()">
+  <ion-modal class="modal-contacto-cuidador" [isOpen]="mostrarFormulario" (didDismiss)="cerrarFormulario()">
 
     <ng-template>
 
       <ion-header class="ion-no-border">
         <ion-toolbar class="toolbar-formulario">
-          <div class="encabezado-formulario">
-            <div class="titulo-icono">
-              <ion-icon name="person-add-outline"></ion-icon>
+          <ion-title class="ion-no-padding">
+            <div class="encabezado-formulario">
+              <div class="titulo-icono">
+                <ion-icon name="person-add-outline"></ion-icon>
+              </div>
+              <div class="titulo-texto">
+                <span class="titulo-modal">Nuevo contacto</span>
+                <span class="subtitulo-modal">{{ formSubtitulo }}</span>
+              </div>
             </div>
-            <div class="titulo-texto">
-              <span class="titulo-modal">Nuevo contacto</span>
-              <span class="subtitulo-modal">{{ formSubtitulo }}</span>
-            </div>
-          </div>
+          </ion-title>
           <ion-buttons slot="end">
             <ion-button fill="clear" aria-label="Cerrar" (click)="cerrarFormulario()">
               <ion-icon name="close" slot="icon-only"></ion-icon>
@@ -411,6 +411,9 @@
 
         </div>
 
+      </ion-content>
+
+      <ion-footer class="footer-formulario">
         <div class="acciones-formulario">
           <button
             type="button"
@@ -433,8 +436,7 @@
             Cancelar
           </button>
         </div>
-
-      </ion-content>
+      </ion-footer>
 
     </ng-template>
 

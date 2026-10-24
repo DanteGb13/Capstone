@@ -55,7 +55,19 @@
               [attr.aria-expanded]="perfilAbierto"
               aria-controls="web-nav-perfil"
               (click)="alternarPerfil(); $event.stopPropagation()">
-              <span class="web-nav__avatar">{{ iniciales || 'AD' }}</span>
+              <!--
+                Si hay foto va la foto; si no, las iniciales. La foto se sube
+                desde Mi Perfil y la cachea PerfilCacheService, así que no
+                cambia nada del resto de la barra.
+              -->
+              @if (perfil?.fotoUrl) {
+                <img
+                  class="web-nav__avatar web-nav__avatar-foto"
+                  [src]="perfil.fotoUrl"
+                  alt="" />
+              } @else {
+                <span class="web-nav__avatar">{{ iniciales || 'AD' }}</span>
+              }
               <span class="web-nav__perfil-nombre">{{ perfil?.nombreCompleto || 'Administrador' }}</span>
             </button>
 

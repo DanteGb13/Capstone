@@ -34,15 +34,15 @@
   <div class="perfil-container" *ngIf="!cargandoPerfil">
     <!-- Avatar con foto de perfil -->
     <div class="avatar-container">
-      <div class="avatar" (click)="abrirSelectorFoto()">
+      <div class="avatar" (click)="modoEditar && abrirSelectorFoto()">
         <img *ngIf="fotoUrl" [src]="fotoUrl" alt="Foto de perfil" class="avatar-img">
         <ion-icon *ngIf="!fotoUrl" name="person"></ion-icon>
-        <div class="avatar-overlay" *ngIf="!cargandoFoto">
+        <div class="avatar-overlay" *ngIf="modoEditar && !cargandoFoto">
           <ion-icon name="camera-outline"></ion-icon>
         </div>
         <ion-spinner *ngIf="cargandoFoto" name="crescent" class="avatar-spinner"></ion-spinner>
       </div>
-      <span class="avatar-hint" *ngIf="!modoEditar">Toca para cambiar foto</span>
+      <span class="avatar-hint" *ngIf="modoEditar">Toca para cambiar foto</span>
     </div>
     <!-- Información personal -->
     <div class="card">
@@ -104,7 +104,7 @@
           <span>Correo</span>
           <p>{{usuario.correo}}</p>
           <ion-button
-            *ngIf="!modoEditar"
+            *ngIf="modoEditar"
             fill="clear"
             size="small"
             class="btn-cambiar-correo"
@@ -112,9 +112,6 @@
             <ion-icon name="create-outline" slot="start"></ion-icon>
             Cambiar correo
           </ion-button>
-          <small *ngIf="modoEditar" class="text-muted" style="color: gray; font-style: italic;">
-            Para cambiar el correo, usa el botón "Cambiar correo".
-          </small>
         </div>
       </div>
 
@@ -125,7 +122,7 @@
           <span>Contraseña</span>
           <p>••••••••</p>
           <ion-button
-            *ngIf="!modoEditar"
+            *ngIf="modoEditar"
             fill="clear"
             size="small"
             class="btn-cambiar-correo"
@@ -157,25 +154,54 @@
 
       
 
-      <!-- Fecha nacimiento -->
+      <!-- Fecha nacimiento (selector igual al del registro: 1900 a 18 años atrás) -->
       <div class="dato">
 
         <ion-icon name="calendar-outline"></ion-icon>
         <div>
           <span>Fecha nacimiento</span>
           <p *ngIf="!modoEditar">
-            {{usuario.fecha_nacimiento}}
+            {{fechaFormateada}}
           </p>
-          <ion-input
-            *ngIf="modoEditar"
-            type="date"
-            [(ngModel)]="usuario.fecha_nacimiento"
-            [class.ion-invalid]="errores.fecha_nacimiento"
-            [class.ion-touched]="errores.fecha_nacimiento">
-          </ion-input>
+          <div *ngIf="modoEditar"
+            class="date-picker-trigger"
+            [class.has-error]="errores.fecha_nacimiento"
+            [class.has-value]="usuario.fecha_nacimiento"
+            (click)="abrirSelectorFecha()">
+            <span class="trigger-text">
+              {{ usuario.fecha_nacimiento ? fechaFormateada : 'Toca para elegir tu fecha' }}
+            </span>
+          </div>
           <small *ngIf="errores.fecha_nacimiento" class="error-msg">{{errores.fecha_nacimiento}}</small>
         </div>
       </div>
+
+      <!-- Modal de fecha, idéntico al del registro -->
+      <ion-modal [isOpen]="mostrarModalFecha" (didDismiss)="cerrarSelectorFecha()" class="datetime-modal">
+        <ng-template>
+          <div class="modal-header">
+            <h3>Selecciona tu fecha de nacimiento</h3>
+            <ion-button fill="clear" (click)="cerrarSelectorFecha()">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </div>
+          <div class="modal-content">
+            <ion-datetime
+              presentation="date"
+              [min]="fechaMinima"
+              [max]="fechaMaxima"
+              [value]="usuario.fecha_nacimiento || '1960-01-01'"
+              (ionChange)="onFechaSeleccionada($event)"
+              size="cover">
+            </ion-datetime>
+          </div>
+          <div class="modal-footer">
+            <ion-button expand="block" (click)="cerrarSelectorFecha()" class="modal-confirm-btn">
+              Confirmar Fecha
+            </ion-button>
+          </div>
+        </ng-template>
+      </ion-modal>
     </div>
     <!-- Dirección -->
     <div class="card">
@@ -189,10 +215,18 @@
         <div>
           <span>Región</span>
           <p *ngIf="!modoEditar">{{usuario.direccion?.region}}</p>
-          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.direccion.region" placeholder="Región"
-            [class.ion-invalid]="errores.region"
-            [class.ion-touched]="errores.region"></ion-input>
+          <ion-select *ngIf="modoEditar" interface="alert" fill="outline"
+            placeholder="Elige tu región" okText="Elegir" cancelText="Cancelar"
+            class="dato-select"
+            [(ngModel)]="usuario.direccion.region"
+            (ionChange)="alCambiarRegion($event)"
+            [class.ion-invalid]="errores.region">
+            @for (r of listaRegiones; track r.nombre) {
+              <ion-select-option [value]="r.nombre">{{ r.nombre }}</ion-select-option>
+            }
+          </ion-select>
           <small *ngIf="errores.region" class="error-msg">{{errores.region}}</small>
+          <small *ngIf="modoEditar && errorRegiones" class="error-msg">{{errorRegiones}}</small>
         </div>
       </div>
 
@@ -202,9 +236,17 @@
         <div>
           <span>Comuna</span>
           <p *ngIf="!modoEditar">{{usuario.direccion?.comuna}}</p>
-          <ion-input *ngIf="modoEditar" [(ngModel)]="usuario.direccion.comuna" placeholder="Comuna"
-            [class.ion-invalid]="errores.comuna"
-            [class.ion-touched]="errores.comuna"></ion-input>
+          <ion-select *ngIf="modoEditar" interface="alert" fill="outline"
+            placeholder="Elige tu comuna" okText="Elegir" cancelText="Cancelar"
+            class="dato-select"
+            [disabled]="!usuario.direccion.region || comunasDisponibles.length === 0"
+            [(ngModel)]="usuario.direccion.comuna"
+            (ionChange)="alCambiarComuna($event)"
+            [class.ion-invalid]="errores.comuna">
+            @for (c of comunasDisponibles; track c) {
+              <ion-select-option [value]="c">{{ c }}</ion-select-option>
+            }
+          </ion-select>
           <small *ngIf="errores.comuna" class="error-msg">{{errores.comuna}}</small>
         </div>
       </div>

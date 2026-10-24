@@ -13,6 +13,7 @@ import { addIcons } from 'ionicons';
 import { arrowBack, helpCircleOutline, refreshOutline, trashOutline } from 'ionicons/icons';
 import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
 import { TUTORIAL_TRES_EN_LINEA } from '../juegos/tutoriales';
+import { suspenderZoomJuego, reanudarZoomJuego } from '../../services/font-size/font-size';
 
 /** Ficha del tablero: X (usuario), O (IA) o vacío. */
 export type FichaTres = 'X' | 'O' | null;
@@ -87,6 +88,7 @@ export class TicTacToePage implements OnDestroy {
     private cdr: ChangeDetectorRef
   ) {
     addIcons({ arrowBack, helpCircleOutline, refreshOutline, trashOutline });
+    suspenderZoomJuego();
     this.cargarStats();
   }
 
@@ -391,6 +393,7 @@ export class TicTacToePage implements OnDestroy {
       clearTimeout(this.iaPendiente);
       this.iaPendiente = null;
     }
+    reanudarZoomJuego();
   }
 
   /*

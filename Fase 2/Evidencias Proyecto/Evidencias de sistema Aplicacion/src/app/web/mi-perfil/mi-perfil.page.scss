@@ -1,7 +1,344 @@
 /* ------------------------------------------------------------------
-   Mi Perfil (/admin/mi-perfil)
+   Mi Perfil (/mi-perfil)
 
-   Esta página no tiene reglas exclusivas en global.scss: todo lo que
-   usa son clases compartidas por varias páginas de la web y se
-   dejaron ahí para que haya un solo lugar donde corregirlas.
+   Una sola tarjeta con todo adentro: título y botón de editar arriba,
+   foto + cuenta a la izquierda, datos a la derecha. Exclusivos de esta
+   página.
+
+   Las tarjetas (`.panel-tarjeta`), las filas de sólo lectura
+   (`.panel-datos`), el subtítulo (`.panel-subtitulo`) y los avisos
+   (`.panel-error`, `.panel-vacio`) son compartidas del panel y siguen
+   en global.scss.
    ------------------------------------------------------------------ */
+
+/* ---------------- Página ----------------
+   La tarjeta no llena la pantalla y sola quedaba pegada arriba, con todo
+   el resto del viewport vacío abajo. El `.inner-scroll` de `ion-content`
+   sí tiene altura definida (está en posición absoluta contra el host, que
+   a su vez se achica al espacio que deja el navbar), así que
+   `min-height: 100%` hace que la página ocupe todo lo visible y
+   `justify-content: center` baja la tarjeta al medio. No hay altura fija:
+   si la tarjeta crece más que la pantalla, el contenedor crece con ella y
+   el scroll sigue andando.
+
+   El fondo lleva un degradado morado muy suave en la parte alta: el área
+   vacía alrededor del card se leía como "falta contenido" y no como
+   fondo. */
+ion-content.web-contenido {
+  --background:
+    radial-gradient(1100px 470px at 50% -6%, #ebe0fd 0%, rgba(235, 224, 253, 0) 64%),
+    var(--sc-bg, #f8f7fc);
+}
+
+/* 960 px dejaban la tarjeta flotando en medio del vacío en pantallas
+   anchas; 1140 la acerca a los bordes sin estirar de más los campos. */
+.web-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 1140px;
+  min-height: 100%;
+}
+
+/* ---------------- Tarjeta ----------------
+   La página ya no usa `web-page--centrado` (620 px): con 1140 px la
+   tarjeta tiene aire de sobra y los campos no quedan de 150 px. La sombra
+   la separa del fondo teñido y le da peso; sin ella parecía un recorte
+   pegado en medio de la página. */
+.perfil-tarjeta {
+  padding: 2rem 2.4rem 2.2rem;
+  box-shadow: var(--sc-shadow-lg);
+}
+
+/* Las filas de sólo lectura crecen junto con la tarjeta: a los tamaños
+   del resto del panel quedaban diminutas dentro de un card de 1140 px. */
+.perfil-tarjeta .panel-datos__fila {
+  padding: 0.95rem 0;
+}
+
+.perfil-tarjeta .panel-datos dt {
+  font-size: 0.95rem;
+}
+
+.perfil-tarjeta .panel-datos dd {
+  font-size: 1.05rem;
+}
+
+/* Los avisos y errores del card van más apretados que los de página:
+   con el padding grande de `.panel-error` parecían otra tarjeta. */
+.perfil-tarjeta > .panel-error,
+.perfil-tarjeta > .perfil-aviso {
+  margin-bottom: var(--sc-gap);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--sc-radius-sm);
+}
+
+/* ---------------- Cabecera ---------------- */
+.perfil-cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-gap-sm);
+  margin-bottom: var(--sc-gap-lg);
+}
+
+.perfil-cabecera h1 {
+  margin: 0;
+  font-size: 36px;
+}
+
+/* ---------------- Acciones, debajo de la última fila de datos ----------------
+   "Editar datos" y "Cambiar contraseña" quedan justo bajo "Dirección",
+   dentro de la columna de datos: al pie de la tarjeta entera dejaban un
+   hueco vacío a la derecha. Sólo en modo lectura: mientras se edita, los
+   botones son Guardar/Cancelar. */
+.perfil-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-gap-sm);
+  margin-top: var(--sc-gap-lg);
+  padding-top: var(--sc-gap);
+  border-top: 1px solid var(--sc-border);
+}
+
+.perfil-pie__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-gap-sm);
+}
+
+/* ---------------- Dos columnas dentro del card ---------------- */
+.perfil-rejilla-principal {
+  display: grid;
+  grid-template-columns: 330px minmax(0, 1fr);
+  gap: 0 var(--sc-gap-xl);
+  align-items: start;
+}
+
+/* En pantallas angostas la foto y los datos se apilan: forzar dos columnas
+   ahí dejaría campos de 40 px de ancho. */
+@media (max-width: 760px) {
+  .perfil-rejilla-principal {
+    grid-template-columns: 1fr;
+    gap: var(--sc-gap-lg) 0;
+  }
+}
+
+.perfil-columna {
+  min-width: 0;
+}
+
+/* ---------------- Foto ----------------
+   Apilada: la miniatura arriba y los controles debajo, al ancho de la
+   columna. En fila los campos de la derecha se achicaban. */
+.perfil-foto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sc-gap-sm);
+  margin-bottom: var(--sc-gap);
+}
+
+.perfil-foto__img,
+.perfil-foto__sin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 168px;
+  height: 168px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: var(--sc-surface-alt);
+  color: var(--sc-ink-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.perfil-foto__img {
+  object-fit: cover;
+  border: 1px solid var(--sc-border);
+}
+
+/* ---------------- Campos ---------------- */
+.perfil-rejilla {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sc-gap) var(--sc-gap-lg);
+}
+
+@media (max-width: 560px) {
+  .perfil-rejilla {
+    grid-template-columns: 1fr;
+  }
+}
+
+.perfil-campo-envoltura {
+  min-width: 0;
+}
+
+.perfil-etiqueta {
+  display: block;
+  margin: 0 0 var(--sc-gap-xs);
+  color: var(--sc-ink-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.perfil-campo {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--sc-border-strong);
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-surface);
+  color: var(--sc-ink);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.perfil-campo:focus-visible {
+  outline: none;
+  border-color: var(--sc-primary);
+  box-shadow: var(--sc-focus-ring);
+}
+
+.perfil-campo:disabled {
+  background-color: var(--sc-surface-alt);
+  color: var(--sc-ink-muted);
+  cursor: not-allowed;
+}
+
+/* Campo con validación fallida. El borde rojo va con el texto de abajo:
+   sin él el color es la única pista, y no alcanza. */
+.perfil-campo--mal {
+  border-color: var(--sc-danger);
+  background-color: var(--sc-danger-soft);
+}
+
+.perfil-error {
+  margin: var(--sc-gap-xs) 0 0;
+  color: var(--sc-danger-dark);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+/* ---------------- Avisos ---------------- */
+.perfil-aviso {
+  margin: 0 0 var(--sc-gap);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-ok-soft);
+  color: var(--sc-ok-dark);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.perfil-aviso--menor {
+  margin-bottom: var(--sc-gap-sm);
+  font-size: 0.85rem;
+}
+
+/* ---------------- Botones ---------------- */
+.perfil-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-gap-sm);
+  margin-top: var(--sc-gap-lg);
+}
+
+.perfil-boton {
+  padding: 0.65rem 1.2rem;
+  border: 1px solid var(--sc-primary);
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-primary);
+  color: var(--sc-ink-invert);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.perfil-boton:hover:not(:disabled) {
+  background-color: var(--sc-primary-dark);
+  border-color: var(--sc-primary-dark);
+}
+
+.perfil-boton:focus-visible {
+  outline: none;
+  box-shadow: var(--sc-focus-ring);
+}
+
+.perfil-boton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.perfil-boton--secundario {
+  background-color: var(--sc-surface);
+  color: var(--sc-primary);
+}
+
+.perfil-boton--secundario:hover:not(:disabled) {
+  background-color: var(--sc-primary-soft);
+  border-color: var(--sc-primary);
+  color: var(--sc-primary-dark);
+}
+
+/* ---------------- Archivo y datos de cuenta ---------------- */
+.perfil-archivo {
+  display: block;
+  width: 100%;
+  margin-bottom: var(--sc-gap-xs);
+  color: var(--sc-ink-2);
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.perfil-archivo::file-selector-button {
+  margin-right: var(--sc-gap-sm);
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--sc-border-strong);
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-surface-alt);
+  color: var(--sc-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.perfil-archivo:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Los datos de la cuenta van al pie de la columna de la foto, separados
+   con una línea fina para no confundirse con lo editable de la derecha. */
+.perfil-datos {
+  margin-top: var(--sc-gap);
+  padding-top: var(--sc-gap);
+  border-top: 1px solid var(--sc-border);
+}
+
+/* El subtítulo "Dirección" dentro del card no necesita el margen de arriba
+   que trae de fábrica: ahí abajo del formulario quedaba un hueco raro. */
+.perfil-columna .panel-subtitulo {
+  margin-top: var(--sc-gap-lg);
+}
+
+/* "Datos personales" abre la columna derecha: margen en cero, para no
+   desalinearla con la foto ni dejar un doble hueco bajo el título. */
+.perfil-columna > .panel-subtitulo:first-child {
+  margin-top: 0;
+}
+
+/* "Foto de perfil" va justo debajo de la imagen, como su pie: la foto ya
+   trae su propio margen de abajo y sumarle 22 px más la dejaba flotando. */
+.perfil-foto + .panel-subtitulo {
+  margin-top: 0;
+}

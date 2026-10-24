@@ -145,6 +145,19 @@
   .tutorial-acciones {
     display: flex;
     gap: 10px;
+
+    /*
+     * Pegados al pie de la tarjeta: con el texto largo del paso (o la letra
+     * Grande de Ajustes), "Siguiente" se salía con el scroll y no había forma
+     * de avanzar. Los márgenes negativos llegan a los bordes del padding de
+     * la tarjeta para que el fondo blanco cubra el contenido de atrás.
+     */
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    margin: auto -18px -18px;
+    padding: 10px 18px 18px;
+    background: #ffffff;
   }
 
   .btn-anterior {

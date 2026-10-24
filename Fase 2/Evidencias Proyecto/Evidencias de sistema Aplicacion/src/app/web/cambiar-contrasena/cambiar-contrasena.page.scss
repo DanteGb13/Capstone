@@ -1,0 +1,169 @@
+/* ------------------------------------------------------------------
+   Cambiar contraseña (/cambiar-contrasena)
+
+   La tarjeta, los campos y los botones del formulario. Lo exclusivo de esta
+   página está abajo: las tres filas con su botón de mostrar/ocultar y el
+   aire sobre el de guardar.
+   ------------------------------------------------------------------ */
+
+.cambiar-tarjeta {
+  padding: 1.6rem 1.8rem 1.8rem;
+}
+
+.cambiar-campo-envoltura {
+  min-width: 0;
+  margin-bottom: var(--sc-gap);
+}
+
+.cambiar-etiqueta {
+  display: block;
+  margin: 0 0 var(--sc-gap-xs);
+  color: var(--sc-ink-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.cambiar-campo {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--sc-border-strong);
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-surface);
+  color: var(--sc-ink);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.cambiar-campo:focus-visible {
+  outline: none;
+  border-color: var(--sc-primary);
+  box-shadow: var(--sc-focus-ring);
+}
+
+.cambiar-campo:disabled {
+  background-color: var(--sc-surface-alt);
+  color: var(--sc-ink-muted);
+  cursor: not-allowed;
+}
+
+.cambiar-error {
+  margin: var(--sc-gap-xs) 0 0;
+  color: var(--sc-danger-dark);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.cambiar-aviso {
+  margin: 0 0 var(--sc-gap);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-ok-soft);
+  color: var(--sc-ok-dark);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.cambiar-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sc-gap-sm);
+}
+
+/* El pie de la tarjeta: la acción principal a la izquierda y "Volver"
+   empujada al borde derecho para que no compita con ella. */
+.cambiar-pie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sc-gap-sm);
+  margin-top: var(--sc-gap-lg);
+  padding-top: var(--sc-gap);
+  border-top: 1px solid var(--sc-border);
+}
+
+.cambiar-boton {
+  padding: 0.65rem 1.2rem;
+  border: 1px solid var(--sc-primary);
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-primary);
+  color: var(--sc-ink-invert);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.cambiar-boton:hover:not(:disabled) {
+  background-color: var(--sc-primary-dark);
+  border-color: var(--sc-primary-dark);
+}
+
+.cambiar-boton:focus-visible {
+  outline: none;
+  box-shadow: var(--sc-focus-ring);
+}
+
+.cambiar-boton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cambiar-boton--secundario {
+  background-color: var(--sc-surface);
+  color: var(--sc-primary);
+}
+
+.cambiar-boton--secundario:hover:not(:disabled) {
+  background-color: var(--sc-primary-soft);
+  border-color: var(--sc-primary);
+  color: var(--sc-primary-dark);
+}
+
+/* ---------------- Unas tres filas con su botón de mostrar ----------------
+   La fila es input + botón: el input se queda con lo que sobre y el botón
+   con su ancho de texto. `min-width: 0` es lo que impide que el input se
+   desborde y empuje el botón fuera de la tarjeta. */
+.cambiar-contrasena__fila {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sc-gap-xs);
+}
+
+.cambiar-contrasena__fila .cambiar-campo {
+  flex: 1;
+  min-width: 0;
+}
+
+.cambiar-contrasena__ojo {
+  flex-shrink: 0;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--sc-border-strong);
+  border-radius: var(--sc-radius-sm);
+  background-color: var(--sc-surface-alt);
+  color: var(--sc-ink-2);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.cambiar-contrasena__ojo:hover {
+  background-color: var(--sc-primary-soft);
+  border-color: var(--sc-primary);
+  color: var(--sc-primary-dark);
+}
+
+.cambiar-contrasena__ojo:focus-visible {
+  outline: none;
+  box-shadow: var(--sc-focus-ring);
+}
+
+/* Cuando no hay mensaje de error, el último campo no deja espacio y el
+   botón de guardar quedaba pegado. */
+.cambiar-contrasena__acciones {
+  margin-top: var(--sc-gap);
+}

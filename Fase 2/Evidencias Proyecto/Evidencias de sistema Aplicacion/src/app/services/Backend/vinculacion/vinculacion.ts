@@ -1,5 +1,6 @@
 ﻿import { Injectable } from '@angular/core';
 import { SupabaseService } from '../../supabase/supabase';
+import { mensajeErrorApp } from '../../utils/mensaje-error';
 
 
 
@@ -400,6 +401,11 @@ export class Vinculacion {
           .in('id', ids);
 
         if (error) throw error;
+        if (data.length === 0) {
+          throw new Error(
+            `RLS bloquea lectura de ${ids.length} usuario(s) (permisos insuficientes)`
+          );
+        }
         for (const u of (data ?? []) as any[]) mapa.set(u.id, u);
       } catch (e) {
         console.warn('No se pudieron leer los usuarios:', e);
@@ -414,7 +420,38 @@ export class Vinculacion {
       // =====================================================
       // OBTENER CUIDADORES VINCULADOS (PARA EL ADULTO MAYOR)
       // =====================================================
-    
+
+      /**
+       * ¿Hay al menos un cuidador vinculado al adulto actual?
+       *
+       * Devuelve `null` cuando NO se pudo saber (sin red o sin sesión), para
+       * que quien llame no confunda "no pude consultar" con "no hay nadie".
+       * importa porque sin vínculo la zona segura no debe mostrarse, y un
+       * falso "sin vínculo" por conexión caída ocultaría zonas reales.
+       */
+      async hayCuidadorVinculado(): Promise<boolean | null> {
+        try {
+          const {
+            data: { user },
+            error: userError
+          } = await this.supabase.auth.getUser();
+
+          if (userError || !user) return null;
+
+          const { data, error } = await this.supabase
+            .from('cuidador_usuario')
+            .select('id')
+            .eq('id_usuario', user.id)
+            .limit(1);
+
+          if (error) return null;
+
+          return (data?.length ?? 0) > 0;
+        } catch {
+          return null;
+        }
+      }
+
       async obtenerCuidadoresVinculados() {
     
         const {
@@ -605,6 +642,12 @@ async obtenerAdultosACargo() {
           `)
           .in('id', idsUsuarios);
 
+        if (idsUsuarios.length > 0 && (!usuariosData || usuariosData.length === 0)) {
+          throw new Error(
+            `RLS bloquea lectura de ${idsUsuarios.length} usuario(s) vinculados (permisos insuficientes)`
+          );
+        }
+
         // Asignar datos a cada item
         const usuariosMap = new Map<string, any>();
         if (usuariosData) {
@@ -767,7 +810,7 @@ async obtenerAdultosACargo() {
           .eq('id_usuario', idUsuario);
 
         if (error) {
-          throw new Error(error.message);
+          throw new Error(mensajeErrorApp(error, 'No se pudo verificar el vínculo. Revisa tu conexión.'));
         }
 
         return data?.length ?? 0;

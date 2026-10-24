@@ -8,14 +8,84 @@
       <p class="descripcion">Administración de SiempreCerca.</p>
     </div>
 
-    <div class="panel-accesos">
-      @for (seccion of secciones; track seccion.ruta) {
-        <a class="panel-acceso" [routerLink]="seccion.ruta">
-          <span class="panel-acceso__titulo">{{ seccion.titulo }}</span>
-          <span class="panel-acceso__detalle">{{ seccion.detalle }}</span>
-        </a>
+    <!--
+      El panel se divide en dos slides para no amontonar todo en una sola
+      página. El navbar de la web no se toca: esto vive dentro del contenido.
+    -->
+    <ion-segment class="web-segment" [value]="vista" (ionChange)="alCambiarVista($event)">
+      <ion-segment-button value="resumen">
+        <ion-label>Resumen</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="accesos">
+        <ion-label>Secciones</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    <!-- ===================================================== -->
+    <!-- SLIDE 1: RESUMEN                                       -->
+    <!-- ===================================================== -->
+    @if (vista === 'resumen') {
+
+      @if (cargando) {
+        <p class="panel-vacio">Cargando…</p>
+      } @else {
+
+        <div class="panel-kpis">
+          @for (kpi of kpis; track kpi.etiqueta) {
+            <div class="panel-kpi">
+              <span class="panel-kpi__valor">{{ kpi.valor }}</span>
+              <span class="panel-kpi__etiqueta">{{ kpi.etiqueta }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="panel-tarjeta panel-tarjeta--bloque">
+          <h2 class="panel-subtitulo">Sistema</h2>
+          <dl class="panel-datos">
+            <div class="panel-datos__fila">
+              <dt>Plataforma</dt>
+              <dd>{{ plataforma }}</dd>
+            </div>
+            <div class="panel-datos__fila">
+              <dt>Entorno</dt>
+              <dd>{{ entorno }}</dd>
+            </div>
+            <div class="panel-datos__fila">
+              <dt>Base de datos</dt>
+              <dd>{{ hostSupabase }}</dd>
+            </div>
+            <div class="panel-datos__fila">
+              <dt>Esquema</dt>
+              <dd>Versionado en supabase/migrations/</dd>
+            </div>
+          </dl>
+          <p class="panel-texto panel-texto--menor">
+            Los cambios de base de datos se versionan en ese directorio y se
+            aplican con Supabase CLI, nunca a mano desde el panel.
+          </p>
+        </div>
+
+        @if (error) {
+          <p class="panel-error">{{ error }}</p>
+        }
+
       }
-    </div>
+
+    }
+
+    <!-- ===================================================== -->
+    <!-- SLIDE 2: SECCIONES                                     -->
+    <!-- ===================================================== -->
+    @if (vista === 'accesos') {
+      <div class="panel-accesos">
+        @for (seccion of secciones; track seccion.ruta) {
+          <a class="panel-acceso" [routerLink]="seccion.ruta">
+            <span class="panel-acceso__titulo">{{ seccion.titulo }}</span>
+            <span class="panel-acceso__detalle">{{ seccion.detalle }}</span>
+          </a>
+        }
+      </div>
+    }
 
   </div>
 </ion-content>

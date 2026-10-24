@@ -58,6 +58,14 @@ public class UbicacionForegroundPlugin extends Plugin {
         UbicacionForegroundService.setSaludCallback(
             () -> notifyListeners("saludSync", new JSObject())
         );
+        UbicacionForegroundService.setCallback((lat, lng, accuracy, timestamp) -> {
+            JSObject ubicacion = new JSObject();
+            ubicacion.put("latitud", lat);
+            ubicacion.put("longitud", lng);
+            ubicacion.put("precision", accuracy);
+            ubicacion.put("timestamp", timestamp);
+            notifyListeners("ubicacion", ubicacion);
+        });
     }
 
     // =====================================================

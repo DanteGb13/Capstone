@@ -87,50 +87,48 @@ ion-content {
 }
 
 // =============================================================================
-// ACTUALIZAR
+// SELECTOR DE PERSONA
 // =============================================================================
 
-.btn-refrescar {
+.selector-card {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    width: 100%;
-    // 44px es el mínimo comfortable para un dedo; con el padding viejo la caja
-    // se quedaba en ~38px y era el control más difícil de acertar de la página.
-    min-height: 46px;
-    margin-bottom: 20px;
-    padding: 10px 14px;
-    border: 1px solid var(--es-primary-linea);
-    border-radius: var(--es-r-lg);
+    gap: 12px;
+    margin-bottom: 16px;
+    padding: 10px 16px;
+    border: 1px solid var(--es-linea);
+    border-radius: 16px;
     background: var(--es-superficie);
-    color: var(--es-primary);
-    font-family: inherit;
-    font-size: 13.5px;
-    font-weight: 600;
-    cursor: pointer;
-    touch-action: manipulation;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    box-shadow: var(--es-sombra);
 
-    &:active {
-        background: var(--es-primary-soft);
-        border-color: var(--es-primary);
-    }
-
-    // Sólo con teclado: en el dedo sale el brillo del :active y basta.
-    &:focus-visible {
-        outline: 2px solid var(--es-primary);
-        outline-offset: 2px;
-    }
-
-    &:disabled {
-        opacity: 0.55;
-        cursor: default;
-    }
-
-    ion-icon {
-        font-size: 17px;
+    > ion-icon {
         flex-shrink: 0;
+        color: var(--es-primary);
+        font-size: 22px;
+    }
+
+    .selector-body {
+        flex: 1;
+        min-width: 0;
+
+        label {
+            display: block;
+            color: var(--es-ink-muted);
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        ion-select {
+            width: 100%;
+            padding: 2px 0;
+            color: var(--es-ink);
+            font-size: 15px;
+            font-weight: 700;
+            --padding-start: 0;
+            --padding-top: 2px;
+            --padding-bottom: 2px;
+        }
     }
 }
 
@@ -149,15 +147,27 @@ ion-content {
     }
 }
 
+.salud-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 16px;
+    color: var(--es-ink-muted);
+    font-size: 13px;
+
+    .spin-icon {
+        color: var(--es-primary);
+        animation: spin 1s linear infinite;
+    }
+}
+
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
 
-// El texto del botón ya dice "Consultando...", así que el giro se puede quitar
-// sin que se pierda la señal de que algo está pasando.
 @media (prefers-reduced-motion: reduce) {
-    .spin-icon,
-    .btn-refrescar .girando {
+    .loading-box .spin-icon,
+    .salud-loading .spin-icon {
         animation: none;
     }
 }

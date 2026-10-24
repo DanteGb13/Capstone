@@ -103,7 +103,22 @@
             </button>
 
               <strong>{{ alarma.nombre }}</strong>
-              <span>{{ alarma.descripcion || 'Sin descripción' }}</span>
+
+              @if (alarma.descripcion) {
+                <span class="alarma-desc">{{ alarma.descripcion }}</span>
+
+                @if (alarma.descripcion.length > limiteVisibleDescripcion) {
+                  <button
+                    type="button"
+                    class="alarma-desc-detalle"
+                    (click)="verDescripcionCompleta(alarma)">
+                    Ver descripción completa
+                  </button>
+                }
+              } @else {
+                <span class="alarma-desc">Sin descripción</span>
+              }
+
               <small [class.texto-apagada]="!alarma.activa">
                 {{ alarma.activa ? diasTexto(alarma) : 'Apagada' }}
               </small>
@@ -177,6 +192,7 @@
           <label class="campo" [class.invalido]="errorNombre">
             <span>Nombre</span>
             <ion-input
+              #inputNombre
               type="text"
               placeholder="Ej. Tomar medicina"
               [(ngModel)]="nuevoNombre"
@@ -188,7 +204,11 @@
             <p class="campo-error">El nombre debe tener entre 1 y 40 caracteres (letras, números o emojis).</p>
           }
 
-          <label class="campo">
+          <!-- No es un <label>: envuelve botones, y un label reenvía el clic
+               del botón elegido al primero de adentro (tocar "Mar" también
+               activaba "Lunes", y el selector de hora se peleaba con sus
+               flechas). -->
+          <div class="campo">
             <span>Hora de la alarma</span>
 
             <div class="modo-hora" role="group" aria-label="Cómo elegir la hora">
@@ -296,9 +316,9 @@
                 🔊 Elige la hora para saber cuándo sonará
               }
             </p>
-          </label>
+          </div>
 
-          <label class="campo">
+          <div class="campo">
             <span>Días de la semana</span>
 
             <div class="dias-selector">
@@ -328,7 +348,11 @@
               {{ todosLosDias() ? 'Todos los días' : 'Seleccionar todos' }}
 
             </button>
-          </label>
+
+            @if (nuevosDias.length === 0) {
+              <p class="dias-nota">Sin días: sonará una sola vez.</p>
+            }
+          </div>
 
           <label class="campo" [class.invalido]="errorDescripcion">
             <span>Descripción</span>
