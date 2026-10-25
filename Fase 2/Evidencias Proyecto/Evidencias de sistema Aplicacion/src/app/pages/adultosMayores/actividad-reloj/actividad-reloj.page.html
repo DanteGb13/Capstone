@@ -1,0 +1,99 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/adulto-mayor" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Actividad del reloj</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <main class="actividad-container">
+    <section class="actividad-intro">
+      <p class="fecha"><ion-icon name="calendar-outline"></ion-icon>{{ fechaHoy }}</p>
+      <h1>Tu actividad</h1>
+      <p>Un resumen de lo que registró tu reloj.</p>
+    </section>
+
+    @if (cargando) {
+      <div class="estado-carga" role="status">
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>Buscando datos del reloj...</span>
+      </div>
+    } @else {
+      @if (error) {
+        <div class="aviso aviso-error" role="alert">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>{{ error }}</span>
+        </div>
+      }
+
+      @if (permisosFaltantes.length > 0) {
+        <div class="aviso aviso-permisos">
+          <ion-icon name="information-circle-outline"></ion-icon>
+          <span>Falta autorizar: {{ permisosFaltantes.join(', ') }}.</span>
+        </div>
+      }
+
+      @if (!error) {
+        <section class="actividad-resumen" aria-label="Resumen de actividad">
+          <article class="pasos-destacados">
+            <div class="pasos-cabecera">
+              <span class="icono-destacado"><ion-icon name="walk-outline"></ion-icon></span>
+              <span>Pasos de hoy</span>
+            </div>
+            <strong>{{ valor(resumen?.pasos) }}</strong>
+            <p>pasos</p>
+          </article>
+
+          <div class="lista-metricas">
+            <article class="fila-metrica">
+              <span class="icono-metrica calorias"><ion-icon name="flame-outline"></ion-icon></span>
+              <div class="metrica-detalle">
+                <h2>Calorías</h2>
+                <p>Actividad de hoy</p>
+              </div>
+              <strong>{{ valor(resumen?.calorias) }} <small>kcal</small></strong>
+            </article>
+
+            <article class="fila-metrica">
+              <span class="icono-metrica oxigeno"><ion-icon name="water-outline"></ion-icon></span>
+              <div class="metrica-detalle">
+                <h2>Oxígeno</h2>
+                <p>
+                  @if (hora(resumen?.spo2_ultima_hora ?? null); as horaLectura) {
+                    Última lectura · {{ horaLectura }}
+                  } @else {
+                    Última lectura disponible (24 h)
+                  }
+                </p>
+              </div>
+              <strong>{{ resumen?.spo2 === null || resumen?.spo2 === undefined ? 'Sin datos' : resumen.spo2 + '%' }}</strong>
+            </article>
+
+            <article class="fila-metrica">
+              <span class="icono-metrica sueno"><ion-icon name="moon-outline"></ion-icon></span>
+              <div class="metrica-detalle">
+                <h2>Sueño</h2>
+                <p>
+                  @if (hora(resumen?.sueno_ultima_noche ?? null); as horaSueno) {
+                    Sesión más reciente · {{ horaSueno }}
+                  } @else {
+                    Sesión más reciente
+                  }
+                </p>
+              </div>
+              <strong>{{ duracionSueno(resumen?.sueno_minutos ?? null) }}</strong>
+            </article>
+          </div>
+        </section>
+
+        <p class="nota">
+          Los pasos y las calorías corresponden a hoy. El oxígeno muestra la última
+          lectura disponible y el sueño corresponde a la sesión más reciente. Si aparece
+          “Sin datos”, el reloj no ha enviado esa medición.
+        </p>
+      }
+    }
+  </main>
+</ion-content>

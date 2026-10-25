@@ -515,25 +515,39 @@ async solicitarPermisos(): Promise<{ autorizado: boolean; denegados: HealthDataT
         aggregation: ['average', 'min', 'max']
       });
 
-      if (samples?.length) {
-        const ultimo = samples[samples.length - 1];
-        const v = ultimo.values || {};
+      const ultimoConDatos = [...(samples || [])]
+        .filter((sample) => {
+          const valores = sample.values || {};
+          return [valores.average, valores.min, valores.max].some((valor) => {
+            const numero = Number(valor);
+            return Number.isFinite(numero) && numero > 0 && numero < 255;
+          });
+        })
+        .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
+
+      if (ultimoConDatos) {
+        const valores = ultimoConDatos.values || {};
+        const lecturaValida = (valor: unknown): number | null => {
+          const numero = Number(valor);
+          return Number.isFinite(numero) && numero > 0 && numero < 255 ? numero : null;
+        };
         const agregado = {
-          media: v.average ?? null,
-          minima: v.min ?? null,
-          maxima: v.max ?? null,
-          // El bucket se cierra el día completo, así que `endDate` es mejor
-          // indicativo que `startDate` para saber hasta cuándo llegan datos.
-          ultimaHora: v.average !== undefined || v.min !== undefined ? ultimo.endDate : null
+          media: lecturaValida(valores.average),
+          minima: lecturaValida(valores.min),
+          maxima: lecturaValida(valores.max),
+          ultimaHora: null as string | null
         };
 
         if (agregado.media !== null || agregado.minima !== null || agregado.maxima !== null) {
-          return agregado;
+          // El fin de un bucket diario no representa la hora de la última
+          // medición; se usa la marca de tiempo de una muestra real.
+          const lecturas = await this.calcularDesdeMuestras('heartRate', startDate, endDate);
+          return { ...agregado, ultimaHora: lecturas?.ultimaHora ?? null };
         }
       }
 
       console.log(
-        '[Salud] FC: la agregación no devolvió valores; se calcula con las lecturas crudas'
+        '[Salud] FC: la agregación no devolvió pulsaciones válidas; se calcula con las lecturas crudas'
       );
     } catch (e) {
       console.warn(
@@ -584,7 +598,9 @@ async solicitarPermisos(): Promise<{ autorizado: boolean; denegados: HealthDataT
 
       // Con orden descendente la primera muestra es la más reciente, que es la
       // que sirve para saber cuándo se midió por última vez.
-      const ordenada = [...(samples || [])];
+      const ordenada = [...(samples || [])].sort(
+        (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+      );
       // Se descartan los valores imposibles: Health Connect usa 255 como
       // "sin lectura" y deja ceros cuando el sensor está apagado. Un latido de
       // 255 no existe, y sin filtrarlo contaminaría el promedio hacia arriba.
@@ -609,7 +625,7 @@ async solicitarPermisos(): Promise<{ autorizado: boolean; denegados: HealthDataT
         media: suma / util.length,
         minima: minimo,
         maxima: maximo,
-        ultimaHora: ordenada[0]?.startDate || null
+        ultimaHora: util[0]?.startDate || null
       };
     } catch (e) {
       console.warn(`[Salud] no se pudieron leer muestras de '${dataType}':`, this.mensajeError(e));

@@ -1049,6 +1049,15 @@ private timerZona: any = null;
     this.changeDetectorRef.detectChanges();
   }
 
+  alTocarSalud(): void {
+    if (this.saludInvitaAAutorizar) {
+      void this.autorizarSalud();
+      return;
+    }
+
+    void this.router.navigate(['/actividad-reloj']);
+  }
+
   /** Manda al usuario a los ajustes de Health Connect si el diálogo ya no sale. */
   async abrirAjustesSalud() {
     await this.saludService.abrirAjustes();

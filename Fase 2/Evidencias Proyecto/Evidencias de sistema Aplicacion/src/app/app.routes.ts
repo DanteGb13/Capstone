@@ -148,6 +148,11 @@ export const routes: Routes = [
     canActivate: [authGuard, onboardingPermisosGuard]
   },
   {
+    path: 'actividad-reloj',
+    loadComponent: () => import('./pages/adultosMayores/actividad-reloj/actividad-reloj.page').then((m) => m.ActividadRelojPage),
+    canActivate: [authGuard, onboardingPermisosGuard]
+  },
+  {
     path: 'contacto-emergencia',
     loadComponent: () => import('./pages/adultosMayores/contacto-emergencia/contacto-emergencia.page').then( m => m.ContactoEmergenciaPage),
     canActivate: [authGuard]

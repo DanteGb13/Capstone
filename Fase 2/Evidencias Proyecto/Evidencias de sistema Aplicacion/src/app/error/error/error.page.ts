@@ -1,19 +1,22 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
+import { Component } from '@angular/core';
+import { Location } from '@angular/common';
+import { IonButton, IonContent, IonHeader, IonIcon, IonToolbar } from '@ionic/angular';
+import { addIcons } from 'ionicons';
+import { alertCircleOutline, arrowBackOutline, heartOutline, homeOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-error',
   templateUrl: './error.page.html',
   styleUrls: ['./error.page.scss'],
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar, CommonModule, FormsModule]
+  imports: [IonButton, IonContent, IonHeader, IonIcon, IonToolbar]
 })
-export class ErrorPage implements OnInit {
+export class ErrorPage {
 
-  constructor() { }
-
-  ngOnInit() {
+  constructor(private location: Location) {
+    addIcons({ alertCircleOutline, arrowBackOutline, heartOutline, homeOutline });
   }
 
+  volver(): void {
+    this.location.back();
+  }
 }

@@ -327,7 +327,7 @@
            texto según lo que se vaya averiguando: autorizando, sin reloj o
            con datos llegando. Autorizar sigue siendo un solo toque y después
            el envío es automático. -->
-      <div class="menu-card ripple" (click)="saludInvitaAAutorizar ? autorizarSalud() : null" [style.background]="saludInvitaAAutorizar
+      <div class="menu-card ripple" (click)="alTocarSalud()" [style.background]="saludInvitaAAutorizar
           ? 'linear-gradient(135deg, #607d8b, #90a4ae)'
           : 'linear-gradient(135deg, #e91e63, #f06292)'" [style.box-shadow]="saludInvitaAAutorizar
           ? '0 10px 25px rgba(96, 125, 139, 0.35)'

@@ -1,0 +1,257 @@
+:host {
+  --fondo: #f5f4f2;
+  --texto: #29272d;
+  --texto-suave: #77747c;
+}
+
+ion-content {
+  --background: var(--fondo);
+}
+
+ion-header {
+  padding: 8px 12px 0;
+  background: var(--fondo);
+  box-shadow: none;
+}
+
+ion-toolbar {
+  --background: #fff;
+  --border-color: transparent;
+  --min-height: 58px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(37, 31, 43, 0.06);
+}
+
+ion-title {
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.actividad-container {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 27px 20px 48px;
+}
+
+.actividad-intro {
+  margin-bottom: 22px;
+
+  .fecha {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 9px;
+    color: #766c7d;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: capitalize;
+
+    ion-icon {
+      font-size: 15px;
+    }
+  }
+
+  h1 {
+    margin: 0;
+    color: var(--texto);
+    font-size: 29px;
+    font-weight: 700;
+    letter-spacing: -0.7px;
+  }
+
+  p:last-child {
+    margin: 6px 0 0;
+    color: var(--texto-suave);
+    font-size: 14px;
+  }
+}
+
+.estado-carga {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  min-height: 190px;
+  color: var(--texto-suave);
+}
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+
+  ion-icon {
+    flex: 0 0 auto;
+    font-size: 19px;
+  }
+}
+
+.aviso-error {
+  background: #fff0ee;
+  color: #9b3830;
+}
+
+.aviso-permisos {
+  background: #fff7e8;
+  color: #795817;
+}
+
+.actividad-resumen {
+  display: grid;
+  gap: 13px;
+}
+
+.pasos-destacados {
+  min-height: 176px;
+  padding: 20px 22px;
+  border-radius: 19px;
+  background: #713b83;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(75, 40, 87, 0.15);
+
+  .pasos-cabecera {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    font-weight: 550;
+  }
+
+  .icono-destacado {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.12);
+    font-size: 21px;
+  }
+
+  strong {
+    display: block;
+    margin-top: 16px;
+    font-size: clamp(32px, 8vw, 42px);
+    font-weight: 700;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  > p {
+    margin: 5px 0 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 13px;
+  }
+}
+
+.lista-metricas {
+  overflow: hidden;
+  border: 1px solid rgba(36, 31, 40, 0.05);
+  border-radius: 17px;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(37, 31, 43, 0.045);
+}
+
+.fila-metrica {
+  display: flex;
+  min-height: 82px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+
+  & + & {
+    border-top: 1px solid #efedf0;
+  }
+
+  > strong {
+    flex: 0 0 auto;
+    max-width: 42%;
+    color: var(--texto);
+    font-size: 16px;
+    font-weight: 650;
+    text-align: right;
+    overflow-wrap: anywhere;
+
+    small {
+      color: var(--texto-suave);
+      font-size: 11px;
+      font-weight: 500;
+    }
+  }
+}
+
+.icono-metrica {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 13px;
+  font-size: 21px;
+
+  &.calorias {
+    background: #fff0e5;
+    color: #bf6425;
+  }
+
+  &.oxigeno {
+    background: #e8f2f5;
+    color: #397b8b;
+  }
+
+  &.sueno {
+    background: #f0edf5;
+    color: #71647f;
+  }
+}
+
+.metrica-detalle {
+  min-width: 0;
+  flex: 1;
+
+  h2 {
+    margin: 0;
+    color: var(--texto);
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--texto-suave);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+}
+
+.nota {
+  margin: 16px 2px 0;
+  color: var(--texto-suave);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+@media (max-width: 360px) {
+  .actividad-container {
+    padding-inline: 15px;
+  }
+
+  .fila-metrica {
+    gap: 9px;
+    padding-inline: 11px;
+
+    > strong {
+      font-size: 14px;
+    }
+  }
+
+  .icono-metrica {
+    width: 38px;
+    height: 38px;
+  }
+}
