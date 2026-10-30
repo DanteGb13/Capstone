@@ -70,6 +70,7 @@ export async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
         rut,
         id_direccion,
         id_rol,
+        estado,
         rol (
           id,
           nombre
@@ -85,6 +86,11 @@ export async function obtenerEstadoUsuario(supabaseService: SupabaseService) {
 
     if (!usuario || !usuario.rut || !usuario.id_direccion) {
       return { autenticado: true, perfilCompleto: false, existeUsuario: !!usuario, rol: null };
+    }
+
+    if (usuario.estado === false) {
+      await supabase.auth.signOut({ scope: 'local' });
+      return { autenticado: false, perfilCompleto: false, existeUsuario: true, rol: null };
     }
 
     const rolData = usuario.rol as any;

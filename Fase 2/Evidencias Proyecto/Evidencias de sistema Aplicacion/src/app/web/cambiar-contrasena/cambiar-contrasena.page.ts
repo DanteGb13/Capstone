@@ -37,16 +37,26 @@ export class CambiarContrasenaPage {
 
   /** Sólo una cosa falla a la vez: la primera regla que no se cumple. */
   error = '';
+  recuperacionActiva = false;
 
   private cdr = inject(ChangeDetectorRef);
   private perfilCache = inject(PerfilCacheService);
   private supabaseService = inject(SupabaseService);
 
+  constructor() {
+    this.supabaseService.getClient().auth.onAuthStateChange((evento) => {
+      if (evento === 'PASSWORD_RECOVERY') {
+        this.recuperacionActiva = true;
+        this.refrescar();
+      }
+    });
+  }
+
   async cambiar() {
     this.error = '';
     this.exito = '';
 
-    if (!this.contrasenaActual.trim()) {
+    if (!this.recuperacionActiva && !this.contrasenaActual.trim()) {
       this.error = 'Ingresa tu contraseña actual.';
       this.refrescar();
       return;

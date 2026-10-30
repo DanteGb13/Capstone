@@ -429,3 +429,11 @@ enabled = true
 [functions.enviar-contacto]
 verify_jwt = false
 
+# Esta función valida internamente el JWT y el rol de administrador. Desactivar
+# la verificación del gateway permite que Supabase responda correctamente a las
+# solicitudes OPTIONS (preflight) desde localhost y desde la web publicada.
+[functions.admin-actualizar-usuario]
+verify_jwt = false
+
+[functions.admin-cambiar-estado]
+verify_jwt = false

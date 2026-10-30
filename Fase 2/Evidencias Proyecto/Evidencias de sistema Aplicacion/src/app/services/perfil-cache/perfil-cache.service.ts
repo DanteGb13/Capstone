@@ -92,6 +92,8 @@ export class PerfilCacheService {
   /** Promesa en vuelo, para no disparar dos consultas a la vez. */
   private enVuelo: Promise<PerfilResumen | null> | null = null;
 
+  private fotosEnMemoria = new Map<string, string | null>();
+
   /**
    * Lo mismo para la foto. Va con el id de usuario porque la promesa es de una
    * persona concreta: si cambia la cuenta, la otra promesa no le sirve.
@@ -293,6 +295,9 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
   async cargarFoto(idUsuario: string): Promise<string | null> {
     if (!idUsuario) return null;
 
+    const enMemoria = this.fotosEnMemoria.get(idUsuario);
+    if (this.fotosEnMemoria.has(idUsuario)) return enMemoria ?? null;
+
     const guardado = this.leerFoto(idUsuario);
     if (guardado && Date.now() - guardado.guardadoEn < TTL_FOTO_MS) {
       return guardado.url;
@@ -330,7 +335,10 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
         .from('fotos-perfil')
         .list(`${idUsuario}/`, { limit: 1 });
 
-      if (error) return null;
+      if (error) {
+        console.warn('No se pudo listar la foto de perfil:', error.message);
+        return null;
+      }
       if (!data || data.length === 0) {
         this.guardarFoto(idUsuario, null);
         return null;
@@ -340,11 +348,16 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
         .from('fotos-perfil')
         .createSignedUrl(`${idUsuario}/${data[0].name}`, 3600);
 
-      if (errorFirma || !firmada?.signedUrl) return null;
+      if (errorFirma || !firmada?.signedUrl) {
+        console.warn('No se pudo firmar la foto de perfil:', errorFirma?.message ?? 'URL no disponible');
+        return null;
+      }
 
       this.guardarFoto(idUsuario, firmada.signedUrl);
+      this.fotosEnMemoria.set(idUsuario, firmada.signedUrl);
       return firmada.signedUrl;
-    } catch {
+    } catch (error) {
+      console.warn('Error resolviendo la foto de perfil:', error);
       return null;
     }
   }
@@ -360,9 +373,13 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
   limpiar(): void {
     this.enMemoria = null;
     this.enVuelo = null;
+    this.fotosEnMemoria.clear();
     try {
       localStorage.removeItem(CLAVE_CACHE);
-      localStorage.removeItem(CLAVE_FOTO);
+      for (let indice = localStorage.length - 1; indice >= 0; indice--) {
+        const clave = localStorage.key(indice);
+        if (clave?.startsWith(`${CLAVE_FOTO}_`)) localStorage.removeItem(clave);
+      }
     } catch {
       // sin almacenamiento local no hay nada que borrar
     }
@@ -379,10 +396,14 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
    */
   limpiarFoto(): void {
     try {
-      localStorage.removeItem(CLAVE_FOTO);
+      for (let indice = localStorage.length - 1; indice >= 0; indice--) {
+        const clave = localStorage.key(indice);
+        if (clave?.startsWith(`${CLAVE_FOTO}_`)) localStorage.removeItem(clave);
+      }
     } catch {
       // sin almacenamiento local no hay nada que borrar
     }
+    this.fotosEnMemoria.clear();
   }
 
   // =====================================================
@@ -409,7 +430,7 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
 
   private leerFoto(id: string): { url: string | null; guardadoEn: number } | null {
     try {
-      const bruto = localStorage.getItem(CLAVE_FOTO);
+      const bruto = localStorage.getItem(`${CLAVE_FOTO}_${id}`);
       if (!bruto) return null;
       const datos = JSON.parse(bruto);
       if (datos?.id !== id) return null;
@@ -421,9 +442,22 @@ private async cargarPerfil(id: string): Promise<PerfilResumen | null> {
 
   private guardarFoto(id: string, url: string | null): void {
     try {
-      localStorage.setItem(CLAVE_FOTO, JSON.stringify({ id, url, guardadoEn: Date.now() }));
+      localStorage.setItem(`${CLAVE_FOTO}_${id}`, JSON.stringify({ id, url, guardadoEn: Date.now() }));
     } catch {
       // ver guardarCache
     }
+    this.fotosEnMemoria.set(id, url);
+  }
+
+  obtenerFotoEnMemoria(idUsuario: string): string | null {
+    return this.fotosEnMemoria.get(idUsuario) ?? null;
+  }
+
+  obtenerFotoGuardada(idUsuario: string): string | null {
+    const guardada = this.leerFoto(idUsuario);
+    if (!guardada || Date.now() - guardada.guardadoEn >= TTL_FOTO_MS) return null;
+
+    if (guardada.url) this.fotosEnMemoria.set(idUsuario, guardada.url);
+    return guardada.url;
   }
 }

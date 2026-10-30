@@ -12,6 +12,7 @@ import {
   validarTextoBasico
 } from '../../services/utils/validators';
 import { WebNav } from '../web-nav/web-nav';
+import { RegionesComunasService, RegionChile } from '../../services/utils/regiones-comunas.service';
 
 /** Lo que el formulario edita. Todo lo demás es de sólo lectura. */
 interface FormularioPerfil {
@@ -96,6 +97,8 @@ export class MiPerfilPage implements OnInit {
 
   /** Guarda si hay dirección registrada: sin ella no hay fila que actualizar. */
   hayDireccion = false;
+  regiones: RegionChile[] = [];
+  comunasDisponibles: string[] = [];
 
   /** Para que el template pueda escribir los tope de largo en cada input. */
   readonly longitudes = LONGITUDES;
@@ -105,10 +108,12 @@ export class MiPerfilPage implements OnInit {
   private cdr = inject(ChangeDetectorRef);
   private supabaseService = inject(SupabaseService);
   private perfilCache = inject(PerfilCacheService);
+  private regionesComunas = inject(RegionesComunasService);
 
   async ngOnInit() {
     this.perfil = await this.perfilCache.perfil();
     this.cargarEnFormulario(this.perfil);
+    await this.cargarRegiones();
     this.cargando = false;
     this.refrescar();
   }
@@ -157,6 +162,11 @@ export class MiPerfilPage implements OnInit {
     return [d.calle, d.numero, d.comuna, d.region].filter(Boolean).join(', ');
   }
 
+  get regionActualNoCatalogada(): string {
+    const region = this.borrador?.region ?? '';
+    return region && !this.regiones.some((item) => item.nombre === region) ? region : '';
+  }
+
   // ---------------------------------------------------------------
   // Edición
   // ---------------------------------------------------------------
@@ -166,7 +176,47 @@ export class MiPerfilPage implements OnInit {
     this.errores = {};
     this.mensajeError = '';
     this.mensaje = '';
+    this.cargarComunas(this.borrador?.region ?? '');
     this.refrescar();
+  }
+
+  alCambiarRegion(region: string): void {
+    if (!this.borrador) return;
+    this.borrador.region = region;
+    this.borrador.comuna = '';
+    this.cargarComunas(region);
+  }
+
+  private async cargarRegiones(): Promise<void> {
+    try {
+      this.regiones = await this.regionesComunas.regiones();
+      this.cargarComunas(this.borrador?.region ?? '');
+    } catch {
+      this.regiones = [];
+      this.comunasDisponibles = [];
+    }
+  }
+
+  private cargarComunas(region: string): void {
+    const regionNormalizada = this.normalizarUbicacion(region);
+    const coincide = this.regiones.find((item) => {
+      const nombre = this.normalizarUbicacion(item.nombre);
+      return nombre === regionNormalizada ||
+        nombre.includes(regionNormalizada) ||
+        regionNormalizada.includes(nombre);
+    });
+    this.comunasDisponibles = coincide?.comunas ?? [];
+  }
+
+  private normalizarUbicacion(valor: string): string {
+    return valor.trim().toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\bregion\b/g, '')
+      .replace(/\bde\b/g, '')
+      .replace(/\bsantiago\b/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   cancelar() {

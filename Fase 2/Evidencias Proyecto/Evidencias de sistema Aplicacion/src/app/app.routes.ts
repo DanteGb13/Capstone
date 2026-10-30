@@ -85,7 +85,6 @@ export const routes: Routes = [
   {
     path: 'cambiar-contrasena',
     loadComponent: () => import('./web/cambiar-contrasena/cambiar-contrasena.page').then((m) => m.CambiarContrasenaPage),
-    canActivate: [rolGuard(['Administrador'])]
   },
   {
     path: 'home',

@@ -39,6 +39,27 @@ export class Login {
       throw error;
     }
 
+    const usuarioId = data.user?.id;
+    if (!usuarioId) {
+      throw new Error('No se pudo identificar la cuenta.');
+    }
+
+    const { data: perfil, error: perfilError } = await supabase
+      .from('usuario')
+      .select('estado')
+      .eq('id', usuarioId)
+      .maybeSingle();
+
+    if (perfilError) {
+      await supabase.auth.signOut({ scope: 'local' });
+      throw new Error('No se pudo verificar el estado de la cuenta.');
+    }
+
+    if (perfil?.estado === false) {
+      await supabase.auth.signOut({ scope: 'local' });
+      throw new Error('Esta cuenta está desactivada.');
+    }
+
     return data;
   }
 

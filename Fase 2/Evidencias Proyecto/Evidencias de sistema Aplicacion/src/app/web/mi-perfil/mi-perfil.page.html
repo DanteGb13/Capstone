@@ -246,14 +246,21 @@
                 <div class="perfil-rejilla">
                   <div class="perfil-campo-envoltura">
                     <label class="perfil-etiqueta" for="p-region">Región</label>
-                    <input
+                    <select
                       id="p-region"
                       class="perfil-campo"
                       [class.perfil-campo--mal]="errores['region']"
-                      type="text"
-                      [attr.maxlength]="longitudes.region"
                       [disabled]="guardando"
-                      [(ngModel)]="borrador.region" />
+                      [ngModel]="borrador.region"
+                      (ngModelChange)="alCambiarRegion($event)">
+                      <option value="" disabled>Selecciona una región</option>
+                      @if (regionActualNoCatalogada) {
+                        <option [value]="regionActualNoCatalogada">{{ regionActualNoCatalogada }}</option>
+                      }
+                      @for (region of regiones; track region.id) {
+                        <option [value]="region.nombre">{{ region.nombre }}</option>
+                      }
+                    </select>
                     @if (errores['region']) {
                       <p class="perfil-error">{{ errores['region'] }}</p>
                     }
@@ -261,14 +268,17 @@
 
                   <div class="perfil-campo-envoltura">
                     <label class="perfil-etiqueta" for="p-comuna">Comuna</label>
-                    <input
+                    <select
                       id="p-comuna"
                       class="perfil-campo"
                       [class.perfil-campo--mal]="errores['comuna']"
-                      type="text"
-                      [attr.maxlength]="longitudes.comuna"
-                      [disabled]="guardando"
-                      [(ngModel)]="borrador.comuna" />
+                      [(ngModel)]="borrador.comuna"
+                      [disabled]="guardando || !comunasDisponibles.length">
+                      <option value="" disabled>Selecciona una comuna</option>
+                      @for (comuna of comunasDisponibles; track comuna) {
+                        <option [value]="comuna">{{ comuna }}</option>
+                      }
+                    </select>
                     @if (errores['comuna']) {
                       <p class="perfil-error">{{ errores['comuna'] }}</p>
                     }

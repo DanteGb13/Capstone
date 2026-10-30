@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { IonContent, IonIcon, IonSpinner } from '@ionic/angular';
+import { AlertController, IonContent, IonIcon, IonSpinner } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { lockClosedOutline, mailOutline, eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { Router, RouterLink } from '@angular/router';
@@ -41,6 +41,7 @@ export class AccesoPage {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
   private acceso = inject(AccesoService);
+  private alertCtrl = inject(AlertController);
 
   constructor() {
     addIcons({ mailOutline, lockClosedOutline, eyeOutline, eyeOffOutline });
@@ -56,7 +57,7 @@ export class AccesoPage {
     this.refrescar();
 
     if (!this.correo.trim() || !this.contrasena) {
-      this.mensajeError = 'Escribe tu correo y tu contraseña.';
+      await this.mostrarAlerta('Datos incompletos', 'Escribe tu correo y tu contraseña para continuar.');
       this.refrescar();
       return;
     }
@@ -76,35 +77,47 @@ export class AccesoPage {
             this.router.navigate([destino], { replaceUrl: true });
             return;
           }
-          this.mensajeError = this.avisoDeRolDesconocido(estado.rol);
+          await this.mostrarAlerta('No pudimos abrir tu cuenta', this.avisoDeRolDesconocido(estado.rol));
           break;
         }
 
         case 'perfil-incompleto':
           // En la app esto cae en `/elegir-tipo`, que en la web no existe:
           // no hay adónde mandar, sólo explicar dónde se termina.
-          this.mensajeError =
-            'Tu registro está incompleto. Termínalo desde la app móvil y vuelve a entrar.';
+          await this.mostrarAlerta(
+            'Registro incompleto',
+            'Tu registro aún no está terminado. Complétalo desde la app móvil y vuelve a ingresar.'
+          );
           break;
 
         case 'sin-rol':
-          this.mensajeError = this.avisoDeRolDesconocido(null);
+          await this.mostrarAlerta('Cuenta no disponible', this.avisoDeRolDesconocido(null));
           break;
 
         case 'sin-sesion':
           // La sesión se borró entre el `signInWithPassword` y la lectura.
-          this.mensajeError =
-            'No se pudo mantener la sesión abierta. Inténtalo de nuevo.';
+          await this.mostrarAlerta('No se pudo iniciar sesión', 'No pudimos mantener tu sesión abierta. Inténtalo nuevamente.');
+          break;
+
+        case 'cuenta-inactiva':
+          await this.mensajeCuentaDesactivada();
           break;
 
         case 'error':
           // La causa exacta ya está en la consola (la dejó `leerEstado`).
-          this.mensajeError =
-            'No pudimos leer tu cuenta. Inténtalo de nuevo en unos segundos.';
+          await this.mostrarAlerta(
+            'No pudimos verificar tu cuenta',
+            'Ocurrió un problema temporal al verificar tu cuenta. Inténtalo nuevamente.'
+          );
           break;
       }
     } catch (e) {
-      this.mensajeError = this.acceso.mensajeDeError(e);
+      const mensaje = this.acceso.mensajeDeError(e);
+      if (mensaje.startsWith('Esta cuenta está desactivada.')) {
+        await this.mensajeCuentaDesactivada();
+      } else {
+        await this.mostrarAlerta('No pudimos iniciar sesión', mensaje);
+      }
     } finally {
       this.cargando = false;
       this.refrescar();
@@ -115,6 +128,24 @@ export class AccesoPage {
     const detalle = rol ? ` (${rol})` : '';
     console.warn(`[acceso] sin destino para el rol: ${rol ?? 'null'}`);
     return `No pudimos determinar el tipo de tu cuenta${detalle}. Escríbenos desde Contáctanos.`;
+  }
+
+  private async mensajeCuentaDesactivada(): Promise<void> {
+    await this.mostrarAlerta(
+      'Cuenta desactivada',
+      'Esta cuenta está desactivada. Solicita ayuda a un administrador para volver a activarla.'
+    );
+  }
+
+  private async mostrarAlerta(header: string, message: string): Promise<void> {
+    const alert = await this.alertCtrl.create({
+      header,
+      message,
+      cssClass: 'alerta-acceso',
+      buttons: [{ text: 'Entendido', role: 'cancel' }]
+    });
+
+    await alert.present();
   }
 
   // La app corre SIN zone.js (zoneless): cambiar el estado después de un

@@ -17,6 +17,8 @@ export type EstadoAcceso =
   | { motivo: 'perfil-incompleto' }
   /** El perfil existe pero su rol no resuelve a un nombre. */
   | { motivo: 'sin-rol' }
+  /** La cuenta existe pero fue desactivada por un administrador. */
+  | { motivo: 'cuenta-inactiva' }
   /** No se pudo leer nada (red, permisos, error de consulta). */
   | { motivo: 'error' };
 
@@ -89,7 +91,7 @@ export class AccesoService {
 
       const { data: usuario, error: perfilError } = await supabase
         .from('usuario')
-        .select('rut, id_direccion, rol(nombre)')
+        .select('rut, id_direccion, estado, rol(nombre)')
         .eq('id', session.user.id)
         .maybeSingle();
 
@@ -107,6 +109,11 @@ export class AccesoService {
 
       if (!usuario || !usuario.rut || !usuario.id_direccion) {
         return { motivo: 'perfil-incompleto' };
+      }
+
+      if (usuario.estado === false) {
+        await supabase.auth.signOut({ scope: 'local' });
+        return { motivo: 'cuenta-inactiva' };
       }
 
       const rolData = usuario.rol as { nombre?: string } | { nombre?: string }[] | null;
@@ -157,6 +164,15 @@ export class AccesoService {
    */
   mensajeDeError(e: unknown): string {
     const texto = String((e as { message?: string })?.message ?? '').toLowerCase();
+
+    if (
+      texto.includes('cuenta está desactivada') ||
+      texto.includes('cuenta desactivada') ||
+      texto.includes('user is banned') ||
+      texto.includes('usuario bloqueado')
+    ) {
+      return 'Esta cuenta está desactivada. Solicita ayuda a un administrador para volver a activarla.';
+    }
 
     if (texto.includes('invalid login credentials') || texto.includes('user not found')) {
       return 'El correo o la contraseña no coinciden.';

@@ -43,7 +43,7 @@ export interface EventoAuditoria {
 }
 
 /** Filas por página del listado. */
-const POR_PAGINA = 10;
+const POR_PAGINA = 12;
 
 @Component({
   selector: 'app-gestion-usuarios',
@@ -277,13 +277,18 @@ export class GestionUsuariosPage implements OnInit {
     this.refrescar();
 
     try {
-      const { error } = await this.supabaseService.getClient()
-        .rpc('admin_cambiar_estado', {
-          p_usuario: this.seleccion.id,
-          p_activo: activar
+      const { data, error } = await this.supabaseService.getClient()
+        .functions.invoke('admin-cambiar-estado', {
+          body: {
+            usuario_id: this.seleccion.id,
+            activo: activar
+          }
         });
 
       if (error) throw new Error(error.message);
+      if ((data as { error?: string })?.error) {
+        throw new Error((data as { error: string }).error);
+      }
 
       this.seleccion.activo = activar;
       const fila = this.usuarios.find((u) => u.id === this.seleccion?.id);

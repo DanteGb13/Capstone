@@ -2,12 +2,6 @@
 
 <ion-content class="web-contenido">
   <div class="web-page">
-
-    <div class="panel-cabecera">
-      <h1>Usuarios</h1>
-      <p class="descripcion">Cuentas registradas y su última actividad.</p>
-    </div>
-
     @if (cargando) {
       <p class="panel-vacio">Cargando…</p>
     } @else if (error) {
@@ -16,22 +10,76 @@
       <p class="panel-vacio">Todavía no hay usuarios registrados.</p>
     } @else {
 
-      <div class="panel-tabla-envoltura">
+      <div class="usuarios-filtros">
+        <input
+          class="usuarios-filtro usuarios-buscador"
+          type="search"
+          placeholder="Buscar por nombre, RUT o correo"
+          aria-label="Buscar por nombre, RUT o correo"
+          [(ngModel)]="busqueda"
+          (ngModelChange)="alCambiarFiltros()" />
+
+        <select
+          class="usuarios-filtro"
+          aria-label="Filtrar por tipo de cuenta"
+          [(ngModel)]="filtroTipoCuenta"
+          (ngModelChange)="alCambiarFiltros()">
+          <option value="">Todos los tipos de cuenta</option>
+          @for (tipo of tiposCuenta; track tipo) {
+            <option [value]="tipo">{{ tipo }}</option>
+          }
+        </select>
+
+        <select
+          class="usuarios-filtro"
+          aria-label="Filtrar por estado"
+          [(ngModel)]="filtroEstado"
+          (ngModelChange)="alCambiarFiltros()">
+          <option value="">Todos los estados</option>
+          <option value="activo">Activos</option>
+          <option value="inactivo">Inactivos</option>
+        </select>
+
+        <div class="usuarios-acciones-filtros">
+          <button type="button" class="usuarios-descargar" (click)="abrirDescarga()">
+            Descargar
+          </button>
+
+          <button
+            type="button"
+            class="usuarios-anadir"
+            (click)="abrirNuevoUsuario()"
+            aria-label="Añadir usuario">
+            <ion-icon name="person-add-outline" aria-hidden="true"></ion-icon>
+            Añadir usuario
+          </button>
+        </div>
+      </div>
+
+      @if (!usuariosFiltrados.length) {
+        <p class="panel-vacio">Ninguna cuenta coincide con los filtros.</p>
+      } @else {
+
+      <div
+        class="panel-tabla-envoltura"
+        [class.panel-tabla-envoltura--con-scroll]="tamanoPagina > 11">
         <table class="panel-tabla">
           <thead>
             <tr>
               <th>Nombre</th>
               <th>Correo</th>
-              <th>Rol</th>
+              <th>RUT</th>
+              <th>Tipo de cuenta</th>
               <th>Estado</th>
-              <th>Última actividad</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
-            @for (usuario of usuarios; track usuario.correo) {
+            @for (usuario of usuariosPagina; track usuario.id) {
               <tr>
                 <td class="panel-tabla__fuerte">{{ usuario.nombre }}</td>
                 <td>{{ usuario.correo }}</td>
+                <td>{{ usuario.rut }}</td>
                 <td>{{ usuario.rol }}</td>
                 <td>
                   <span
@@ -40,14 +88,419 @@
                     {{ usuario.activo ? 'Activo' : 'Inactivo' }}
                   </span>
                 </td>
-                <td>{{ haceCuanto(usuario.ultimoVisto) }}</td>
+                <td class="usuarios-acciones">
+                  <div class="usuarios-botones">
+                    <button
+                      type="button"
+                      class="usuarios-ver"
+                      (click)="verUsuario(usuario)"
+                      title="Ver detalles de la cuenta"
+                      aria-label="Ver detalles de la cuenta de {{ usuario.nombre }}">
+                      <ion-icon name="eye-outline" aria-hidden="true"></ion-icon>
+                    </button>
+                    <a
+                      class="usuarios-editar"
+                      href="javascript:void(0)"
+                      (click)="editarUsuario(usuario)"
+                      title="Editar estado y cuenta"
+                      aria-label="Editar estado y cuenta de {{ usuario.nombre }}">
+                      <ion-icon name="create-outline" aria-hidden="true"></ion-icon>
+                    </a>
+                  </div>
+                </td>
               </tr>
             }
           </tbody>
         </table>
       </div>
 
+      <div class="usuarios-paginacion" aria-label="Paginación de usuarios">
+        <label class="usuarios-paginacion__tamano">
+          Filas por página:
+          <select
+            [(ngModel)]="tamanoPagina"
+            (ngModelChange)="alCambiarTamanoPagina()">
+            <option [ngValue]="11">11</option>
+            <option [ngValue]="25">25</option>
+            <option [ngValue]="50">50</option>
+          </select>
+        </label>
+
+        <span class="usuarios-paginacion__resumen">
+          {{ numeroPrimerUsuario }}–{{ numeroUltimoUsuario }} de {{ usuariosFiltrados.length }} usuarios
+        </span>
+
+        <div class="usuarios-paginacion__controles">
+          <button type="button" aria-label="Primera página" [disabled]="paginaActual === 1" (click)="irAPagina(1)">«</button>
+          <button type="button" aria-label="Página anterior" [disabled]="paginaActual === 1" (click)="irAPagina(paginaActual - 1)">‹</button>
+          @for (pagina of paginasVisibles; track pagina) {
+            @if (pagina === -1) {
+              <span class="usuarios-paginacion__separador">…</span>
+            } @else {
+              <button
+                type="button"
+                [class.usuarios-paginacion__activa]="paginaActual === pagina"
+                [attr.aria-current]="paginaActual === pagina ? 'page' : null"
+                (click)="irAPagina(pagina)">
+                {{ pagina }}
+              </button>
+            }
+          }
+          <button type="button" aria-label="Página siguiente" [disabled]="paginaActual === totalPaginas" (click)="irAPagina(paginaActual + 1)">›</button>
+          <button type="button" aria-label="Última página" [disabled]="paginaActual === totalPaginas" (click)="irAPagina(totalPaginas)">»</button>
+        </div>
+      </div>
+      }
+
     }
 
   </div>
+
+  @if (descargaAbierta) {
+    <div class="usuarios-modal-fondo usuarios-modal-fondo--descarga" role="presentation" (click)="cerrarDescarga()">
+      <section
+        class="usuarios-modal usuarios-modal--descarga"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="usuarios-descarga-titulo"
+        (click)="$event.stopPropagation()">
+        <header class="usuarios-modal-cabecera">
+          <h2 id="usuarios-descarga-titulo">Descargar usuarios</h2>
+          <button
+            type="button"
+            class="usuarios-modal-cerrar"
+            aria-label="Cerrar opciones de descarga"
+            (click)="cerrarDescarga()">
+            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+          </button>
+        </header>
+
+        <div class="usuarios-descarga-contenido">
+          <div class="usuarios-descarga-filtros">
+            <label>Tipo de cuenta
+              <select [(ngModel)]="descargaTipoCuenta">
+                <option value="">Todos</option>
+                <option value="Adulto mayor">Adulto mayor</option>
+                <option value="Familiar">Familiar</option>
+              </select>
+            </label>
+
+            <label>Estado
+              <select [(ngModel)]="descargaEstado">
+                <option value="">Todos</option>
+                <option value="activo">Activo</option>
+                <option value="inactivo">Inactivo</option>
+              </select>
+            </label>
+
+            <label>Periodo de creación
+              <select [(ngModel)]="descargaPeriodo">
+                <option value="todos">Todos los tiempos</option>
+                <option value="1mes">Último mes</option>
+                <option value="6meses">Últimos 6 meses</option>
+                <option value="3meses">Últimos 3 meses</option>
+              </select>
+            </label>
+          </div>
+
+          <p class="usuarios-descarga-cantidad">{{ usuariosDescarga.length }} usuario(s) seleccionados</p>
+
+          <div class="usuarios-descarga-acciones">
+            <button type="button" class="usuarios-editor-boton usuarios-editor-boton--secundario" (click)="cerrarDescarga()">Cancelar</button>
+            <button
+              type="button"
+              class="usuarios-editor-boton"
+              [disabled]="!usuariosDescarga.length"
+              (click)="descargarUsuariosCsv()">
+              Descargar CSV
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  }
+
+  @if (nuevoUsuarioAbierto) {
+    <div class="usuarios-modal-fondo" role="presentation" (click)="cerrarNuevoUsuario()">
+      <section
+        class="usuarios-modal usuarios-modal--nuevo"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="usuarios-nuevo-titulo"
+        (click)="$event.stopPropagation()">
+        <header class="usuarios-modal-cabecera">
+          <div>
+            <h2 id="usuarios-nuevo-titulo">Añadir usuario</h2>
+          </div>
+          <button
+            type="button"
+            class="usuarios-modal-cerrar"
+            aria-label="Cerrar formulario"
+            [disabled]="creandoUsuario"
+            (click)="cerrarNuevoUsuario()">
+            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+          </button>
+        </header>
+
+        <form class="usuarios-editor" (ngSubmit)="crearUsuario()">
+          <section class="usuarios-seccion">
+            <h3>Datos de acceso</h3>
+            <div class="usuarios-editor-grid">
+              <label>Correo
+                <input type="email" [(ngModel)]="nuevoUsuario.correo" name="nuevoCorreo" required maxlength="100" autocomplete="email" />
+              </label>
+              <label>Contraseña
+                <input type="password" [(ngModel)]="nuevoUsuario.contrasena" name="nuevaContrasena" required minlength="8" autocomplete="new-password" />
+              </label>
+              <label>Tipo de cuenta
+                <select [(ngModel)]="nuevoUsuario.idRol" name="nuevoRol" required>
+                  @for (rol of roles; track rol.id) {
+                    <option [value]="rol.id">{{ rol.nombre === 'Usuario' ? 'Adulto mayor' : rol.nombre }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="usuarios-seccion">
+            <h3>Información personal</h3>
+            <div class="usuarios-editor-grid">
+              <label>Nombre
+                <input [(ngModel)]="nuevoUsuario.nombre" name="nuevoNombre" required maxlength="60" autocomplete="given-name" />
+              </label>
+              <label>Apellido paterno
+                <input [(ngModel)]="nuevoUsuario.apellidopa" name="nuevoApellidopa" required maxlength="40" autocomplete="family-name" />
+              </label>
+              <label>Apellido materno
+                <input [(ngModel)]="nuevoUsuario.apellidoma" name="nuevoApellidoma" maxlength="40" autocomplete="family-name" />
+              </label>
+              <label>Teléfono
+                <input [(ngModel)]="nuevoUsuario.telefono" name="nuevoTelefono" required maxlength="16" inputmode="tel" autocomplete="tel" />
+              </label>
+              <label>RUT
+                <input [(ngModel)]="nuevoUsuario.rut" name="nuevoRut" required maxlength="12" />
+              </label>
+              <label>Fecha de nacimiento
+                <input type="date" [(ngModel)]="nuevoUsuario.fechaNacimiento" name="nuevaFechaNacimiento" required [max]="fechaHoy" />
+              </label>
+            </div>
+          </section>
+
+          <section class="usuarios-seccion">
+            <h3>Dirección</h3>
+            <div class="usuarios-editor-grid">
+              <label>Región
+                <select [ngModel]="nuevoUsuario.region" name="nuevaRegion" required (ngModelChange)="alCambiarRegionNuevoUsuario($event)">
+                  <option value="" disabled>Selecciona una región</option>
+                  @for (region of regiones; track region.id) {
+                    <option [value]="region.nombre">{{ region.nombre }}</option>
+                  }
+                </select>
+              </label>
+              <label>Comuna
+                <select [(ngModel)]="nuevoUsuario.comuna" name="nuevaComuna" required [disabled]="!comunasDisponibles.length">
+                  <option value="" disabled>Selecciona una comuna</option>
+                  @for (comuna of comunasDisponibles; track comuna) {
+                    <option [value]="comuna">{{ comuna }}</option>
+                  }
+                </select>
+              </label>
+              <label>Calle
+                <input [(ngModel)]="nuevoUsuario.calle" name="nuevaCalle" required maxlength="100" />
+              </label>
+              <label>Número
+                <input [(ngModel)]="nuevoUsuario.numero" name="nuevoNumero" required maxlength="20" />
+              </label>
+            </div>
+          </section>
+
+          <section class="usuarios-seccion">
+            <h3>Estado</h3>
+            <div class="usuarios-editor-grid">
+              <label>Estado de la cuenta
+                <select [(ngModel)]="nuevoUsuario.activo" name="nuevoEstado" required>
+                  <option [ngValue]="true">Activo</option>
+                  <option [ngValue]="false">Inactivo</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          @if (nuevoUsuarioError) {
+            <p class="usuarios-editor-mensaje usuarios-editor-mensaje--error">{{ nuevoUsuarioError }}</p>
+          }
+          <div class="usuarios-editor-acciones">
+            <div></div>
+            <div>
+              <button
+                type="button"
+                class="usuarios-editor-boton usuarios-editor-boton--secundario"
+                [disabled]="creandoUsuario"
+                (click)="cerrarNuevoUsuario()">
+                Cancelar
+              </button>
+              <button type="submit" class="usuarios-editor-boton" [disabled]="creandoUsuario">
+                {{ creandoUsuario ? 'Creando…' : 'Añadir usuario' }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+    </div>
+  }
+
+  @if (usuarioSeleccionado) {
+    <div class="usuarios-modal-fondo" role="presentation" (click)="cerrarDetalle()">
+      <section
+        class="usuarios-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="usuarios-detalle-titulo"
+        (click)="$event.stopPropagation()">
+        <header class="usuarios-modal-cabecera">
+          <div class="usuarios-modal-perfil">
+            <div class="usuarios-modal-avatar-contenedor">
+              <span class="usuarios-modal-avatar" aria-hidden="true">
+                {{ iniciales(usuarioSeleccionado.nombre) }}
+              </span>
+              @if (usuarioSeleccionado.fotoUrl) {
+                <img
+                  class="usuarios-modal-foto"
+                  [src]="usuarioSeleccionado.fotoUrl"
+                  alt="Foto de perfil de {{ usuarioSeleccionado.nombre }}" />
+              }
+            </div>
+            <div>
+              <span class="usuarios-modal-etiqueta">Datos del usuario</span>
+              <h2 id="usuarios-detalle-titulo">{{ usuarioSeleccionado.nombre }}</h2>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="usuarios-modal-cerrar"
+            aria-label="Cerrar detalles"
+            (click)="cerrarDetalle()">
+            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+          </button>
+        </header>
+
+        @if (modoEdicion && usuarioEditado) {
+          <form class="usuarios-editor" (ngSubmit)="guardarUsuario()">
+            <section class="usuarios-seccion">
+              <h3>Información personal</h3>
+              <div class="usuarios-editor-grid">
+                <label>Nombre
+                  <input [(ngModel)]="usuarioEditado.nombreCompleto" name="nombre" required maxlength="60" autocomplete="given-name" />
+                </label>
+                <label>Apellido paterno
+                  <input [(ngModel)]="usuarioEditado.apellidopa" name="apellidopa" required maxlength="40" autocomplete="family-name" />
+                </label>
+                <label>Apellido materno
+                  <input [(ngModel)]="usuarioEditado.apellidoma" name="apellidoma" maxlength="40" autocomplete="family-name" />
+                </label>
+                <label>Fecha de nacimiento
+                  <input type="date" [(ngModel)]="usuarioEditado.fechaNacimiento" name="fechaNacimiento" />
+                </label>
+                <label>RUT
+                  <input [(ngModel)]="usuarioEditado.rut" name="rut" maxlength="12" inputmode="text" />
+                </label>
+                <label>Teléfono
+                  <input [(ngModel)]="usuarioEditado.telefono" name="telefono" required maxlength="16" inputmode="tel" autocomplete="tel" />
+                </label>
+              </div>
+            </section>
+
+            <section class="usuarios-seccion">
+              <h3>Dirección</h3>
+              <div class="usuarios-editor-grid">
+                <label>Región
+                  <select [ngModel]="usuarioEditado.direccionDatos.region" name="region" (ngModelChange)="alCambiarRegion($event)">
+                    <option value="" disabled>Selecciona una región</option>
+                    @for (region of regiones; track region.id) {
+                      <option [value]="region.nombre">{{ region.nombre }}</option>
+                    }
+                  </select>
+                </label>
+                <label>Comuna
+                  <select [(ngModel)]="usuarioEditado.direccionDatos.comuna" name="comuna" [disabled]="!comunasDisponibles.length">
+                    <option value="" disabled>Selecciona una comuna</option>
+                    @for (comuna of comunasDisponibles; track comuna) {
+                      <option [value]="comuna">{{ comuna }}</option>
+                    }
+                  </select>
+                </label>
+                <label>Calle<input [(ngModel)]="usuarioEditado.direccionDatos.calle" name="calle" /></label>
+                <label>Número<input [(ngModel)]="usuarioEditado.direccionDatos.numero" name="numero" /></label>
+              </div>
+            </section>
+
+            <section class="usuarios-seccion">
+              <h3>Cuenta</h3>
+              <div class="usuarios-editor-grid">
+                <label>Tipo de cuenta
+                  <select [(ngModel)]="usuarioEditado.idRol" name="idRol" required>
+                    @for (rol of roles; track rol.id) {
+                      <option [value]="rol.id">{{ rol.nombre === 'Usuario' ? 'Adulto mayor' : rol.nombre }}</option>
+                    }
+                  </select>
+                </label>
+                <label>Correo
+                  <input type="email" [(ngModel)]="usuarioEditado.correo" name="correo" required maxlength="100" autocomplete="email" inputmode="email" />
+                </label>
+                <label class="usuarios-estado-editor">
+                  Estado de la cuenta
+                  <select [(ngModel)]="usuarioEditado.activo" name="activo">
+                    <option [ngValue]="true">Activa</option>
+                    <option [ngValue]="false">Inactiva</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            @if (errorEdicion) { <p class="usuarios-editor-mensaje usuarios-editor-mensaje--error">{{ errorEdicion }}</p> }
+            @if (mensajeEdicion) { <p class="usuarios-editor-mensaje">{{ mensajeEdicion }}</p> }
+
+            <div class="usuarios-editor-acciones">
+              <button type="button" class="usuarios-editor-boton usuarios-editor-boton--reset" [disabled]="guardando || enviandoEnlace" (click)="enviarCambioContrasena()">
+                {{ enviandoEnlace ? 'Enviando enlace…' : 'Enviar enlace de cambio de contraseña' }}
+              </button>
+              <div>
+                <button type="button" class="usuarios-editor-boton usuarios-editor-boton--secundario" (click)="cerrarDetalle()">Cancelar</button>
+                <button type="submit" class="usuarios-editor-boton" [disabled]="guardando">
+                  {{ guardando ? 'Guardando…' : 'Guardar cambios' }}
+                </button>
+              </div>
+            </div>
+          </form>
+        } @else {
+        <div class="usuarios-detalles">
+          <section class="usuarios-seccion">
+            <h3>Información personal</h3>
+            <div class="usuarios-datos-grid">
+              <div><span>RUT</span><strong>{{ usuarioSeleccionado.rut }}</strong></div>
+              <div><span>Fecha de nacimiento</span><strong>{{ formatearFecha(usuarioSeleccionado.fechaNacimiento) }}</strong></div>
+              <div class="usuarios-dato-amplio"><span>Dirección</span><strong>{{ usuarioSeleccionado.direccion }}</strong></div>
+            </div>
+          </section>
+
+          <section class="usuarios-seccion">
+            <h3>Contacto y cuenta</h3>
+            <div class="usuarios-datos-grid">
+              <div><span>Correo</span><strong>{{ usuarioSeleccionado.correo }}</strong></div>
+              <div><span>Teléfono</span><strong>{{ usuarioSeleccionado.telefono }}</strong></div>
+              <div><span>Tipo de cuenta</span><strong>{{ usuarioSeleccionado.rol }}</strong></div>
+              <div>
+                <span>Estado</span>
+                <strong class="usuarios-estado-detalle"
+                  [class.inactivo]="!usuarioSeleccionado.activo">
+                  {{ usuarioSeleccionado.activo ? 'Activo' : 'Inactivo' }}
+                </strong>
+              </div>
+            </div>
+          </section>
+        </div>
+        }
+      </section>
+    </div>
+  }
 </ion-content>

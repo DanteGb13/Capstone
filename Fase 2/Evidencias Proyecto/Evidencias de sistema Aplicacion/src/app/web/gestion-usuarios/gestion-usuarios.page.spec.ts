@@ -119,6 +119,7 @@ describe('GestionUsuariosPage', () => {
   let component: GestionUsuariosPage;
   let fixture: ComponentFixture<GestionUsuariosPage>;
   let rpc: ReturnType<typeof vi.fn>;
+  let invoke: ReturnType<typeof vi.fn>;
   let crearAlerta: ReturnType<typeof vi.fn>;
 
   /** Rol que devuelve la alerta al cerrarse. Lo cambia cada test. */
@@ -134,6 +135,7 @@ describe('GestionUsuariosPage', () => {
     // misma cadena falsa que `from`: si no, los RPC (traer roles, cambiar
     // rol) resolverían undefined y el componente creería que fallaron.
     rpc = vi.fn((nombre: string) => falso.rpc(nombre));
+    invoke = vi.fn().mockResolvedValue({ data: { ok: true }, error: null });
 
     crearAlerta = vi.fn().mockImplementation(async () => ({
       present: vi.fn(),
@@ -148,7 +150,7 @@ describe('GestionUsuariosPage', () => {
         {
           provide: SupabaseService,
           useValue: {
-            getClient: () => ({ from: falso.from, rpc }),
+            getClient: () => ({ from: falso.from, rpc, functions: { invoke } }),
           },
         },
         { provide: AlertController, useValue: { create: crearAlerta } },
@@ -256,7 +258,7 @@ describe('GestionUsuariosPage', () => {
     expect(component.pagina).toBe(1);
   });
 
-  it('pagina el listado de 10 en 10', async () => {
+  it('pagina el listado de 12 en 12', async () => {
     const muchas = Array.from({ length: 23 }, (_, i) => ({
       id: `p${i}`,
       nombre: `Persona ${i}`,
@@ -270,12 +272,12 @@ describe('GestionUsuariosPage', () => {
     }));
     await preparar({ 'from:usuario': { data: muchas, error: null } });
 
-    expect(component.paginas).toBe(3);
-    expect(component.visibles).toHaveLength(10);
+    expect(component.paginas).toBe(2);
+    expect(component.visibles).toHaveLength(12);
 
-    component.irPagina(3);
-    expect(component.visibles).toHaveLength(3);
-    expect(component.visibles[0].id).toBe('p20');
+    component.irPagina(2);
+    expect(component.visibles).toHaveLength(11);
+    expect(component.visibles[0].id).toBe('p12');
   });
 
   it('vuelve al listado desde los otros slides y limpia el aviso', async () => {
@@ -360,9 +362,11 @@ describe('GestionUsuariosPage', () => {
 
     await component.cambiarEstado(true);
 
-    expect(rpc).toHaveBeenCalledWith('admin_cambiar_estado', {
-      p_usuario: 'u2',
-      p_activo: true,
+    expect(invoke).toHaveBeenCalledWith('admin-cambiar-estado', {
+      body: {
+        usuario_id: 'u2',
+        activo: true,
+      }
     });
     expect(idUsuario(component, 'u2').activo).toBe(true);
     expect(component.mensaje).toContain('activada');
