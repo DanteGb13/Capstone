@@ -37,6 +37,21 @@ export const routes: Routes = [
     loadComponent: () => import('./web/contactanos/contactanos.page').then((m) => m.ContactanosPage)
   },
   {
+    path: 'historial-web',
+    loadComponent: () => import('./web/historial-web/historial-web.page').then((m) => m.HistorialWebPage),
+    canActivate: [soloWebGuard, rolGuard(['Familiar'])]
+  },
+  {
+    path: 'mi-plan',
+    loadComponent: () => import('./web/mi-plan/mi-plan.page').then((m) => m.MiPlanPage),
+    canActivate: [soloWebGuard, rolGuard(['Familiar'])]
+  },
+  {
+    path: 'ubicaciones',
+    loadComponent: () => import('./web/ubicaciones/ubicaciones.page').then((m) => m.UbicacionesPage),
+    canActivate: [soloWebGuard, rolGuard(['Familiar'])]
+  },
+  {
     // Acceso de la web: pantalla, servicio y guards propios, todos dentro de
     // `web/acceso/`. No reutiliza nada del acceso de la app (`/login`).
     path: 'acceso',
@@ -80,7 +95,7 @@ export const routes: Routes = [
   {
     path: 'mi-perfil',
     loadComponent: () => import('./web/mi-perfil/mi-perfil.page').then((m) => m.MiPerfilPage),
-    canActivate: [rolGuard(['Administrador'])]
+    canActivate: [rolGuard(['Administrador', 'Familiar'])]
   },
   {
     path: 'cambiar-contrasena',

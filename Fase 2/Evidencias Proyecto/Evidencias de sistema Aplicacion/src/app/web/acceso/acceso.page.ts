@@ -77,7 +77,14 @@ export class AccesoPage {
             this.router.navigate([destino], { replaceUrl: true });
             return;
           }
-          await this.mostrarAlerta('No pudimos abrir tu cuenta', this.avisoDeRolDesconocido(estado.rol));
+          if (estado.rol === 'Usuario') {
+            await this.mostrarAlerta(
+              'Acceso exclusivo para Familias',
+              'El acceso web es exclusivo para Administradores y Familiares. Usa la aplicación móvil para continuar.'
+            );
+          } else {
+            await this.mostrarAlerta('No pudimos abrir tu cuenta', this.avisoDeRolDesconocido(estado.rol));
+          }
           break;
         }
 

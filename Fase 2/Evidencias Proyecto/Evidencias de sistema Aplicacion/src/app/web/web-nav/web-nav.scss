@@ -408,8 +408,6 @@
     border-radius: 0;
     background: none;
     color: #443c56;
-    /* El menú de abajo ya está abierto: el botón deja de ser un interruptor. */
-    pointer-events: none;
   }
 
   .web-nav__perfil-boton:hover,
@@ -425,11 +423,15 @@
 
   .web-nav__perfil-menu {
     position: static;
-    display: block;
+    display: none;
     min-width: 0;
     border-radius: 0;
     background: none;
     box-shadow: none;
+  }
+
+  .web-nav__perfil-menu--abierto {
+    display: block;
   }
 
   .web-nav__perfil-menu a,

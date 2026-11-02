@@ -1,0 +1,132 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <main class="ubicaciones-pagina">
+    <aside class="ubicaciones-panel">
+      <div class="ubicaciones-panel__titulo">
+        <div>
+          <label for="persona-ubicacion">Ubicación de:</label>
+        </div>
+      </div>
+      @if (cargando && personas.length === 0) {
+        <ion-spinner name="crescent"></ion-spinner>
+      } @else if (personas.length) {
+        <div class="selector-persona">
+          @if (fotoPersona()) {
+            <img class="selector-persona__foto" [src]="fotoPersona()" alt="" />
+          } @else {
+            <span class="selector-persona__iniciales">{{ inicialesPersona() }}</span>
+          }
+          <select id="persona-ubicacion" [value]="personaId" (change)="seleccionarPersona($event)">
+            @for (persona of personas; track idPersona(persona)) {
+              <option [value]="idPersona(persona)">
+                {{ persona.adulto_mayor?.nombre }} {{ persona.adulto_mayor?.apellidopa }}
+              </option>
+            }
+          </select>
+        </div>
+      } @else {
+        <p>No tienes personas vinculadas.</p>
+      }
+
+      @if (personaSeleccionada) {
+        <section class="ubicacion-detalle">
+          <div class="persona-card">
+            <div class="persona-card__info">
+              <span>Información:</span>
+              <small>Edad: {{ edadPersona }}</small>
+              <small>Teléfono: {{ telefonoPersona }}</small>
+              <small>Domicilio: {{ direccionCasaPersona }}</small>
+            </div>
+          </div>
+          @if (ubicacion) {
+            <div class="ubicacion-dato">
+              <span class="ubicacion-dato__titulo">Dirección actual</span>
+              <p>{{ ubicacion.direccionTexto || 'Ubicación actualizada' }}</p>
+            </div>
+            <div class="ubicacion-dato ubicacion-dato--actualizacion">
+              <span class="ubicacion-dato__titulo">Última actualización</span>
+              <strong>{{ ubicacion.fecha | date:'medium' }}</strong>
+            </div>
+          }
+        </section>
+      }
+      <section class="lugares-seccion lugares-seccion--seguras">
+        <h3>Zonas seguras</h3>
+        @if (zonasSeguras.length) {
+          @for (zona of zonasSeguras; track zona.nombre) {
+            <button
+              type="button"
+              class="lugar-item lugar-item--zona"
+              [class.lugar-item--activo]="zonaSeleccionadaId === zona.id"
+              (click)="mostrarZonaSegura(zona)">
+              <ion-icon class="lugar-item__zona-icono" name="shield-checkmark-outline" aria-hidden="true"></ion-icon>
+              <div>
+                <strong>{{ zona.nombre }}</strong>
+                @if (zona.direccion) {
+                  <small>{{ zona.direccion }}</small>
+                }
+              </div>
+              <span class="lugar-item__accion">Ver en mapa</span>
+            </button>
+          }
+        } @else {
+          <p class="lugares-vacio">No hay zonas seguras registradas.</p>
+        }
+      </section>
+    </aside>
+
+    <aside class="ubicaciones-historial" aria-label="Ubicaciones visitadas">
+      <section class="lugares-seccion">
+        <h3>Ubicaciones visitadas</h3>
+        @if (ubicacionesVisitadas.length) {
+          @for (lugar of ubicacionesVisitadas; track lugar.fecha + lugar.direccion) {
+            <div class="lugar-item">
+              <span class="lugar-item__icono lugar-item__icono--historial" aria-hidden="true">●</span>
+              <div>
+                <strong>{{ lugar.direccion || 'Ubicación registrada' }}</strong>
+                <small>{{ lugar.fecha | date:'dd/MM/yyyy, HH:mm' }}</small>
+              </div>
+            </div>
+          }
+        } @else {
+          <p class="lugares-vacio">No hay ubicaciones recientes.</p>
+        }
+      </section>
+      <button type="button" class="descarga-app" (click)="abrirModalDescarga()">
+        <ion-icon name="download-outline" aria-hidden="true"></ion-icon>
+        <span>Para ver más</span>
+        <small>Descarga la aplicación</small>
+      </button>
+    </aside>
+
+    <section class="ubicaciones-mapa-panel" aria-label="Mapa en tiempo real">
+      <div id="ubicaciones-mapa"></div>
+      <button
+        type="button"
+        class="volver-ubicacion"
+        aria-label="Volver a la ubicación actual"
+        title="Ubicación actual"
+        (click)="volverUbicacionActual()">
+        ◎
+      </button>
+    </section>
+  </main>
+
+  <ion-modal
+    [isOpen]="mostrarModalDescarga"
+    (didDismiss)="cerrarModalDescarga()"
+    class="descarga-app-modal">
+    <ng-template>
+      <div class="descarga-app-modal__contenido">
+        <button
+          type="button"
+          class="descarga-app-modal__cerrar"
+          aria-label="Cerrar"
+          (click)="cerrarModalDescarga()">
+          <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+        </button>
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>

@@ -26,6 +26,12 @@ const ENLACES_PUBLICOS = [
   { ruta: '/contactanos', etiqueta: 'Contáctanos' }
 ];
 
+const ENLACES_USUARIO = [
+  { ruta: '/historial-web', etiqueta: 'Historial' },
+  { ruta: '/mi-plan', etiqueta: 'Mi plan' },
+  { ruta: '/ubicaciones', etiqueta: 'Ubicaciones' }
+];
+
 @Component({
   selector: 'app-web-nav',
   templateUrl: 'web-nav.html',
@@ -95,7 +101,19 @@ export class WebNav implements OnInit {
   }
 
   get enlaces() {
-    return this.esAdmin ? ENLACES_ADMIN : ENLACES_PUBLICOS;
+    if (this.esAdmin) return ENLACES_ADMIN;
+    if (this.esUsuarioWeb) return ENLACES_USUARIO;
+    return ENLACES_PUBLICOS;
+  }
+
+  get esUsuarioWeb(): boolean {
+    const rol = this.perfil?.rol?.toLowerCase();
+    return rol === 'familiar';
+  }
+
+  get tienePerfilWeb(): boolean {
+    const rol = this.perfil?.rol?.toLowerCase();
+    return this.esAdmin || rol === 'familiar';
   }
 
   alternarMenu() {
@@ -113,7 +131,6 @@ export class WebNav implements OnInit {
 
   alternarPerfil() {
     this.perfilAbierto = !this.perfilAbierto;
-    if (this.perfilAbierto) this.menuAbierto = false;
     this.refrescar();
   }
 

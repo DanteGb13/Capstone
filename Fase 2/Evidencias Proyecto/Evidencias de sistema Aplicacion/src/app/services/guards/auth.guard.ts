@@ -171,7 +171,20 @@ export const authGuard: CanActivateFn = async () => {
   const estado = await obtenerEstadoUsuario(supabaseService);
 
   if (!estado.autenticado) {
-    router.navigate(['/login'], { replaceUrl: true });
+    router.navigate([Capacitor.isNativePlatform() ? '/login' : '/acceso'], { replaceUrl: true });
+    return false;
+  }
+
+  // Las rutas de `pages/` pertenecen exclusivamente a la app móvil. En la
+  // web vuelven al panel correspondiente y nunca se intenta mostrar una
+  // pantalla de Capacitor dentro del navegador.
+  if (!Capacitor.isNativePlatform()) {
+    const destino = estado.rol === 'Administrador'
+      ? '/panel-control'
+      : estado.rol === 'Familiar'
+        ? '/historial-web'
+        : '/inicio';
+    router.navigate([destino], { replaceUrl: true });
     return false;
   }
 

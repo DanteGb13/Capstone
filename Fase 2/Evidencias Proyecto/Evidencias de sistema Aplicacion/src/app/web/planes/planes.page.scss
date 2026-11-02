@@ -1,7 +1,231 @@
-/* ------------------------------------------------------------------
-   Planes (/planes)
+:host {
+  display: block;
+}
 
-   Esta página no tiene reglas exclusivas en global.scss: todo lo que
-   usa son clases compartidas por varias páginas de la web y se
-   dejaron ahí para que haya un solo lugar donde corregirlas.
-   ------------------------------------------------------------------ */
+:host ::ng-deep .web-page.planes {
+  position: relative;
+  max-width: 1320px;
+  box-sizing: border-box;
+  padding: 34px 18px 54px;
+}
+
+.planes__encabezado {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.planes__encabezado h1 {
+  margin: 0 0 10px;
+  color: #202b4d;
+  font-size: clamp(34px, 4vw, 44px);
+  letter-spacing: -1px;
+  line-height: 1.1;
+}
+
+.planes__grilla {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px;
+  align-items: stretch;
+}
+
+.plan {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 30px 34px 28px;
+  border: 1px solid rgba(45, 51, 73, 0.08);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(48, 39, 82, 0.09);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.plan:hover {
+  box-shadow: 0 14px 34px rgba(48, 39, 82, 0.14);
+  transform: translateY(-4px);
+}
+
+.plan__icono {
+  height: 105px;
+  margin-bottom: 14px;
+  color: #7738d9;
+  text-align: center;
+}
+
+.plan__icono svg {
+  width: 100px;
+  height: 100px;
+  fill: currentColor;
+}
+
+.plan__icono--adulto svg {
+  width: 112px;
+  height: 100px;
+}
+
+.plan__icono--adulto .plan__escudo {
+  fill: #7738d9;
+}
+
+.plan__icono--adulto .plan__marca {
+  fill: none;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 5;
+}
+
+.plan h2 {
+  min-height: 58px;
+  margin: 0 0 10px;
+  color: #202b4d;
+  font-size: 26px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.plan__intro {
+  min-height: 64px;
+  margin: 0 0 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #eef0f5;
+  color: #263552;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.plan__beneficios {
+  flex: 1;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.plan__beneficios li {
+  position: relative;
+  margin-bottom: 12px;
+  padding-left: 28px;
+  color: #263552;
+  font-size: 15px;
+  line-height: 1.38;
+}
+
+.plan__beneficios li::before {
+  position: absolute;
+  top: 1px;
+  left: 0;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #7738d9;
+  color: #fff;
+  content: "✓";
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 17px;
+  text-align: center;
+}
+
+.plan__boton {
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  border: 1px solid #7738d9;
+  border-radius: 10px;
+  color: #7738d9;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(119, 56, 217, 0.08);
+}
+
+.plan__boton--principal {
+  border-color: #7738d9;
+  background: linear-gradient(135deg, #6f35d6, #7738d9);
+  color: #fff;
+}
+
+.planes-ayuda {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 42px;
+  padding: 16px 22px;
+  border: 1px solid rgba(45, 51, 73, 0.06);
+  border-radius: 14px;
+  background: linear-gradient(90deg, #fff 0%, #fff 82%, #fbfaff 100%);
+  box-shadow: 0 9px 26px rgba(35, 47, 82, 0.10);
+  color: #354763;
+  font-size: 12px;
+}
+
+.planes-ayuda p {
+  margin: 0;
+}
+
+.planes-ayuda__corazon {
+  color: #7738d9;
+  font-size: 26px;
+}
+
+.planes-ayuda__separador {
+  width: 1px;
+  height: 34px;
+  background: #dcdff0;
+}
+
+.planes-ayuda a {
+  color: #7738d9;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+@media (max-width: 900px) {
+  .planes__grilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan:last-child {
+    grid-column: 1 / -1;
+    max-width: calc(50% - 13px);
+    width: 100%;
+    justify-self: center;
+  }
+
+  .planes-ayuda {
+    grid-template-columns: auto 1fr;
+  }
+
+  .planes-ayuda__separador {
+    display: none;
+  }
+}
+
+@media (max-width: 620px) {
+  :host ::ng-deep .web-page.planes {
+    padding: 28px 16px 48px;
+  }
+
+  .planes__encabezado h1 {
+    font-size: 32px;
+  }
+
+  .planes__grilla {
+    grid-template-columns: 1fr;
+  }
+
+  .plan:last-child {
+    grid-column: auto;
+    max-width: none;
+  }
+
+  .plan h2,
+  .plan__intro {
+    min-height: 0;
+  }
+}

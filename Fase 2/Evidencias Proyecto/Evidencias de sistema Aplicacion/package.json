@@ -49,6 +49,7 @@
     "leaflet": "^1.9.4",
     "qrcode": "^1.5.4",
     "rxjs": "~7.8.0",
+    "transbank-sdk": "^6.1.1",
     "tslib": "^2.3.0"
   },
   "devDependencies": {

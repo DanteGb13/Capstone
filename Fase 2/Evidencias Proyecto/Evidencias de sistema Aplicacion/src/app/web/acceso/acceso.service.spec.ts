@@ -72,8 +72,8 @@ describe('AccesoService', () => {
   describe('destinoPara', () => {
     it('reparte cada rol a su panel', () => {
       expect(servicio().destinoPara('Administrador')).toBe('/panel-control');
-      expect(servicio().destinoPara('Familiar')).toBe('/cuidador');
-      expect(servicio().destinoPara('Usuario')).toBe('/adulto-mayor');
+      expect(servicio().destinoPara('Familiar')).toBe('/historial-web');
+      expect(servicio().destinoPara('Usuario')).toBeNull();
     });
 
     it('devuelve null para un rol que no se reconoce', () => {

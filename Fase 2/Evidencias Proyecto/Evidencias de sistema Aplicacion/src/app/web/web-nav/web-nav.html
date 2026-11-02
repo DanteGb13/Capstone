@@ -41,12 +41,10 @@
         </div>
 
         <!--
-          A la derecha: el mini perfil del Administrador si lo es; si no, el
-          botón de acceso cuando no hay sesión, o la salida cuando la hay. Un
-          Familiar o un Usuario entra por /acceso pero no tiene panel propio,
-          así que para ellos sólo queda cerrar sesión.
+          Administradores y Familiares usan el mini perfil. Los demás roles
+          ven el acceso o el botón de salida según tengan sesión.
         -->
-        @if (esAdmin) {
+        @if (tienePerfilWeb) {
           <div class="web-nav__perfil">
             <button
               type="button"
@@ -68,7 +66,7 @@
               } @else {
                 <span class="web-nav__avatar">{{ iniciales || 'AD' }}</span>
               }
-              <span class="web-nav__perfil-nombre">{{ perfil?.nombreCompleto || 'Administrador' }}</span>
+              <span class="web-nav__perfil-nombre">{{ perfil?.nombreCompleto || (esAdmin ? 'Administrador' : 'Familiar') }}</span>
             </button>
 
             <div

@@ -1,0 +1,258 @@
+:host {
+  display: block;
+}
+
+:host ::ng-deep .web-page.mi-plan {
+  max-width: 1320px;
+  box-sizing: border-box;
+  padding: 34px 18px 54px;
+}
+
+.mi-plan__encabezado {
+  margin-bottom: 28px;
+  text-align: left;
+}
+
+.mi-plan__encabezado h1 {
+  margin: 0;
+  color: #202b4d;
+  font-size: clamp(34px, 4vw, 44px);
+  letter-spacing: -1px;
+  line-height: 1.1;
+}
+
+.mi-plan__vigencia {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+  margin: 10px 0 0;
+  color: #263552;
+  font-size: 14px;
+}
+
+.mi-plan__vigencia strong {
+  color: #202b4d;
+}
+
+.mi-plan__acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.mi-plan__accion {
+  min-height: 38px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mi-plan__accion--mejorar {
+  border: 1px solid #7738d9;
+  background: #7738d9;
+  color: #fff;
+}
+
+.mi-plan__accion--anular {
+  border: 1px solid #c43d4b;
+  background: #fff;
+  color: #c43d4b;
+}
+
+.mi-plan__grilla {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 26px;
+  align-items: stretch;
+}
+
+.plan {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 30px 34px 28px;
+  border: 1px solid rgba(45, 51, 73, 0.08);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 28px rgba(48, 39, 82, 0.09);
+}
+
+.plan--destacado {
+  outline: 3px solid #7738d9;
+  outline-offset: 5px;
+}
+
+.plan__icono {
+  height: 105px;
+  margin-bottom: 14px;
+  color: #7738d9;
+  text-align: center;
+}
+
+.plan__icono svg {
+  width: 100px;
+  height: 100px;
+  fill: currentColor;
+}
+
+.plan__icono--adulto svg {
+  width: 112px;
+  height: 100px;
+}
+
+.plan__icono--adulto .plan__escudo {
+  fill: #7738d9;
+}
+
+.plan__icono--adulto .plan__marca {
+  fill: none;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 5;
+}
+
+.plan h2 {
+  min-height: 58px;
+  margin: 0 0 10px;
+  color: #202b4d;
+  font-size: 26px;
+  line-height: 1.15;
+  text-align: center;
+}
+
+.plan__intro {
+  min-height: 64px;
+  margin: 0 0 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #eef0f5;
+  color: #263552;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.plan__beneficios {
+  flex: 1;
+  margin: 0 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.plan__beneficios li {
+  position: relative;
+  margin-bottom: 12px;
+  padding-left: 28px;
+  color: #263552;
+  font-size: 15px;
+  line-height: 1.38;
+}
+
+.plan__beneficios li::before {
+  position: absolute;
+  top: 1px;
+  left: 0;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #7738d9;
+  color: #fff;
+  content: "✓";
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 17px;
+  text-align: center;
+}
+
+.plan__precio {
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  border: 1px solid #7738d9;
+  border-radius: 10px;
+  color: #7738d9;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+}
+
+.plan__precio--principal {
+  border-color: #7738d9;
+  background: linear-gradient(135deg, #6f35d6, #7738d9);
+  color: #fff;
+}
+
+.plan__precio--pagable {
+  width: 100%;
+  background: #fff;
+  cursor: pointer;
+}
+
+.plan__precio--pagable:hover {
+  background: #7738d9;
+  color: #fff;
+}
+
+.plan__precio--pagable.plan__precio--actual,
+.plan__precio--pagable.plan__precio--actual:hover {
+  border-color: #2d8a4b;
+  background: #2d8a4b;
+  color: #fff;
+  cursor: default;
+  opacity: 1;
+}
+
+.plan__precio--pagable:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.mi-plan__estado {
+  max-width: 620px;
+  margin: 0 auto 24px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #eaf8ef;
+  color: #1d6f39;
+  text-align: center;
+}
+
+.mi-plan__estado--error {
+  background: #fff1f1;
+  color: #a52a2a;
+}
+
+@media (max-width: 900px) {
+  .mi-plan__grilla {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan:last-child {
+    grid-column: 1 / -1;
+    max-width: calc(50% - 13px);
+    width: 100%;
+    justify-self: center;
+  }
+}
+
+@media (max-width: 620px) {
+  :host ::ng-deep .web-page.mi-plan {
+    padding: 28px 16px 48px;
+  }
+
+  .mi-plan__grilla {
+    grid-template-columns: 1fr;
+  }
+
+  .plan:last-child {
+    grid-column: auto;
+    max-width: none;
+  }
+
+  .plan h2,
+  .plan__intro {
+    min-height: 0;
+  }
+}

@@ -1,0 +1,135 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <main class="web-page mi-plan">
+    <header class="mi-plan__encabezado">
+      <h1>Mi plan</h1>
+      @if (planActual && inicioPlan && terminoPlan) {
+        <p class="mi-plan__vigencia">
+          <strong>{{ planActual === 'mensual' ? 'Plan mensual' : 'Plan anual' }}</strong>
+          <span>Inicio: {{ inicioPlan }}</span>
+          <span>Termina: {{ terminoPlan }}</span>
+        </p>
+        <div class="mi-plan__acciones">
+          @if (planActual === 'mensual') {
+            <button type="button" class="mi-plan__accion mi-plan__accion--mejorar" (click)="mejorarSuscripcion()">
+              Mejorar suscripción
+            </button>
+          }
+          <button type="button" class="mi-plan__accion mi-plan__accion--anular" (click)="anularSuscripcion()">
+            Anular suscripción
+          </button>
+        </div>
+      }
+    </header>
+
+    @if (procesando) {
+      <p class="mi-plan__estado" role="status">Procesando pago...</p>
+    } @else if (mensajePago) {
+      <p class="mi-plan__estado" [class.mi-plan__estado--error]="errorPago" role="status">
+        {{ mensajePago }}
+      </p>
+    }
+
+    <section class="mi-plan__grilla" aria-label="Planes disponibles">
+      <article class="plan">
+        <div class="plan__icono plan__icono--adulto" aria-hidden="true">
+          <svg viewBox="0 0 100 100" role="img">
+            <circle cx="34" cy="30" r="13"></circle>
+            <path d="M10 73V60c0-13 9-21 24-21s24 8 24 21v13z"></path>
+            <circle cx="68" cy="30" r="11"></circle>
+            <path d="M58 73V61c0-10 6-17 16-17 7 0 13 3 16 8"></path>
+            <path class="plan__escudo" d="M67 49l17 7v10c0 11-7 19-17 23-10-4-17-12-17-23V56z"></path>
+            <path class="plan__marca" d="M58 70l6 6 12-14"></path>
+          </svg>
+        </div>
+        <h2>Adulto mayor sin cuidador</h2>
+        <p class="plan__intro">Funciones disponibles para el adulto mayor sin cuidador asociado.</p>
+
+        <ul class="plan__beneficios">
+          <li>Podrá utilizar las funcionalidades disponibles para su usuario.</li>
+          <li>Podrá comunicarse directamente con servicios de emergencia.</li>
+          <li>Podrá utilizar el botón de emergencia para solicitar ayuda.</li>
+          <li>Podrá recibir notificaciones relacionadas con alertas y emergencias.</li>
+          <li>Podrá visualizar su ubicación y estado dentro de la aplicación.</li>
+        </ul>
+
+        <div class="plan__precio plan__precio--principal">Plan gratuito</div>
+      </article>
+
+      <article
+        class="plan"
+        [class.plan--destacado]="planDestacado">
+        <div class="plan__icono" aria-hidden="true">
+          <svg viewBox="0 0 100 100" role="img">
+            <circle cx="50" cy="25" r="13"></circle>
+            <circle cx="23" cy="39" r="10"></circle>
+            <circle cx="77" cy="39" r="10"></circle>
+            <path d="M31 82V58c0-13 8-22 19-22s19 9 19 22v24z"></path>
+            <path d="M10 82V62c0-8 5-14 13-14 7 0 12 4 14 10v24z"></path>
+            <path d="M90 82V62c0-8-5-14-13-14-7 0-12 4-14 10v24z"></path>
+          </svg>
+        </div>
+        <h2>Plan mensual</h2>
+        <p class="plan__intro">Herramientas de seguimiento y cuidado para familias.</p>
+
+        <ul class="plan__beneficios">
+          <li>Visualización de ubicación del adulto mayor.</li>
+          <li>Actualización de ubicación con una frecuencia limitada.</li>
+          <li>Notificaciones de alertas.</li>
+          <li>Botón de emergencia que contactará a todos los cuidadores asociados.</li>
+          <li>Llamada rápida al adulto mayor.</li>
+          <li>Historial de alertas correspondiente a la última semana.</li>
+          <li>Hasta 2 adultos mayores y 2 cuidadores por familia.</li>
+        </ul>
+
+        <button
+          class="plan__precio plan__precio--pagable"
+          [class.plan__precio--actual]="planActual === 'mensual'"
+          type="button"
+          (click)="pagar('mensual')"
+          [disabled]="procesando || planActual === 'mensual'">
+          {{ planActual === 'mensual' ? 'Plan actual' : '$7.000 al mes' }}
+        </button>
+      </article>
+
+      <article id="plan-anual" class="plan">
+        <div class="plan__icono" aria-hidden="true">
+          <svg viewBox="0 0 100 100" role="img">
+            <path d="M16 31h68L50 12z"></path>
+            <rect x="20" y="36" width="9" height="39"></rect>
+            <rect x="46" y="36" width="9" height="39"></rect>
+            <rect x="71" y="36" width="9" height="39"></rect>
+            <rect x="14" y="75" width="72" height="10" rx="2"></rect>
+            <rect x="10" y="85" width="80" height="5" rx="2"></rect>
+          </svg>
+        </div>
+        <h2>Plan anual</h2>
+        <p class="plan__intro">El acompañamiento más completo para familias y cuidadores.</p>
+
+        <ul class="plan__beneficios">
+          <li>Visualización y actualización de la ubicación.</li>
+          <li>Notificaciones de alertas y emergencias.</li>
+          <li>Alertas mediante llamada, vibración y sonido.</li>
+          <li>Botón de emergencia que contactará a todos los cuidadores asociados.</li>
+          <li>Llamada rápida al adulto mayor.</li>
+          <li>Historial completo de alertas.</li>
+          <li>Hasta 4 adultos mayores y 4 cuidadores por familia.</li>
+          <li>Monitoreo de signos vitales mediante reloj.</li>
+          <li>Historial de signos vitales.</li>
+        </ul>
+
+        <button
+          class="plan__precio plan__precio--pagable"
+          [class.plan__precio--actual]="planActual === 'anual'"
+          type="button"
+          (click)="pagar('anual')"
+          [disabled]="procesando || planActual === 'anual'">
+          {{ planActual === 'anual'
+            ? 'Plan actual'
+            : '$70.000 al año' }}
+        </button>
+      </article>
+    </section>
+  </main>
+</ion-content>
