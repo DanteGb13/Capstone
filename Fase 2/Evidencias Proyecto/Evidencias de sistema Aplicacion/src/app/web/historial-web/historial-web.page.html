@@ -2,7 +2,43 @@
 
 <ion-content class="web-contenido">
   <main class="web-page">
-    <h1>Historial</h1>
-    <p class="descripcion">Consulta el historial de cuidados y eventos registrados.</p>
+    <div class="historial-filtros" role="group" aria-label="Filtros del historial">
+      <button type="button" [class.activo]="filtroActivo === 'todos'" (click)="filtroActivo = 'todos'">
+        Todos
+      </button>
+      <button type="button" [class.activo]="filtroActivo === 'pagados'" (click)="filtroActivo = 'pagados'">
+        Pagados
+      </button>
+      <button type="button" [class.activo]="filtroActivo === 'cancelados'" (click)="filtroActivo = 'cancelados'">
+        Cancelados
+      </button>
+    </div>
+
+    @if (cargando) {
+      <p class="historial-estado">Cargando movimientos…</p>
+    } @else if (!movimientosFiltrados.length) {
+      <p class="historial-estado">Aún no tienes movimientos de facturación.</p>
+    } @else {
+      <div class="historial-tabla" role="table" aria-label="Historial de facturación">
+        <div class="historial-tabla__fila historial-tabla__encabezado" role="row">
+          <span>Fecha</span><span>Motivo</span><span>Plan</span><span>Monto</span><span>Comprobante</span>
+        </div>
+        @for (movimiento of movimientosFiltrados; track movimiento.fecha + movimiento.concepto) {
+          <div class="historial-tabla__fila" role="row">
+            <span>{{ formatearFecha(movimiento.fecha) }}</span>
+            <span>{{ movimiento.concepto }}</span>
+            <span class="historial-plan">{{ movimiento.plan }}</span>
+            <strong class="historial-monto">{{ movimiento.monto ? ('$ ' + formatearMonto(movimiento.monto)) : '—' }}</strong>
+            @if (movimiento.esPago && movimiento.estado === 'autorizada') {
+              <button type="button" class="historial-comprobante" (click)="descargarComprobante(movimiento)">
+                Descargar
+              </button>
+            } @else {
+              <span class="historial-estado-badge historial-estado-badge--cancelado">{{ estadoVisible(movimiento) }}</span>
+            }
+          </div>
+        }
+      </div>
+    }
   </main>
 </ion-content>

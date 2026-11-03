@@ -103,6 +103,37 @@
         </ul>
       </div>
 
+      @if (perfil?.rol === 'Administrador') {
+        <div class="panel-tarjeta panel-tarjeta--bloque">
+          <h2 class="panel-subtitulo">Suscripciones activas</h2>
+          @if (cargandoSuscripciones) {
+            <p class="panel-texto">Cargando suscripciones…</p>
+          } @else {
+            @if (mensajeSuscripciones) {
+              <p class="panel-texto">{{ mensajeSuscripciones }}</p>
+            }
+            @for (suscripcion of suscripciones; track suscripcion.id) {
+              @if (suscripcion.estado === 'activa') {
+                <div class="panel-datos__fila">
+                  <div>
+                    <strong>{{ suscripcion.nombre || suscripcion.correo || suscripcion.usuario_id }}</strong>
+                    <span>{{ suscripcion.correo }}</span>
+                  </div>
+                  <div>
+                    <span>{{ suscripcion.plan_codigo === 'anual' ? 'Plan anual' : 'Plan mensual' }}</span>
+                    @if (suscripcion.plan_codigo === 'anual' && suscripcion.plan_anterior_codigo === 'mensual') {
+                      <button type="button" (click)="revertirMejora(suscripcion)">
+                        Revertir mejora
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            }
+          }
+        </div>
+      }
+
     }
 
     <!-- ===================================================== -->

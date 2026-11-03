@@ -1,6 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { IonContent } from '@ionic/angular';
-import { ActivatedRoute } from '@angular/router';
+import { AlertController, IonContent } from '@ionic/angular';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { WebNav } from '../web-nav/web-nav';
 import { CodigoPlan, PagosService, PlanPago } from '../../services/pagos/pagos';
 
@@ -8,11 +8,12 @@ import { CodigoPlan, PagosService, PlanPago } from '../../services/pagos/pagos';
   selector: 'app-mi-plan',
   templateUrl: 'mi-plan.page.html',
   styleUrls: ['mi-plan.page.scss'],
-  imports: [WebNav, IonContent],
+  imports: [WebNav, IonContent, RouterLink],
 })
 export class MiPlanPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly pagos = inject(PagosService);
+  private readonly alertCtrl = inject(AlertController);
 
   procesando = false;
   mensajePago = '';
@@ -20,11 +21,12 @@ export class MiPlanPage implements OnInit {
   planActual: CodigoPlan = this.pagos.obtenerPlanActualCacheado();
   inicioPlan = this.formatearFecha(this.pagos.obtenerDetallesPlanCacheados().iniciaEn);
   terminoPlan = this.formatearFecha(this.pagos.obtenerDetallesPlanCacheados().venceEn);
+  inicioPlanRaw = this.pagos.obtenerDetallesPlanCacheados().iniciaEn ?? '';
+  terminoPlanRaw = this.pagos.obtenerDetallesPlanCacheados().venceEn ?? '';
   planDestacado = false;
   precioMejoraAnual = 70000;
   creditoMejoraAnual = 0;
   precioMejoraAnualTexto = '70.000';
-
   async ngOnInit(): Promise<void> {
     const token = this.route.snapshot.queryParamMap.get('token_ws');
     if (!token) {
@@ -34,6 +36,7 @@ export class MiPlanPage implements OnInit {
     }
 
     this.procesando = true;
+    const alertaProcesando = await this.mostrarProcesandoPago();
     try {
       const resultado = await this.pagos.confirmar(token);
       this.errorPago = !resultado.ok;
@@ -44,10 +47,12 @@ export class MiPlanPage implements OnInit {
       this.errorPago = true;
       this.mensajePago = error instanceof Error ? error.message : 'No se pudo confirmar el pago.';
     } finally {
+      await alertaProcesando.dismiss();
       this.procesando = false;
       await this.cargarPlanActual();
       await this.cargarPrecioMejora();
       window.history.replaceState({}, document.title, window.location.pathname);
+      await this.mostrarResultadoPago(this.errorPago, this.mensajePago);
     }
   }
 
@@ -71,6 +76,8 @@ export class MiPlanPage implements OnInit {
       this.planActual = detalles.codigo;
       this.inicioPlan = this.formatearFecha(detalles.iniciaEn);
       this.terminoPlan = this.formatearFecha(detalles.venceEn);
+      this.inicioPlanRaw = detalles.iniciaEn ?? '';
+      this.terminoPlanRaw = detalles.venceEn ?? '';
     } catch {
       this.planActual = null;
       this.inicioPlan = '';
@@ -91,6 +98,24 @@ export class MiPlanPage implements OnInit {
     return new Intl.NumberFormat('es-CL').format(monto);
   }
 
+  get porcentajeVigencia(): number {
+    const inicio = new Date(this.inicioPlanRaw).getTime();
+    const termino = new Date(this.terminoPlanRaw).getTime();
+    const ahora = Date.now();
+    if (!inicio || !termino || termino <= inicio) return 0;
+    return Math.max(0, Math.min(100, Math.round(((ahora - inicio) / (termino - inicio)) * 100)));
+  }
+
+  get diasRestantes(): number {
+    const termino = new Date(this.terminoPlanRaw).getTime();
+    if (!termino) return 0;
+    return Math.max(0, Math.ceil((termino - Date.now()) / 86400000));
+  }
+
+  get precioPlanActual(): string {
+    return this.planActual === 'mensual' ? '$ 7.000 al mes' : '$ 70.000 al año';
+  }
+
   async pagar(plan: PlanPago): Promise<void> {
     this.procesando = true;
     this.mensajePago = '';
@@ -103,6 +128,7 @@ export class MiPlanPage implements OnInit {
       this.errorPago = true;
       this.mensajePago = error instanceof Error ? error.message : 'No se pudo iniciar el pago.';
       this.procesando = false;
+      await this.mostrarResultadoPago(true, this.mensajePago);
     }
   }
 
@@ -122,15 +148,7 @@ export class MiPlanPage implements OnInit {
     try {
       const { data: dentroDeReembolso, error } = await this.pagos.obtenerCancelacion();
       if (error) throw error;
-      const confirmado = dentroDeReembolso
-        ? window.confirm(
-            '¿Estás seguro de que deseas perder todos los beneficios de tu suscripción? ' +
-            'Si confirmas, la devolución se procesará dentro de 48 horas hábiles.'
-          )
-        : window.confirm(
-            'Tu suscripción continuará activa hasta el final del período pagado. ' +
-            'La cancelación se realizará para el siguiente período y no habrá devolución.'
-          );
+      const confirmado = await this.confirmarCancelacion(dentroDeReembolso);
       if (!confirmado) return;
 
       const resultado = await this.pagos.cancelar();
@@ -145,6 +163,65 @@ export class MiPlanPage implements OnInit {
       this.mensajePago = error instanceof Error ? error.message : 'No se pudo anular la suscripción.';
     } finally {
       this.procesando = false;
+      if (this.mensajePago) {
+        await this.mostrarResultadoAccion(
+          this.errorPago ? 'No se pudo anular la suscripción' : 'Suscripción anulada',
+          this.mensajePago,
+          this.errorPago,
+        );
+      }
     }
+  }
+
+  private async mostrarProcesandoPago() {
+    const alerta = await this.alertCtrl.create({
+      header: 'Procesando pago',
+      message: 'Estamos verificando tu suscripción…',
+      backdropDismiss: false,
+      buttons: [],
+    });
+    await alerta.present();
+    return alerta;
+  }
+
+  private async mostrarResultadoPago(error: boolean, mensaje: string): Promise<void> {
+    const alerta = await this.alertCtrl.create({
+      header: error ? 'No se pudo completar el pago' : 'Pago completado',
+      message: mensaje,
+      buttons: ['Entendido'],
+    });
+    await alerta.present();
+  }
+
+  private async mostrarResultadoAccion(titulo: string, mensaje: string, error = false): Promise<void> {
+    const alerta = await this.alertCtrl.create({
+      header: titulo,
+      message: mensaje,
+      cssClass: error ? 'alerta-accion-error' : 'alerta-accion-exito',
+      buttons: ['Entendido'],
+    });
+    await alerta.present();
+  }
+
+  private async confirmarCancelacion(dentroDeReembolso: boolean): Promise<boolean> {
+    const alerta = await this.alertCtrl.create({
+      header: dentroDeReembolso ? 'Anular suscripción' : 'Cancelación al finalizar el período',
+      message: dentroDeReembolso
+        ? '¿Estás seguro de que deseas perder todos los beneficios de tu suscripción? ' +
+          'La devolución se procesará dentro de 48 horas hábiles.'
+        : 'Tu suscripción continuará activa hasta el final del período pagado. ' +
+          'La cancelación será para el siguiente período y no habrá devolución.',
+      buttons: [
+        { text: 'Volver', role: 'cancel' },
+        {
+          text: dentroDeReembolso ? 'Sí, anular' : 'Programar cancelación',
+          role: 'destructive',
+          handler: () => true,
+        },
+      ],
+    });
+    await alerta.present();
+    const resultado = await alerta.onDidDismiss();
+    return resultado.role === 'destructive';
   }
 }

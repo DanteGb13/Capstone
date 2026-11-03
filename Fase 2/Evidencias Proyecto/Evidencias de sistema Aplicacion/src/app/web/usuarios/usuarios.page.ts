@@ -237,7 +237,7 @@ export class UsuariosPage implements OnInit {
     this.refrescar();
   }
 
-  descargarUsuariosCsv(): void {
+  async descargarUsuariosCsv(): Promise<void> {
     const usuarios = this.usuariosDescarga;
     if (!usuarios.length) return;
 
@@ -275,7 +275,24 @@ export class UsuariosPage implements OnInit {
     enlace.download = `usuarios_${new Date().toISOString().slice(0, 10)}.csv`;
     enlace.click();
     URL.revokeObjectURL(url);
+    await this.registrarDescarga('Usuarios', usuarios.length);
     this.cerrarDescarga();
+  }
+
+  private async registrarDescarga(reporte: string, elementos: number): Promise<void> {
+    await this.supabaseService.getClient().rpc('registrar_evento_seguridad', {
+      p_accion: 'exportacion_reporte',
+      p_tabla: 'usuario',
+      p_detalle: {
+        reporte,
+        tipo: 'usuarios',
+        formato: 'csv',
+        elementos,
+        tipoCuenta: this.descargaTipoCuenta,
+        estado: this.descargaEstado,
+        periodo: this.descargaPeriodo
+      }
+    });
   }
 
   private obtenerLimitePeriodo(periodo: string): Date | null {

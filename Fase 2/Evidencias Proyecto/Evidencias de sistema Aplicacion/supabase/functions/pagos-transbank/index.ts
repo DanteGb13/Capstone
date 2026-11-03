@@ -348,6 +348,14 @@ Deno.serve(async (request) => {
           inicia_en: inicia.toISOString(),
           vence_en: vence.toISOString(),
           credito_prorrateado_clp: creditoProrrateado,
+          plan_anterior_codigo: mensualAnteriorId ? "mensual" : null,
+          mejora_en: mensualAnteriorId ? new Date().toISOString() : null,
+          plan_anterior_inicia_en: mensualAnteriorId
+            ? (await clienteAdmin.from("suscripcion").select("inicia_en").eq("id", mensualAnteriorId).single()).data?.inicia_en
+            : null,
+          plan_anterior_vence_en: mensualAnteriorId
+            ? (await clienteAdmin.from("suscripcion").select("vence_en").eq("id", mensualAnteriorId).single()).data?.vence_en
+            : null,
           actualizada_en: new Date().toISOString(),
         })
         .eq("id", transaccion.suscripcion_id);

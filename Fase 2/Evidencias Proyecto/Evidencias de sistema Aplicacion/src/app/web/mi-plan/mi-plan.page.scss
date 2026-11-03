@@ -2,6 +2,11 @@
   display: block;
 }
 
+:host,
+:host ::ng-deep .mi-plan {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
 :host ::ng-deep .web-page.mi-plan {
   max-width: 1320px;
   box-sizing: border-box;
@@ -13,6 +18,7 @@
   text-align: left;
 }
 
+
 .mi-plan__encabezado h1 {
   margin: 0;
   color: #202b4d;
@@ -21,31 +27,134 @@
   line-height: 1.1;
 }
 
-.mi-plan__vigencia {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 18px;
-  align-items: center;
-  margin: 10px 0 0;
-  color: #263552;
-  font-size: 14px;
+.mi-plan__suscripcion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 14px 24px;
+  margin-top: 18px;
+  padding: 22px 24px;
+  border: 1px solid #ebe8ef;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 3px 18px rgba(45, 43, 58, 0.06);
 }
 
-.mi-plan__vigencia strong {
+.mi-plan__tipo {
+  display: inline-flex;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #edf9f1;
+  color: #247a39;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.mi-plan__resumen h2 {
+  margin: 8px 0 14px;
   color: #202b4d;
+  font-size: 24px;
+}
+
+.mi-plan__precio {
+  display: inline-block;
+  margin: -8px 0 14px;
+  color: #7738d9;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.mi-plan__fechas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.mi-plan__fechas div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 12px;
+  border-left: 2px solid #7738d9;
+}
+
+.mi-plan__fechas span {
+  color: #777087;
+  font-size: 12px;
+}
+
+.mi-plan__fechas strong {
+  color: #263552;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mi-plan__grafico {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  place-self: center;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(#7738d9 var(--progreso), #ebe6f1 0);
+}
+
+.mi-plan__grafico::before {
+  position: absolute;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: #fff;
+  content: '';
+}
+
+.mi-plan__grafico-centro {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.mi-plan__grafico-centro strong {
+  color: #7738d9;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.mi-plan__grafico-centro span {
+  width: 66px;
+  margin-top: 5px;
+  color: #777087;
+  font-size: 10px;
+  text-transform: lowercase;
 }
 
 .mi-plan__acciones {
   display: flex;
   gap: 10px;
-  margin-top: 12px;
+  grid-column: 1 / -1;
+  padding-top: 4px;
 }
 
 .mi-plan__accion {
-  min-height: 38px;
-  padding: 8px 14px;
+  box-sizing: border-box;
+  min-width: 190px;
+  min-height: 40px;
+  margin: 0;
+  padding: 9px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 8px;
+  font-family: inherit;
   font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -53,6 +162,12 @@
   border: 1px solid #7738d9;
   background: #7738d9;
   color: #fff;
+}
+
+.mi-plan__accion--historial {
+  border: 1px solid #3157c8;
+  background: #fff;
+  color: #3157c8;
 }
 
 .mi-plan__accion--anular {
@@ -254,5 +369,28 @@
   .plan h2,
   .plan__intro {
     min-height: 0;
+  }
+
+  .mi-plan__suscripcion {
+    grid-template-columns: 1fr;
+  }
+
+  .mi-plan__grafico {
+    grid-row: 2;
+  }
+
+  .mi-plan__fechas {
+    grid-template-columns: 1fr;
+  }
+
+  .mi-plan__acciones {
+    grid-column: 1;
+    flex-direction: column;
+  }
+
+  .mi-plan__accion {
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
   }
 }

@@ -27,9 +27,10 @@ const ENLACES_PUBLICOS = [
 ];
 
 const ENLACES_USUARIO = [
-  { ruta: '/historial-web', etiqueta: 'Historial' },
+  { ruta: '/inicio', etiqueta: 'Inicio' },
   { ruta: '/mi-plan', etiqueta: 'Mi plan' },
-  { ruta: '/ubicaciones', etiqueta: 'Ubicaciones' }
+  { ruta: '/ubicaciones', etiqueta: 'Ubicaciones' },
+  { ruta: '/contactanos', etiqueta: 'Contáctanos' }
 ];
 
 @Component({

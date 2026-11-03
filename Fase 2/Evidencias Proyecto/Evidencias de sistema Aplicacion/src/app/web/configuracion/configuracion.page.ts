@@ -4,6 +4,20 @@ import { Capacitor } from '@capacitor/core';
 import { environment } from '../../../environments/environment';
 import { PerfilCacheService, PerfilResumen } from '../../services/perfil-cache/perfil-cache.service';
 import { WebNav } from '../web-nav/web-nav';
+import { SupabaseClientProvider } from '../../core/supabase-client';
+
+interface SuscripcionAdministrada {
+  id: string;
+  usuario_id: string;
+  nombre: string;
+  correo: string;
+  plan_codigo: 'mensual' | 'anual' | string;
+  estado: string;
+  inicia_en: string | null;
+  vence_en: string | null;
+  mejora_en: string | null;
+  plan_anterior_codigo: string | null;
+}
 
 @Component({
   selector: 'app-configuracion',
@@ -18,6 +32,9 @@ export class ConfiguracionPage implements OnInit {
 
   cargando = true;
   perfil: PerfilResumen | null = null;
+  suscripciones: SuscripcionAdministrada[] = [];
+  cargandoSuscripciones = false;
+  mensajeSuscripciones = '';
 
   readonly hostSupabase = this.hostDe(environment.supabaseUrl);
   readonly entorno = environment.production ? 'Producción' : 'Desarrollo';
@@ -25,10 +42,45 @@ export class ConfiguracionPage implements OnInit {
 
   private cdr = inject(ChangeDetectorRef);
   private perfilCache = inject(PerfilCacheService);
+  private clienteSupabase = inject(SupabaseClientProvider).get();
 
   async ngOnInit() {
     this.perfil = await this.perfilCache.perfil();
+    if (this.perfil?.rol === 'Administrador') await this.cargarSuscripciones();
     this.cargando = false;
+    this.refrescar();
+  }
+
+  async cargarSuscripciones(): Promise<void> {
+    this.cargandoSuscripciones = true;
+    this.mensajeSuscripciones = '';
+    const { data, error } = await this.clienteSupabase.functions.invoke('admin-suscripciones', {
+      body: { accion: 'listar' },
+    });
+    if (error) {
+      this.mensajeSuscripciones = 'No se pudieron cargar las suscripciones.';
+    } else {
+      this.suscripciones = Array.isArray(data?.suscripciones) ? data.suscripciones : [];
+    }
+    this.cargandoSuscripciones = false;
+    this.refrescar();
+  }
+
+  async revertirMejora(suscripcion: SuscripcionAdministrada): Promise<void> {
+    if (!window.confirm(`¿Revertir la mejora de ${suscripcion.nombre || suscripcion.correo}? Se aplicará reembolso si corresponde.`)) {
+      return;
+    }
+    this.cargandoSuscripciones = true;
+    const { error } = await this.clienteSupabase.functions.invoke('admin-suscripciones', {
+      body: { accion: 'revertir_mejora', suscripcion_id: suscripcion.id },
+    });
+    this.cargandoSuscripciones = false;
+    if (error) {
+      this.mensajeSuscripciones = 'No se pudo revertir la mejora.';
+    } else {
+      this.mensajeSuscripciones = 'Mejora revertida y plan mensual restaurado.';
+      await this.cargarSuscripciones();
+    }
     this.refrescar();
   }
 

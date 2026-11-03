@@ -1,70 +1,88 @@
 <app-web-nav />
 
 <ion-content class="web-contenido">
-  <div class="web-page web-page--centrado">
-
-    <div class="panel-cabecera">
-      <h1>Reportes</h1>
-      <p class="descripcion">Exporta los datos del panel para llevarlos a una planilla.</p>
+  <div class="web-page reportes-page">
+    <div class="reportes-filtros">
+      <label class="reportes-fecha">
+        <span>Desde</span>
+        <input type="date" [(ngModel)]="fechaDesde" (ngModelChange)="alCambiarFiltros()" aria-label="Fecha desde">
+      </label>
+      <label class="reportes-fecha">
+        <span>Hasta</span>
+        <input type="date" [(ngModel)]="fechaHasta" (ngModelChange)="alCambiarFiltros()" aria-label="Fecha hasta">
+      </label>
+      <select aria-label="Filtrar por reporte" [(ngModel)]="filtroReporte" (ngModelChange)="alCambiarFiltros()">
+        <option value="">Todos los reportes</option>
+        <option value="panel">Panel de control</option>
+        <option value="analitica">Analítica</option>
+        <option value="usuarios">Usuarios</option>
+      </select>
+      <select aria-label="Filtrar por formato" [(ngModel)]="filtroFormato" (ngModelChange)="alCambiarFiltros()">
+        <option value="">Todos los formatos</option>
+        <option value="PDF">PDF</option>
+        <option value="CSV">CSV</option>
+      </select>
+      <button type="button" class="reportes-panel__actualizar" (click)="cargar()" [disabled]="cargando">
+        {{ cargando ? 'Actualizando…' : 'Actualizar' }}
+      </button>
     </div>
 
-    <!--
-      Dos controles del contenido, no del navbar: cuántos días y qué se
-      exporta. El botón de abajo se adapta a lo elegido acá.
-    -->
-    <ion-segment class="web-segment" [value]="dias" (ionChange)="alCambiarRango($event)">
-      @for (rango of rangos; track rango) {
-        <ion-segment-button [value]="rango">
-          <ion-label>{{ rango }} días</ion-label>
-        </ion-segment-button>
-      }
-    </ion-segment>
-
-    <ion-segment class="web-segment" [value]="reporte" (ionChange)="alCambiarReporte($event)">
-      <ion-segment-button value="uso">
-        <ion-label>Uso</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="cuentas">
-        <ion-label>Cuentas</ion-label>
-      </ion-segment-button>
-    </ion-segment>
-
-    <div class="panel-tarjeta panel-tarjeta--bloque">
-      @if (reporte === 'uso') {
-        <h2 class="panel-subtitulo">Eventos de analítica</h2>
-        <p class="panel-texto">
-          Últimos {{ dias }} días: fecha, página, tipo de evento y plataforma.
-          Se descarga en formato CSV, que se abre en Excel o Google Sheets.
-        </p>
-        <button
-          type="button"
-          class="panel-boton"
-          [disabled]="exportando"
-          (click)="exportar()">
-          {{ exportando ? 'Preparando…' : 'Descargar CSV de uso' }}
-        </button>
+      @if (cargando) {
+        <p class="panel-vacio">Cargando registros…</p>
+      } @else if (error) {
+        <p class="panel-error">{{ error }}</p>
+      } @else if (!descargasFiltradas.length) {
+        <p class="panel-vacio">No hay descargas registradas.</p>
       } @else {
-        <h2 class="panel-subtitulo">Cuentas registradas</h2>
-        <p class="panel-texto">
-          Todas las cuentas: nombre, correo, teléfono, rol, estado y cuándo
-          entraron por última vez. No incluye contraseña ni dirección.
-        </p>
-        <button
-          type="button"
-          class="panel-boton"
-          [disabled]="exportando"
-          (click)="exportar()">
-          {{ exportando ? 'Preparando…' : 'Descargar CSV de cuentas' }}
-        </button>
+        <div class="reportes-tabla-contenedor">
+          <table class="reportes-tabla">
+            <thead>
+              <tr>
+                <th>Reporte</th>
+                <th>Administrador</th>
+                <th>Fecha</th>
+                <th>Formato</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (descarga of descargasPagina; track descarga.id) {
+                <tr>
+                  <td><strong>{{ descarga.reporte }}</strong></td>
+                  <td>{{ descarga.administrador }}</td>
+                  <td>{{ formatearFecha(descarga.fecha) }}</td>
+                  <td><span class="reportes-formato">{{ descarga.formato }}</span></td>
+                  <td>
+                    <button type="button" class="reportes-descarga" (click)="volverADescargar(descarga)">
+                      Descargar
+                    </button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="reportes-paginacion">
+          <label>
+            Filas por página
+            <select [(ngModel)]="filasPorPagina" (ngModelChange)="alCambiarFiltros()">
+              <option [ngValue]="10">10</option>
+              <option [ngValue]="20">20</option>
+              <option [ngValue]="50">50</option>
+            </select>
+          </label>
+          <span class="reportes-paginacion__resumen">
+            {{ numeroPrimerRegistro }}–{{ numeroUltimoRegistro }} de {{ descargasFiltradas.length }} registros
+          </span>
+          <div>
+            <button type="button" aria-label="Primera página" [disabled]="filaActual === 1" (click)="cambiarPagina(1)">«</button>
+            <button type="button" aria-label="Página anterior" [disabled]="filaActual === 1" (click)="cambiarPagina(filaActual - 1)">‹</button>
+            <strong>{{ filaActual }} / {{ totalPaginas }}</strong>
+            <button type="button" [disabled]="filaActual === totalPaginas" (click)="cambiarPagina(filaActual + 1)">›</button>
+            <button type="button" aria-label="Última página" [disabled]="filaActual === totalPaginas" (click)="cambiarPagina(totalPaginas)">»</button>
+          </div>
+        </div>
       }
-      @if (mensaje) {
-        <p class="panel-texto panel-texto--menor">{{ mensaje }}</p>
-      }
-      <p class="panel-texto panel-texto--menor">
-        Toda exportación queda registrada en la bitácora de seguridad con quién
-        la hizo, cuándo y cuántas filas llevaba.
-      </p>
-    </div>
 
   </div>
 </ion-content>

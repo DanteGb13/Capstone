@@ -3,3 +3,127 @@
   margin: 0 auto;
   padding: 3rem 1rem;
 }
+
+.historial-filtros {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  padding: 0.55rem;
+  width: fit-content;
+  border: 1px solid #e8e1f3;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 24px rgba(53, 34, 91, 0.08);
+}
+
+.historial-filtros button {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  color: #675c78;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.historial-filtros button:hover:not(.activo) {
+  color: #7738d9;
+  background: #f5f0fc;
+}
+
+.historial-filtros button.activo {
+  color: #fff;
+  border-color: #7738d9;
+  background: linear-gradient(135deg, #7738d9, #9848df);
+  box-shadow: 0 6px 16px rgba(119, 56, 217, 0.28);
+}
+
+.historial-comprobante {
+  border: 1px solid #34a853;
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  color: #247a39;
+  background: #edf9f1;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.historial-comprobante:hover {
+  color: #fff;
+  border-color: #247a39;
+  background: #34a853;
+}
+
+.historial-estado {
+  color: #665f78;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.historial-tabla {
+  overflow-x: auto;
+  border: 1px solid #e7e1ef;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 14px 38px rgba(53, 34, 91, 0.09);
+}
+
+.historial-tabla__fila {
+  min-width: 760px;
+  display: grid;
+  grid-template-columns: 1.25fr 2fr 1fr 0.75fr 0.75fr;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #ece9f1;
+  color: #40374e;
+}
+
+.historial-tabla__fila:not(.historial-tabla__encabezado):nth-child(odd) {
+  background: #fbf9fe;
+}
+
+.historial-tabla__fila:not(.historial-tabla__encabezado):hover {
+  background: #f5effc;
+}
+
+.historial-tabla__fila:last-child {
+  border-bottom: 0;
+}
+
+.historial-tabla__encabezado {
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(90deg, #7738d9, #8d42dc);
+  border-bottom: 0;
+}
+
+.historial-plan {
+  color: #5d5270;
+  font-weight: 600;
+}
+
+.historial-monto {
+  color: #27304f;
+}
+
+.historial-estado-badge {
+  justify-self: start;
+  padding: 0.38rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.historial-estado-badge--cancelado {
+  color: #b42318;
+  background: #fee4e2;
+}
+
+@media (max-width: 600px) {
+  .historial-filtros {
+    flex-wrap: wrap;
+  }
+}

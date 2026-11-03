@@ -13,15 +13,101 @@
 /* Aviso secundario bajo la descripción. En Analítica explica por qué el
    ranking no incluye el propio panel, que es justo lo que alguien va a
    preguntarse al ver cifras más bajas de lo esperado. */
-.panel-aviso {
-  margin-top: 0.6rem;
-  padding: 0.7rem 0.9rem;
-  border-left: 3px solid #c4b5fd;
-  border-radius: 0 8px 8px 0;
-  background-color: #f3effc;
-  color: #4b3f66;
-  font-size: 0.88rem;
-  line-height: 1.55;
+.analitica-filtros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.analitica-filtro {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  padding: 0.65rem 0.85rem;
+  position: relative;
+  border: 1px solid #dfdae9;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.analitica-filtro details {
+  width: 100%;
+  position: relative;
+}
+
+.analitica-filtro summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #241b38;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.analitica-filtro summary::-webkit-details-marker { display: none; }
+.analitica-filtro summary::after { content: '⌄'; color: #777386; font-size: 1rem; }
+
+.analitica-menu {
+  min-width: 190px;
+  position: absolute;
+  top: calc(100% + 0.65rem);
+  left: -0.85rem;
+  z-index: 20;
+  padding: 0.35rem;
+  border: 1px solid #c8c8c8;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(36, 27, 56, 0.18);
+}
+
+.analitica-menu button {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #29262d;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.analitica-menu button:hover {
+  background: #edf4ff;
+  color: #174ea6;
+}
+
+.analitica-menu button.activo {
+  background: #1a73e8;
+  color: #fff;
+}
+
+.analitica-descarga {
+  min-height: 46px;
+  padding: 0 1.25rem;
+  border: 0;
+  border-radius: 10px;
+  background: #7c3aed;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 5px 14px rgba(124, 58, 237, 0.18);
+}
+
+.analitica-descarga:hover { background: #6d28d9; }
+.analitica-descarga:disabled { opacity: 0.55; cursor: wait; }
+
+.analitica-filtro:focus-within {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
 }
 
 .panel-tarjetas {
@@ -88,7 +174,86 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #813edc 0%, #6c2dd4 100%);
+  background: #8b5cf6;
+}
+
+.analitica-ranking {
+  min-height: 280px;
+  margin-top: 1rem;
+  padding: 1.2rem;
+  border: 1px solid #e2ddf2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.analitica-ranking .panel-grafico__cabecera {
+  min-height: auto;
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #eeeaf4;
+}
+
+.analitica-ranking .panel-grafico__cabecera h2 {
+  position: relative;
+  padding-left: 0.75rem;
+  color: #241b38;
+  font-size: 1.08rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+}
+
+.analitica-ranking .panel-grafico__cabecera h2::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  position: absolute;
+  left: 0;
+  top: 50%;
+  border-radius: 999px;
+  background: #8b5cf6;
+  transform: translateY(-50%);
+}
+
+.analitica-ranking__grafico {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding-top: 0.5rem;
+}
+
+.analitica-ranking__fila {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.9fr) minmax(180px, 2fr) 48px;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.analitica-ranking__ruta {
+  overflow-wrap: anywhere;
+  color: #4a4652;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.analitica-ranking__barra {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eeeaf4;
+}
+
+.analitica-ranking__barra span {
+  display: block;
+  height: 100%;
+  min-width: 3px;
+  border-radius: inherit;
+  background: #8b5cf6;
+}
+
+.analitica-ranking__fila strong {
+  text-align: right;
+  color: #241b38;
+  font-variant-numeric: tabular-nums;
 }
 
 .panel-ranking__valor {
@@ -102,6 +267,23 @@
 
 
 @media (max-width: 600px) {
+  .analitica-filtros {
+    grid-template-columns: 1fr;
+  }
+
+  .analitica-descarga {
+    width: 100%;
+  }
+
+  .analitica-ranking__fila {
+    grid-template-columns: 1fr 48px;
+    row-gap: 0.35rem;
+  }
+
+  .analitica-ranking__barra {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
   /* En pantalla chica el ranking aprieta la barra hasta hacerla inútil: se
      apila el nombre arriba y la barra con su número abajo. */
   .panel-ranking__fila {

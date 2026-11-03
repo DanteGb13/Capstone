@@ -3,33 +3,47 @@
 <ion-content class="web-contenido">
   <main class="web-page mi-plan">
     <header class="mi-plan__encabezado">
-      <h1>Mi plan</h1>
       @if (planActual && inicioPlan && terminoPlan) {
-        <p class="mi-plan__vigencia">
-          <strong>{{ planActual === 'mensual' ? 'Plan mensual' : 'Plan anual' }}</strong>
-          <span>Inicio: {{ inicioPlan }}</span>
-          <span>Termina: {{ terminoPlan }}</span>
-        </p>
-        <div class="mi-plan__acciones">
-          @if (planActual === 'mensual') {
-            <button type="button" class="mi-plan__accion mi-plan__accion--mejorar" (click)="mejorarSuscripcion()">
-              Mejorar suscripción
+        <div class="mi-plan__suscripcion">
+          <div class="mi-plan__resumen">
+            <span class="mi-plan__tipo">Suscripción activa</span>
+            <h2>{{ planActual === 'mensual' ? 'Plan mensual' : 'Plan anual' }}</h2>
+            <p class="mi-plan__precio">{{ precioPlanActual }}</p>
+            <div class="mi-plan__fechas">
+              <div>
+                <span>Inicio</span>
+                <strong>{{ inicioPlan }}</strong>
+              </div>
+              <div>
+                <span>Vigencia hasta</span>
+                <strong>{{ terminoPlan }}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="mi-plan__grafico" [style.--progreso]="porcentajeVigencia + '%'">
+            <div class="mi-plan__grafico-centro">
+              <strong>{{ diasRestantes }}</strong>
+              <span>{{ diasRestantes === 1 ? 'día' : 'días' }}</span>
+            </div>
+          </div>
+
+          <div class="mi-plan__acciones">
+            <a routerLink="/historial-web" class="mi-plan__accion mi-plan__accion--historial">
+              Ver historial de facturación
+            </a>
+            @if (planActual === 'mensual') {
+              <button type="button" class="mi-plan__accion mi-plan__accion--mejorar" (click)="mejorarSuscripcion()">
+                Mejorar suscripción
+              </button>
+            }
+            <button type="button" class="mi-plan__accion mi-plan__accion--anular" (click)="anularSuscripcion()">
+              Anular suscripción
             </button>
-          }
-          <button type="button" class="mi-plan__accion mi-plan__accion--anular" (click)="anularSuscripcion()">
-            Anular suscripción
-          </button>
+          </div>
         </div>
       }
     </header>
-
-    @if (procesando) {
-      <p class="mi-plan__estado" role="status">Procesando pago...</p>
-    } @else if (mensajePago) {
-      <p class="mi-plan__estado" [class.mi-plan__estado--error]="errorPago" role="status">
-        {{ mensajePago }}
-      </p>
-    }
 
     <section class="mi-plan__grilla" aria-label="Planes disponibles">
       <article class="plan">
@@ -88,8 +102,10 @@
           [class.plan__precio--actual]="planActual === 'mensual'"
           type="button"
           (click)="pagar('mensual')"
-          [disabled]="procesando || planActual === 'mensual'">
-          {{ planActual === 'mensual' ? 'Plan actual' : '$7.000 al mes' }}
+          [disabled]="procesando || planActual === 'mensual' || planActual === 'anual'">
+          {{ planActual === 'mensual'
+            ? 'Plan actual'
+            : (planActual === 'anual' ? 'Plan superior activo' : '$7.000 al mes') }}
         </button>
       </article>
 

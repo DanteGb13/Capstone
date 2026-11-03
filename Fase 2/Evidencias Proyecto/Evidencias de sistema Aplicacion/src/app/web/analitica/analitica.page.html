@@ -3,40 +3,42 @@
 <ion-content class="web-contenido">
   <div class="web-page">
 
-    <div class="panel-cabecera">
-      <h1>Analítica</h1>
-      <p class="descripcion">Uso real de la aplicación en los últimos {{ dias }} días.</p>
-      <p class="panel-aviso">
-        Las rutas del panel de administración no se registran: mirar tu propio
-        panel no es uso de la app y contaminaría el ranking.
-      </p>
+    <div class="analitica-filtros" aria-label="Filtros de analítica">
+      <div class="analitica-filtro">
+        <details (toggle)="alAlternarMenu($event)">
+          <summary>Últimos {{ dias }} días</summary>
+          <div class="analitica-menu">
+            @for (rango of rangos; track rango) {
+              <button type="button" [class.activo]="dias === rango" (click)="alCambiarRango($event, rango)">Últimos {{ rango }} días</button>
+            }
+          </div>
+        </details>
+      </div>
+      <div class="analitica-filtro">
+        <details (toggle)="alAlternarMenu($event)">
+          <summary>{{ etiquetaPlataforma }}</summary>
+          <div class="analitica-menu">
+            <button type="button" [class.activo]="!filtroPlataforma" (click)="alCambiarPlataforma($event, '')">Todas</button>
+            <button type="button" [class.activo]="filtroPlataforma === 'web'" (click)="alCambiarPlataforma($event, 'web')">Web</button>
+            <button type="button" [class.activo]="filtroPlataforma === 'app'" (click)="alCambiarPlataforma($event, 'app')">Aplicación</button>
+          </div>
+        </details>
+      </div>
+      <div class="analitica-filtro">
+        <details (toggle)="alAlternarMenu($event)">
+          <summary>{{ etiquetaRol }}</summary>
+          <div class="analitica-menu">
+            <button type="button" [class.activo]="!filtroRol" (click)="alCambiarRol($event, '')">Todos</button>
+            <button type="button" [class.activo]="filtroRol === 'adulto mayor'" (click)="alCambiarRol($event, 'adulto mayor')">Adulto mayor</button>
+            <button type="button" [class.activo]="filtroRol === 'cuidador'" (click)="alCambiarRol($event, 'cuidador')">Cuidador</button>
+            <button type="button" [class.activo]="filtroRol === 'familia'" (click)="alCambiarRol($event, 'familia')">Familia</button>
+          </div>
+        </details>
+      </div>
+      <button class="analitica-descarga" type="button" [disabled]="cargando" (click)="descargarPdf()">
+        Descargar PDF
+      </button>
     </div>
-
-    <!--
-      Los dos segmentos viven fuera del bloque de "cargando" a propósito:
-      cambiar de rango o de plataforma tiene que ser posible incluso mientras
-      se carga, y no empujan el resto de la página porque son controles del
-      contenido, no del navbar.
-    -->
-    <ion-segment class="web-segment" [value]="dias" (ionChange)="alCambiarRango($event)">
-      @for (rango of rangos; track rango) {
-        <ion-segment-button [value]="rango">
-          <ion-label>{{ rango }} días</ion-label>
-        </ion-segment-button>
-      }
-    </ion-segment>
-
-    <ion-segment class="web-segment" [value]="filtroPlataforma" (ionChange)="alCambiarPlataforma($event)">
-      <ion-segment-button value="">
-        <ion-label>Todas</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="web">
-        <ion-label>Web</ion-label>
-      </ion-segment-button>
-      <ion-segment-button value="app">
-        <ion-label>App</ion-label>
-      </ion-segment-button>
-    </ion-segment>
 
     @if (cargando) {
       <p class="panel-vacio">Cargando…</p>
@@ -71,22 +73,23 @@
         }
       </div>
 
-      <h2 class="panel-subtitulo">Páginas más usadas</h2>
-
       @if (ranking.length) {
-        <ul class="panel-ranking">
-          @for (fila of ranking; track fila.ruta) {
-            <li class="panel-ranking__fila">
-              <span class="panel-ranking__ruta">{{ rutaLegible(fila.ruta) }}</span>
-              <span class="panel-ranking__barra">
-                <span
-                  class="panel-ranking__relleno"
-                  [style.width.%]="fila.proporcion * 100"></span>
-              </span>
-              <span class="panel-ranking__valor">{{ fila.vistas }}</span>
-            </li>
-          }
-        </ul>
+        <section class="panel-grafico analitica-ranking">
+          <div class="panel-grafico__cabecera">
+            <h2>Páginas más usadas</h2>
+          </div>
+          <div class="analitica-ranking__grafico" aria-label="Ranking de páginas más usadas">
+            @for (fila of ranking; track fila.ruta) {
+              <div class="analitica-ranking__fila">
+                <span class="analitica-ranking__ruta">{{ rutaLegible(fila.ruta) }}</span>
+                <div class="analitica-ranking__barra">
+                  <span [style.width.%]="fila.proporcion * 100"></span>
+                </div>
+                <strong>{{ fila.vistas }}</strong>
+              </div>
+            }
+          </div>
+        </section>
       } @else {
         <p class="panel-vacio">
           No hay eventos registrados en ese rango. Entra a una página desde la

@@ -2,10 +2,10 @@
 
 <ion-content class="web-contenido">
   <div class="web-page web-page--centrado">
-    <h1>Contáctanos</h1>
-    <p class="descripcion">¿Tienes una duda, una sugerencia o un problema? Cuéntanos.</p>
-
-    <form class="contacto-form" (ngSubmit)="enviar()" novalidate>
+    <div class="contacto-card">
+      <h1>Contáctanos</h1>
+      <p class="descripcion">¿Tienes una duda, una sugerencia o un problema? Cuéntanos.</p>
+      <form class="contacto-form" (ngSubmit)="enviar()" novalidate>
 
       <div class="contacto-fila">
         <label class="contacto-label" for="contacto-nombre">Nombre completo</label>
@@ -107,6 +107,7 @@
           Enviar mensaje
         }
       </button>
-    </form>
+      </form>
+    </div>
   </div>
 </ion-content>

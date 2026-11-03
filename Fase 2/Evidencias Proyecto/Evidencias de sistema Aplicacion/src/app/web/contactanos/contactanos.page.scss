@@ -20,6 +20,29 @@
   margin: 0 auto;
 }
 
+.contacto-card {
+  max-width: 620px;
+  margin: 2rem auto 0;
+  padding: 28px 30px;
+  border: 1px solid #ebe7f3;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 35px rgba(48, 32, 79, 0.08);
+}
+
+.contacto-card h1,
+.contacto-card .descripcion {
+  text-align: center;
+}
+
+.contacto-card .descripcion {
+  margin: 0.5rem 0 1.5rem;
+}
+
+.contacto-card .contacto-form {
+  max-width: none;
+}
+
 .contacto-fila {
   display: flex;
   flex-direction: column;
@@ -95,7 +118,8 @@
 }
 
 .contacto-boton {
-  display: inline-flex;
+  display: flex;
+  width: fit-content;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
@@ -111,6 +135,7 @@
   font-weight: 700;
   cursor: pointer;
   transition: filter 0.15s ease;
+  margin: 0.5rem auto 0;
 }
 
 .contacto-boton:hover:not(:disabled) {
