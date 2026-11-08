@@ -145,7 +145,7 @@ export class AccesoService {
    */
   destinoPara(rol: string): string | null {
     if (rol === 'Administrador') return '/panel-control';
-    if (rol === 'Familiar') return '/historial-web';
+    if (rol === 'Familiar') return '/inicio';
     return null;
   }
 

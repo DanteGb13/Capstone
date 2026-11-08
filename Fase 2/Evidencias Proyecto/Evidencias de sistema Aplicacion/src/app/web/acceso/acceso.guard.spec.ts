@@ -16,7 +16,7 @@ describe('guards del acceso de la web', () => {
   const destinoPara = (rol: string): string | null => {
     if (estado.motivo !== 'ok') return null;
     if (rol === 'Administrador') return '/panel-control';
-    if (rol === 'Familiar') return '/historial-web';
+    if (rol === 'Familiar') return '/inicio';
     return null;
   };
 

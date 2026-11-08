@@ -14,7 +14,7 @@ describe('AccesoPage', () => {
   /** `destinoPara` es el reparto real, escrito a mano: no se mockea. */
   const destinoPara = (rol: string) =>
     rol === 'Administrador' ? '/panel-control'
-    : rol === 'Familiar' ? '/historial-web'
+    : rol === 'Familiar' ? '/inicio'
     : null
     : null;
 
@@ -49,7 +49,7 @@ describe('AccesoPage', () => {
   it('manda a cada rol a su panel', async () => {
     const destinos: Array<[string, string]> = [
       ['Administrador', '/panel-control'],
-      ['Familiar', '/historial-web'],
+      ['Familiar', '/inicio'],
     ];
 
     for (const [rol, destino] of destinos) {
