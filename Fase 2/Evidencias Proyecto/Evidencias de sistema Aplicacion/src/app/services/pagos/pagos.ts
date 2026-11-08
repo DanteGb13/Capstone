@@ -17,6 +17,16 @@ export interface MejoraAnual {
   credito: number;
 }
 
+export interface MetodoPagoTarjeta {
+  id: string;
+  marca: string;
+  ultimos_cuatro: string;
+  mes_expiracion: number;
+  ano_expiracion: number;
+  titular: string;
+  es_predeterminado: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PagosService {
   private readonly supabase: SupabaseClient;
@@ -125,6 +135,38 @@ export class PagosService {
       data: data?.reembolso === true,
       error: error ? new Error(error.message || 'No se pudo consultar la cancelación') : null,
     };
+  }
+
+  async obtenerMetodoPago(): Promise<MetodoPagoTarjeta | null> {
+    const { data, error } = await this.supabase.functions.invoke('metodo-pago', {
+      body: { accion: 'consultar' },
+    });
+    if (error) throw new Error(error.message || 'No se pudo consultar el método de pago');
+    return (data?.metodo ?? null) as MetodoPagoTarjeta | null;
+  }
+
+  async guardarMetodoPago(datos: {
+    numero: string;
+    titular: string;
+    mes_expiracion: number;
+    ano_expiracion: number;
+    cvv: string;
+    predeterminado: boolean;
+  }): Promise<MetodoPagoTarjeta> {
+    const { data, error } = await this.supabase.functions.invoke('metodo-pago', {
+      body: { accion: 'guardar', ...datos },
+    });
+    if (error || !data?.metodo) {
+      throw new Error(error?.message || 'No se pudo guardar el método de pago');
+    }
+    return data.metodo as MetodoPagoTarjeta;
+  }
+
+  async eliminarMetodoPago(): Promise<void> {
+    const { error } = await this.supabase.functions.invoke('metodo-pago', {
+      body: { accion: 'eliminar' },
+    });
+    if (error) throw new Error(error.message || 'No se pudo eliminar el método de pago');
   }
 
   obtenerPlanActualCacheado(): CodigoPlan {

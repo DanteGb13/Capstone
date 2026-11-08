@@ -3,12 +3,13 @@ import { AlertController, IonContent } from '@ionic/angular';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { WebNav } from '../web-nav/web-nav';
 import { CodigoPlan, PagosService, PlanPago } from '../../services/pagos/pagos';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-mi-plan',
   templateUrl: 'mi-plan.page.html',
   styleUrls: ['mi-plan.page.scss'],
-  imports: [WebNav, IonContent, RouterLink],
+  imports: [WebNav, IonContent, RouterLink, FormsModule],
 })
 export class MiPlanPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
@@ -27,11 +28,26 @@ export class MiPlanPage implements OnInit {
   precioMejoraAnual = 70000;
   creditoMejoraAnual = 0;
   precioMejoraAnualTexto = '70.000';
+  metodoPagoGuardado: {
+    marca: string;
+    ultimos_cuatro: string;
+    mes_expiracion: number;
+    ano_expiracion: number;
+    titular: string;
+    es_predeterminado: boolean;
+  } | null = null;
+  mostrarFormularioTarjeta = false;
+  tarjetaNumero = '';
+  tarjetaTitular = '';
+  tarjetaExpiracion = '';
+  tarjetaCvv = '';
+  tarjetaPredeterminada = true;
   async ngOnInit(): Promise<void> {
     const token = this.route.snapshot.queryParamMap.get('token_ws');
     if (!token) {
       await this.cargarPlanActual();
       await this.cargarPrecioMejora();
+      await this.cargarMetodoPago();
       return;
     }
 
@@ -51,10 +67,94 @@ export class MiPlanPage implements OnInit {
       this.procesando = false;
       await this.cargarPlanActual();
       await this.cargarPrecioMejora();
+      await this.cargarMetodoPago();
       window.history.replaceState({}, document.title, window.location.pathname);
       await this.mostrarResultadoPago(this.errorPago, this.mensajePago);
     }
   }
+
+    private async cargarMetodoPago(): Promise<void> {
+      try {
+        this.metodoPagoGuardado = await this.pagos.obtenerMetodoPago();
+      } catch {
+        this.metodoPagoGuardado = null;
+      }
+    }
+
+    abrirFormularioTarjeta(): void {
+      this.mostrarFormularioTarjeta = true;
+    }
+
+    cancelarFormularioTarjeta(): void {
+      this.mostrarFormularioTarjeta = false;
+      this.limpiarFormularioTarjeta();
+    }
+
+    formatearNumeroTarjeta(): void {
+      const digitos = this.tarjetaNumero.replace(/\D/g, '').slice(0, 19);
+      this.tarjetaNumero = digitos.replace(/(.{4})/g, '$1 ').trim();
+    }
+
+    formatearExpiracion(): void {
+      const digitos = this.tarjetaExpiracion.replace(/\D/g, '').slice(0, 4);
+      this.tarjetaExpiracion = digitos.length > 2
+        ? `${digitos.slice(0, 2)}/${digitos.slice(2)}`
+        : digitos;
+    }
+
+    async guardarTarjeta(): Promise<void> {
+      this.procesando = true;
+      try {
+        const [mesTexto, anoTexto = ''] = this.tarjetaExpiracion.split('/');
+        const mes = Number(mesTexto);
+        const ano = anoTexto ? 2000 + Number(anoTexto) : 0;
+        this.metodoPagoGuardado = await this.pagos.guardarMetodoPago({
+          numero: this.tarjetaNumero,
+          titular: this.tarjetaTitular,
+          mes_expiracion: mes,
+          ano_expiracion: ano,
+          cvv: this.tarjetaCvv,
+          predeterminado: this.tarjetaPredeterminada,
+        });
+        this.cancelarFormularioTarjeta();
+        await this.mostrarResultadoAccion(
+          'Método de pago guardado',
+          'La tarjeta quedará como método de pago predeterminado. Los datos completos se cifran en el servidor.',
+        );
+      } catch (error) {
+        await this.mostrarResultadoAccion(
+          'No se pudo guardar la tarjeta',
+          error instanceof Error ? error.message : 'Intenta nuevamente.',
+          true,
+        );
+      } finally {
+        this.procesando = false;
+      }
+    }
+
+    async eliminarTarjeta(): Promise<void> {
+      this.procesando = true;
+      try {
+        await this.pagos.eliminarMetodoPago();
+        this.metodoPagoGuardado = null;
+      } catch (error) {
+        await this.mostrarResultadoAccion(
+          'No se pudo eliminar la tarjeta',
+          error instanceof Error ? error.message : 'Intenta nuevamente.',
+          true,
+        );
+      } finally {
+        this.procesando = false;
+      }
+    }
+
+    private limpiarFormularioTarjeta(): void {
+      this.tarjetaNumero = '';
+      this.tarjetaTitular = '';
+      this.tarjetaExpiracion = '';
+      this.tarjetaCvv = '';
+      this.tarjetaPredeterminada = true;
+    }
 
   private async cargarPrecioMejora(): Promise<void> {
     try {

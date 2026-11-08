@@ -45,6 +45,68 @@
       }
     </header>
 
+    <section class="metodo-pago" aria-labelledby="titulo-metodo-pago">
+      <div class="metodo-pago__encabezado">
+        <div>
+          <span class="metodo-pago__eyebrow">Método de pago</span>
+          <h2 id="titulo-metodo-pago">Tarjeta predeterminada</h2>
+        </div>
+        @if (metodoPagoGuardado) {
+          <button type="button" class="metodo-pago__secundario" (click)="eliminarTarjeta()" [disabled]="procesando">
+            Eliminar tarjeta
+          </button>
+        }
+      </div>
+
+      @if (metodoPagoGuardado && !mostrarFormularioTarjeta) {
+        <div class="metodo-pago__guardado">
+          <div class="metodo-pago__icono" aria-hidden="true">••</div>
+          <div>
+            <strong>{{ metodoPagoGuardado.marca }} •••• {{ metodoPagoGuardado.ultimos_cuatro }}</strong>
+            <span>{{ metodoPagoGuardado.titular }} · vence {{ metodoPagoGuardado.mes_expiracion }}/{{ metodoPagoGuardado.ano_expiracion }}</span>
+          </div>
+          @if (metodoPagoGuardado.es_predeterminado) {
+            <span class="metodo-pago__predeterminada">Predeterminada</span>
+          }
+        </div>
+      } @else if (!mostrarFormularioTarjeta) {
+        <p class="metodo-pago__vacio">Todavía no tienes una tarjeta guardada.</p>
+      }
+
+      @if (!mostrarFormularioTarjeta) {
+        <button type="button" class="metodo-pago__principal" (click)="abrirFormularioTarjeta()" [disabled]="procesando">
+          {{ metodoPagoGuardado ? 'Cambiar tarjeta' : 'Guardar tarjeta' }}
+        </button>
+      } @else {
+        <form class="metodo-pago__formulario" (ngSubmit)="guardarTarjeta()">
+          <label>
+            Número de tarjeta
+            <input [(ngModel)]="tarjetaNumero" name="numero" inputmode="numeric" autocomplete="cc-number" maxlength="23" (input)="formatearNumeroTarjeta()" required />
+          </label>
+          <label class="metodo-pago__ancho-completo">
+            Nombre del titular
+            <input [(ngModel)]="tarjetaTitular" name="titular" autocomplete="cc-name" maxlength="80" required />
+          </label>
+          <label>
+            Fecha de expiración
+            <input [(ngModel)]="tarjetaExpiracion" name="expiracion" type="text" inputmode="numeric" maxlength="5" autocomplete="cc-exp" placeholder="MM/AA" (input)="formatearExpiracion()" required />
+          </label>
+          <label>
+            Código CVV
+            <input [(ngModel)]="tarjetaCvv" name="cvv" type="password" inputmode="numeric" maxlength="4" autocomplete="cc-csc" required />
+          </label>
+          <label class="metodo-pago__check metodo-pago__ancho-completo">
+            <input [(ngModel)]="tarjetaPredeterminada" name="predeterminada" type="checkbox" />
+            Usar esta tarjeta como método de pago automático
+          </label>
+          <div class="metodo-pago__acciones metodo-pago__ancho-completo">
+            <button type="button" class="metodo-pago__secundario" (click)="cancelarFormularioTarjeta()" [disabled]="procesando">Cancelar</button>
+            <button type="submit" class="metodo-pago__principal" [disabled]="procesando">Guardar y cifrar</button>
+          </div>
+        </form>
+      }
+    </section>
+
     <section class="mi-plan__grilla" aria-label="Planes disponibles">
       <article class="plan">
         <div class="plan__icono plan__icono--adulto" aria-hidden="true">
