@@ -13,7 +13,7 @@ const LIMITE_FILAS = 50000;
 const RUTAS_REALES = new Set([
   '', 'inicio', 'planes', 'descarga', 'contactanos', 'historial-web', 'mi-plan',
   'ubicaciones', 'acceso', 'panel-control', 'analitica', 'usuarios',
-  'gestion-usuarios', 'reportes', 'configuracion', 'mi-perfil',
+  'gestion-usuarios', 'reportes', 'finanzas', 'configuracion', 'mi-perfil',
   'cambiar-contrasena', 'home', 'cuidador', 'cuidado', 'ubicacion', 'historial',
   'adulto-cargo', 'contactos-cuidador', 'login', 'registro', 'siguiente-paso',
   'elegir-tipo', 'adulto-mayor', 'actividad-reloj', 'contacto-emergencia',
@@ -155,6 +155,7 @@ export class AnaliticaPage implements OnInit {
             && !ruta.startsWith('/usuarios')
             && !ruta.startsWith('/gestion-usuarios')
             && !ruta.startsWith('/reportes')
+            && !ruta.startsWith('/finanzas')
             && !ruta.startsWith('/configuracion')
             && RUTAS_REALES.has(primeraRuta);
         })

@@ -88,8 +88,8 @@ export const routes: Routes = [
     canActivate: [rolGuard(['Administrador'])]
   },
   {
-    path: 'configuracion',
-    loadComponent: () => import('./web/configuracion/configuracion.page').then((m) => m.ConfiguracionPage),
+    path: 'finanzas',
+    loadComponent: () => import('./web/finanzas/finanzas.page').then((m) => m.FinanzasPage),
     canActivate: [rolGuard(['Administrador'])]
   },
   {

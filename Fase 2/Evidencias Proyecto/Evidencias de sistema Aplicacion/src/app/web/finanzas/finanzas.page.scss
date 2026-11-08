@@ -1,0 +1,109 @@
+:host ::ng-deep .web-page {
+  max-width: 1200px;
+}
+
+.finanzas-filtros {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.finanzas-filtro {
+  height: 42px;
+  min-width: 190px;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #d8d1e7;
+  border-radius: 8px;
+  background: #fff;
+  color: #443c56;
+  font: inherit;
+}
+
+.finanzas-buscador {
+  flex: 1 1 280px;
+}
+
+.finanzas-filtro:focus-visible {
+  border-color: #7715c7;
+  outline: 2px solid rgba(119, 21, 199, 0.2);
+}
+
+.finanzas-recargar {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 8px;
+  background: linear-gradient(168deg, #813edc 0%, #7734d9 50%, #6c2dd4 100%);
+  box-shadow: 0 3px 10px rgba(119, 21, 199, 0.24);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.panel-tabla-envoltura {
+  border: 1px solid #e2ddf2;
+  border-radius: 12px;
+  background: #fff;
+  overflow-x: auto;
+}
+
+.finanzas-tabla {
+  width: 100%;
+  table-layout: fixed;
+}
+
+.finanzas-tabla th:nth-child(1),
+.finanzas-tabla td:nth-child(1) { width: 20%; }
+.finanzas-tabla th:nth-child(2),
+.finanzas-tabla td:nth-child(2) { width: 24%; }
+.finanzas-tabla th:nth-child(3),
+.finanzas-tabla td:nth-child(3) { width: 14%; }
+.finanzas-tabla th:nth-child(4),
+.finanzas-tabla td:nth-child(4) { width: 12%; }
+.finanzas-tabla th:nth-child(5),
+.finanzas-tabla td:nth-child(5) { width: 18%; }
+.finanzas-tabla th:nth-child(6),
+.finanzas-tabla td:nth-child(6) { width: 12%; }
+
+.finanzas-tabla td {
+  white-space: normal;
+}
+
+.finanzas-accion {
+  min-height: 32px;
+  padding: 0.35rem 0.65rem;
+  border: 0;
+  border-radius: 7px;
+  background: #7715c7;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.finanzas-accion--secundaria {
+  margin-left: 0.35rem;
+  border: 1px solid #7715c7;
+  background: #fff;
+  color: #7715c7;
+}
+
+.finanzas-accion:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+@media (max-width: 800px) {
+  .finanzas-filtros {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .finanzas-filtro,
+  .finanzas-recargar {
+    width: 100%;
+  }
+}

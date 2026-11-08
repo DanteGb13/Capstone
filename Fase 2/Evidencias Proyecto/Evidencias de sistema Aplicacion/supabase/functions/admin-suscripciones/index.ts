@@ -9,7 +9,7 @@ const TRANSBANK_API_KEY = Deno.env.get("TRANSBANK_API_KEY") ?? "";
 
 const headers = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -42,18 +42,37 @@ Deno.serve(async request => {
       .select("id, usuario_id, plan_codigo, estado, inicia_en, vence_en, mejora_en, plan_anterior_codigo")
       .in("estado", ["activa", "cancelada"])
       .order("actualizada_en", { ascending: false });
-    if (errorConsulta) return respuesta(500, { error: "No se pudieron cargar las suscripciones" });
+    if (errorConsulta) {
+      console.error("admin-suscripciones listar suscripcion:", errorConsulta);
+      return respuesta(500, { error: "No se pudieron cargar las suscripciones", detalle: errorConsulta.message });
+    }
 
     const ids = [...new Set((data ?? []).map((fila) => fila.usuario_id))];
     const nombres = new Map<string, string>();
     const correos = new Map<string, string>();
+    const cuidadores = new Set<string>();
+
     if (ids.length) {
-      const usuarios = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      for (const cuenta of usuarios.data?.users ?? []) {
-        if (!ids.includes(cuenta.id)) continue;
-        correos.set(cuenta.id, cuenta.email ?? "");
-        const perfil = await admin.from("usuario").select("nombre, apellidopa").eq("id", cuenta.id).maybeSingle();
-        nombres.set(cuenta.id, [perfil.data?.nombre, perfil.data?.apellidopa].filter(Boolean).join(" ").trim());
+      const { data: perfiles, error: errorPerfiles } = await admin
+        .from("usuario")
+        .select("id, nombre, apellidopa, rol(nombre)")
+        .in("id", ids);
+      if (errorPerfiles) {
+        console.error("admin-suscripciones listar perfiles:", errorPerfiles);
+        return respuesta(500, { error: "No se pudieron cargar los cuidadores", detalle: errorPerfiles.message });
+      }
+
+      for (const perfil of perfiles ?? []) {
+        const rol = Array.isArray(perfil.rol) ? perfil.rol[0]?.nombre : perfil.rol?.nombre;
+        if (rol === "Familiar") cuidadores.add(perfil.id);
+        nombres.set(perfil.id, [perfil.nombre, perfil.apellidopa].filter(Boolean).join(" ").trim());
+      }
+
+      const listado = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (!listado.error) {
+        for (const cuenta of listado.data?.users ?? []) {
+          if (ids.includes(cuenta.id)) correos.set(cuenta.id, cuenta.email ?? "");
+        }
       }
     }
 
@@ -62,7 +81,7 @@ Deno.serve(async request => {
         ...fila,
         correo: correos.get(fila.usuario_id) ?? "",
         nombre: nombres.get(fila.usuario_id) ?? "",
-      })),
+      })).filter(fila => cuidadores.has(fila.usuario_id)),
     });
   }
 
@@ -131,6 +150,41 @@ Deno.serve(async request => {
     }, { onConflict: "usuario_id,plan_codigo" });
     if (mensualError) return respuesta(500, { error: "No se pudo restaurar el plan mensual" });
 
+    return respuesta(200, { ok: true });
+  }
+
+  if (accion === "activar" || accion === "cancelar") {
+    const suscripcionId = String(datos.suscripcion_id ?? "");
+    if (!suscripcionId) return respuesta(400, { error: "Falta la suscripción" });
+
+    const { data: suscripcion } = await admin
+      .from("suscripcion")
+      .select("id, usuario_id, plan_codigo")
+      .eq("id", suscripcionId)
+      .maybeSingle();
+    if (!suscripcion) return respuesta(404, { error: "Suscripción no encontrada" });
+
+    if (accion === "activar") {
+      const ahora = new Date();
+      const vence = new Date(ahora);
+      vence.setMonth(vence.getMonth() + (suscripcion.plan_codigo === "anual" ? 12 : 1));
+      const { error: errorActivar } = await admin.from("suscripcion").update({
+        estado: "activa",
+        inicia_en: ahora.toISOString(),
+        vence_en: vence.toISOString(),
+        cancelada_en: null,
+        actualizada_en: ahora.toISOString(),
+      }).eq("id", suscripcion.id);
+      if (errorActivar) return respuesta(500, { error: "No se pudo activar la suscripción" });
+      return respuesta(200, { ok: true });
+    }
+
+    const { error: errorCancelar } = await admin.from("suscripcion").update({
+      estado: "cancelada",
+      cancelada_en: new Date().toISOString(),
+      actualizada_en: new Date().toISOString(),
+    }).eq("id", suscripcion.id);
+    if (errorCancelar) return respuesta(500, { error: "No se pudo cancelar la suscripción" });
     return respuesta(200, { ok: true });
   }
 

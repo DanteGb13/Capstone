@@ -1,0 +1,79 @@
+<app-web-nav />
+
+<ion-content class="web-contenido">
+  <div class="web-page">
+    @if (cargandoSuscripciones) {
+      <p class="panel-vacio">Cargando suscripciones…</p>
+    } @else if (mensajeSuscripciones) {
+      <p class="panel-error">{{ mensajeSuscripciones }}</p>
+    } @else {
+      <div class="finanzas-filtros">
+        <input
+          class="finanzas-filtro finanzas-buscador"
+          type="search"
+          [(ngModel)]="busqueda"
+          placeholder="Buscar cuidador por nombre o correo"
+          aria-label="Buscar cuidador por nombre o correo" />
+
+        <select class="finanzas-filtro" [(ngModel)]="filtroEstado" aria-label="Filtrar por estado de suscripción">
+          <option value="">Todas las suscripciones</option>
+          <option value="activa">Activas</option>
+          <option value="cancelada">Canceladas</option>
+        </select>
+
+        <button type="button" class="finanzas-recargar" (click)="cargarSuscripciones()">
+          <ion-icon name="refresh-outline" aria-hidden="true"></ion-icon>
+          Actualizar
+        </button>
+      </div>
+
+      @if (!suscripcionesFiltradas.length) {
+        <p class="panel-vacio">No hay cuidadores con suscripciones.</p>
+      } @else {
+        <div class="panel-tabla-envoltura">
+          <table class="panel-tabla finanzas-tabla">
+            <thead>
+              <tr>
+                <th>Cuidador</th>
+                <th>Correo</th>
+                <th>Plan</th>
+                <th>Estado</th>
+                <th>Vigencia</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (suscripcion of suscripcionesFiltradas; track suscripcion.id) {
+                <tr>
+                  <td class="panel-tabla__fuerte">{{ suscripcion.nombre || 'Sin nombre' }}</td>
+                  <td>{{ suscripcion.correo || '—' }}</td>
+                  <td>{{ nombrePlan(suscripcion.plan_codigo) }}</td>
+                  <td>
+                    <span class="panel-estado" [class.panel-estado--inactivo]="suscripcion.estado !== 'activa'">
+                      {{ textoEstado(suscripcion.estado) }}
+                    </span>
+                  </td>
+                  <td>{{ vigencia(suscripcion) }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="finanzas-accion"
+                      [disabled]="suscripcion.estado === 'activa'"
+                      (click)="activar(suscripcion)">
+                      Activar
+                    </button>
+                    @if (suscripcion.estado === 'activa') {
+                      <button type="button" class="finanzas-accion finanzas-accion--secundaria" (click)="cancelar(suscripcion)">
+                        Cancelar
+                      </button>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  </div>
+</ion-content>
