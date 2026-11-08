@@ -1,20 +1,26 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { AlertController, IonContent } from '@ionic/angular';
+import { AlertController, IonContent, IonIcon, IonModal } from '@ionic/angular';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { WebNav } from '../web-nav/web-nav';
 import { CodigoPlan, PagosService, PlanPago } from '../../services/pagos/pagos';
 import { FormsModule } from '@angular/forms';
+import { addIcons } from 'ionicons';
+import { createOutline, trashOutline } from 'ionicons/icons';
 
 @Component({
   selector: 'app-mi-plan',
   templateUrl: 'mi-plan.page.html',
   styleUrls: ['mi-plan.page.scss'],
-  imports: [WebNav, IonContent, RouterLink, FormsModule],
+  imports: [WebNav, IonContent, IonIcon, IonModal, RouterLink, FormsModule],
 })
 export class MiPlanPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly pagos = inject(PagosService);
   private readonly alertCtrl = inject(AlertController);
+
+  constructor() {
+    addIcons({ createOutline, trashOutline });
+  }
 
   procesando = false;
   mensajePago = '';
@@ -36,18 +42,24 @@ export class MiPlanPage implements OnInit {
     titular: string;
     es_predeterminado: boolean;
   } | null = null;
+  cargandoMetodoPago = true;
   mostrarFormularioTarjeta = false;
+  editandoTarjeta = false;
   tarjetaNumero = '';
   tarjetaTitular = '';
   tarjetaExpiracion = '';
   tarjetaCvv = '';
   tarjetaPredeterminada = true;
   async ngOnInit(): Promise<void> {
+    this.metodoPagoGuardado = this.pagos.obtenerMetodoPagoCacheado();
+    if (this.metodoPagoGuardado) this.cargandoMetodoPago = false;
     const token = this.route.snapshot.queryParamMap.get('token_ws');
     if (!token) {
-      await this.cargarPlanActual();
-      await this.cargarPrecioMejora();
-      await this.cargarMetodoPago();
+      await Promise.all([
+        this.cargarPlanActual(),
+        this.cargarPrecioMejora(),
+        this.cargarMetodoPago(),
+      ]);
       return;
     }
 
@@ -78,10 +90,19 @@ export class MiPlanPage implements OnInit {
         this.metodoPagoGuardado = await this.pagos.obtenerMetodoPago();
       } catch {
         this.metodoPagoGuardado = null;
+      } finally {
+        this.cargandoMetodoPago = false;
       }
     }
 
     abrirFormularioTarjeta(): void {
+      this.editandoTarjeta = this.metodoPagoGuardado !== null;
+      if (this.metodoPagoGuardado) {
+        this.tarjetaTitular = this.metodoPagoGuardado.titular;
+        this.tarjetaExpiracion =
+          `${String(this.metodoPagoGuardado.mes_expiracion).padStart(2, '0')}/${String(this.metodoPagoGuardado.ano_expiracion).slice(-2)}`;
+        this.tarjetaPredeterminada = this.metodoPagoGuardado.es_predeterminado;
+      }
       this.mostrarFormularioTarjeta = true;
     }
 
@@ -102,6 +123,22 @@ export class MiPlanPage implements OnInit {
         : digitos;
     }
 
+    formatearTitular(): void {
+      this.tarjetaTitular = this.tarjetaTitular
+        .replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]/g, '')
+        .replace(/\s+/g, ' ')
+        .slice(0, 80);
+    }
+
+    cerrarOtrosDetalles(evento: Event): void {
+      const detallesAbiertos = evento.target as HTMLDetailsElement;
+      if (!detallesAbiertos.open) return;
+
+      document.querySelectorAll<HTMLDetailsElement>('.plan__detalles[open]').forEach((detalles) => {
+        if (detalles !== detallesAbiertos) detalles.open = false;
+      });
+    }
+
     async guardarTarjeta(): Promise<void> {
       this.procesando = true;
       try {
@@ -115,11 +152,14 @@ export class MiPlanPage implements OnInit {
           ano_expiracion: ano,
           cvv: this.tarjetaCvv,
           predeterminado: this.tarjetaPredeterminada,
+          editar: this.editandoTarjeta,
         });
         this.cancelarFormularioTarjeta();
         await this.mostrarResultadoAccion(
-          'Método de pago guardado',
-          'La tarjeta quedará como método de pago predeterminado. Los datos completos se cifran en el servidor.',
+          'Tarjeta guardada',
+          this.editandoTarjeta
+            ? 'Los datos de la tarjeta fueron actualizados.'
+            : 'Tu tarjeta se guardó con éxito.',
         );
       } catch (error) {
         await this.mostrarResultadoAccion(
@@ -133,6 +173,9 @@ export class MiPlanPage implements OnInit {
     }
 
     async eliminarTarjeta(): Promise<void> {
+      const confirmada = await this.confirmarEliminacionTarjeta();
+      if (!confirmada) return;
+
       this.procesando = true;
       try {
         await this.pagos.eliminarMetodoPago();
@@ -149,6 +192,7 @@ export class MiPlanPage implements OnInit {
     }
 
     private limpiarFormularioTarjeta(): void {
+      this.editandoTarjeta = false;
       this.tarjetaNumero = '';
       this.tarjetaTitular = '';
       this.tarjetaExpiracion = '';
@@ -217,6 +261,18 @@ export class MiPlanPage implements OnInit {
   }
 
   async pagar(plan: PlanPago): Promise<void> {
+    if (!this.metodoPagoGuardado) {
+      await this.cargarMetodoPago();
+    }
+    if (!this.metodoPagoGuardado) {
+      await this.mostrarResultadoAccion(
+        'Agrega un método de pago',
+        'Necesitas agregar una tarjeta antes de adquirir un plan.',
+        true,
+      );
+      return;
+    }
+
     this.procesando = true;
     this.mensajePago = '';
     this.errorPago = false;
@@ -307,14 +363,30 @@ export class MiPlanPage implements OnInit {
     const alerta = await this.alertCtrl.create({
       header: dentroDeReembolso ? 'Anular suscripción' : 'Cancelación al finalizar el período',
       message: dentroDeReembolso
-        ? '¿Estás seguro de que deseas perder todos los beneficios de tu suscripción? ' +
-          'La devolución se procesará dentro de 48 horas hábiles.'
-        : 'Tu suscripción continuará activa hasta el final del período pagado. ' +
-          'La cancelación será para el siguiente período y no habrá devolución.',
+        ? '¿Estás seguro de que deseas perder todos los beneficios de tu suscripción?'
+        : '¿Estás seguro de que deseas cancelar la suscripción al finalizar el período pagado?',
       buttons: [
         { text: 'Volver', role: 'cancel' },
         {
           text: dentroDeReembolso ? 'Sí, anular' : 'Programar cancelación',
+          role: 'destructive',
+          handler: () => true,
+        },
+      ],
+    });
+    await alerta.present();
+    const resultado = await alerta.onDidDismiss();
+    return resultado.role === 'destructive';
+  }
+
+  private async confirmarEliminacionTarjeta(): Promise<boolean> {
+    const alerta = await this.alertCtrl.create({
+      header: 'Eliminar tarjeta',
+      message: '¿Estás seguro de que deseas eliminar esta tarjeta?',
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        {
+          text: 'Eliminar',
           role: 'destructive',
           handler: () => true,
         },

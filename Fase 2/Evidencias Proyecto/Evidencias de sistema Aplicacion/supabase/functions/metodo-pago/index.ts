@@ -106,6 +106,35 @@ Deno.serve(async (request) => {
       const mes = Number(datos.mes_expiracion);
       const ano = Number(datos.ano_expiracion);
       const cvv = soloDigitos(datos.cvv);
+      if (!/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+$/.test(titular)) {
+        return respuesta(400, { error: "El nombre del titular solo puede contener letras" });
+      }
+
+      if (!numero && datos.editar === true) {
+        if (!titular || titular.length > 80) {
+          return respuesta(400, { error: "Ingresa el nombre del titular" });
+        }
+        if (!Number.isInteger(mes) || mes < 1 || mes > 12) {
+          return respuesta(400, { error: "El mes de expiración no es válido" });
+        }
+        const hoy = new Date();
+        if (!Number.isInteger(ano) || ano < hoy.getFullYear() || ano > 2100 ||
+            (ano === hoy.getFullYear() && mes < hoy.getMonth() + 1)) {
+          return respuesta(400, { error: "La tarjeta está vencida" });
+        }
+
+        const { data, error } = await clienteAdmin.from("metodo_pago").update({
+          mes_expiracion: mes,
+          ano_expiracion: ano,
+          titular,
+          es_predeterminado: datos.predeterminado !== false,
+          actualizada_en: new Date().toISOString(),
+        }).eq("usuario_id", usuarioId).select(
+          "id, marca, ultimos_cuatro, mes_expiracion, ano_expiracion, titular, es_predeterminado",
+        ).single();
+        if (error) return respuesta(500, { error: "No se pudo editar el método de pago" });
+        return respuesta(200, { ok: true, metodo: data });
+      }
 
       if (numero.length < 13 || numero.length > 19 || !esLuhn(numero)) {
         return respuesta(400, { error: "El número de tarjeta no es válido" });

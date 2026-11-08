@@ -10,7 +10,7 @@
 :host ::ng-deep .web-page.mi-plan {
   max-width: 1320px;
   box-sizing: border-box;
-  padding: 34px 18px 54px;
+  padding: 18px 18px 96px;
 }
 
 .mi-plan__encabezado {
@@ -81,24 +81,71 @@
   font-weight: 800;
 }
 
-.metodo-pago__predeterminada {
-  width: auto;
-  padding: 5px 9px;
-  border-radius: 999px;
-  background: #edf9f1;
-  color: #247a39;
-  font-size: 12px;
-  font-weight: 700;
+.metodo-pago__acciones-iconos {
+  display: flex;
+  gap: 8px;
+}
+
+.metodo-pago__icono-accion {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: #ece7f7;
+  color: #7738d9;
+  cursor: pointer;
+}
+
+.metodo-pago__icono-eliminar {
+  background: #fdecec;
+  color: #c83b3b;
+}
+
+.metodo-pago__icono-accion ion-icon {
+  font-size: 19px;
 }
 
 .metodo-pago__vacio {
   color: #777087;
 }
 
+.metodo-pago__cargando {
+  margin-bottom: 16px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f7f5fb;
+  color: #777087;
+  font-size: 13px;
+}
+
 .metodo-pago__formulario {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
+}
+
+.metodo-pago__modal::part(content) {
+  width: min(680px, calc(100vw - 32px));
+  height: auto;
+  max-height: calc(100vh - 32px);
+  border-radius: 16px;
+  box-shadow: 0 18px 48px rgba(32, 43, 77, 0.24);
+}
+
+.metodo-pago__ventana {
+  box-sizing: border-box;
+  padding: 24px;
+  overflow-y: auto;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.metodo-pago__ventana h2 {
+  margin: 0 0 20px;
+  color: #202b4d;
+  font-size: 22px;
 }
 
 .metodo-pago__formulario label {
@@ -121,6 +168,14 @@
 
 .metodo-pago__formulario input:first-child {
   grid-column: 1 / 3;
+}
+
+.metodo-pago__formulario > label {
+  grid-column: span 2;
+}
+
+.metodo-pago__formulario > .metodo-pago__titular {
+  grid-column: span 2;
 }
 
 .metodo-pago__ancho-completo {
@@ -186,16 +241,37 @@
   box-shadow: 0 3px 18px rgba(45, 43, 58, 0.06);
 }
 
+.mi-plan__suscripcion--gratuita {
+  grid-template-columns: 1fr;
+}
+
+.mi-plan__suscripcion--gratuita .mi-plan__resumen {
+  grid-column: 1;
+}
+
 .mi-plan__tipo {
   display: inline-flex;
-  padding: 5px 10px;
-  border-radius: 999px;
-  background: #edf9f1;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px 6px 9px;
+  border: 1px solid #d9efdf;
+  border-radius: 8px;
+  background: #f5fbf7;
   color: #247a39;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.mi-plan__tipo::before {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+  background: #4caf67;
+  box-shadow: 0 0 0 3px rgba(76, 175, 103, 0.14);
+  content: "";
 }
 
 .mi-plan__resumen h2 {
@@ -327,12 +403,14 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 26px;
-  align-items: stretch;
+  align-items: start;
 }
 
 .plan {
   display: flex;
   min-width: 0;
+  width: 100%;
+  align-self: start;
   flex-direction: column;
   padding: 30px 34px 28px;
   border: 1px solid rgba(45, 51, 73, 0.08);
@@ -409,6 +487,27 @@
   color: #263552;
   font-size: 15px;
   line-height: 1.38;
+}
+
+.plan__detalles {
+  margin-top: 10px;
+}
+
+.plan__detalles + .plan__precio {
+  margin-top: 18px;
+}
+
+.plan__detalles summary {
+  width: fit-content;
+  color: #7738d9;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  list-style-position: outside;
+}
+
+.plan__detalles[open] summary {
+  margin-bottom: 6px;
 }
 
 .plan__beneficios li::before {
@@ -501,7 +600,7 @@
 
 @media (max-width: 620px) {
   :host ::ng-deep .web-page.mi-plan {
-    padding: 28px 16px 48px;
+    padding: 16px 16px 72px;
   }
 
   .mi-plan__grilla {

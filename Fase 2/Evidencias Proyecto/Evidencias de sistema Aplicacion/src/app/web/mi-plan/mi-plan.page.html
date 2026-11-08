@@ -42,50 +42,68 @@
             </button>
           </div>
         </div>
+      } @else {
+        <div class="mi-plan__suscripcion mi-plan__suscripcion--gratuita">
+          <div class="mi-plan__resumen">
+            <span class="mi-plan__tipo">Sin suscripción</span>
+            <h2>Plan gratuito</h2>
+            <p class="mi-plan__precio">Gratis</p>
+          </div>
+        </div>
       }
     </header>
 
-    <section class="metodo-pago" aria-labelledby="titulo-metodo-pago">
+    <section class="metodo-pago">
       <div class="metodo-pago__encabezado">
         <div>
           <span class="metodo-pago__eyebrow">Método de pago</span>
-          <h2 id="titulo-metodo-pago">Tarjeta predeterminada</h2>
         </div>
-        @if (metodoPagoGuardado) {
-          <button type="button" class="metodo-pago__secundario" (click)="eliminarTarjeta()" [disabled]="procesando">
-            Eliminar tarjeta
-          </button>
-        }
       </div>
 
-      @if (metodoPagoGuardado && !mostrarFormularioTarjeta) {
+      @if (cargandoMetodoPago) {
+        <div class="metodo-pago__cargando" aria-label="Cargando método de pago">Cargando método de pago...</div>
+      } @else if (metodoPagoGuardado) {
         <div class="metodo-pago__guardado">
           <div class="metodo-pago__icono" aria-hidden="true">••</div>
           <div>
             <strong>{{ metodoPagoGuardado.marca }} •••• {{ metodoPagoGuardado.ultimos_cuatro }}</strong>
-            <span>{{ metodoPagoGuardado.titular }} · vence {{ metodoPagoGuardado.mes_expiracion }}/{{ metodoPagoGuardado.ano_expiracion }}</span>
+            <span>{{ metodoPagoGuardado.titular }}</span>
           </div>
-          @if (metodoPagoGuardado.es_predeterminado) {
-            <span class="metodo-pago__predeterminada">Predeterminada</span>
-          }
+          <div class="metodo-pago__acciones-iconos">
+            <button type="button" class="metodo-pago__icono-accion" (click)="abrirFormularioTarjeta()" [disabled]="procesando" aria-label="Editar tarjeta" title="Editar tarjeta">
+              <ion-icon name="create-outline"></ion-icon>
+            </button>
+            <button type="button" class="metodo-pago__icono-accion metodo-pago__icono-eliminar" (click)="eliminarTarjeta()" [disabled]="procesando" aria-label="Eliminar tarjeta" title="Eliminar tarjeta">
+              <ion-icon name="trash-outline"></ion-icon>
+            </button>
+          </div>
         </div>
-      } @else if (!mostrarFormularioTarjeta) {
+      } @else {
         <p class="metodo-pago__vacio">Todavía no tienes una tarjeta guardada.</p>
       }
 
-      @if (!mostrarFormularioTarjeta) {
+      @if (!cargandoMetodoPago && !metodoPagoGuardado) {
         <button type="button" class="metodo-pago__principal" (click)="abrirFormularioTarjeta()" [disabled]="procesando">
-          {{ metodoPagoGuardado ? 'Cambiar tarjeta' : 'Guardar tarjeta' }}
+          Agregar tarjeta
         </button>
-      } @else {
-        <form class="metodo-pago__formulario" (ngSubmit)="guardarTarjeta()">
+      }
+
+      <ion-modal
+        class="metodo-pago__modal"
+        [isOpen]="mostrarFormularioTarjeta"
+        [backdropDismiss]="false"
+        (didDismiss)="cancelarFormularioTarjeta()">
+        <ng-template>
+          <div class="metodo-pago__ventana">
+            <h2>{{ editandoTarjeta ? 'Editar tarjeta' : 'Agregar tarjeta' }}</h2>
+            <form class="metodo-pago__formulario" (ngSubmit)="guardarTarjeta()">
           <label>
             Número de tarjeta
-            <input [(ngModel)]="tarjetaNumero" name="numero" inputmode="numeric" autocomplete="cc-number" maxlength="23" (input)="formatearNumeroTarjeta()" required />
+            <input [(ngModel)]="tarjetaNumero" name="numero" inputmode="numeric" autocomplete="cc-number" maxlength="23" (input)="formatearNumeroTarjeta()" [required]="!editandoTarjeta" [placeholder]="editandoTarjeta ? 'Dejar vacío para conservar la tarjeta' : 'Número de tarjeta'" />
           </label>
-          <label class="metodo-pago__ancho-completo">
+          <label class="metodo-pago__titular">
             Nombre del titular
-            <input [(ngModel)]="tarjetaTitular" name="titular" autocomplete="cc-name" maxlength="80" required />
+            <input [(ngModel)]="tarjetaTitular" name="titular" autocomplete="cc-name" maxlength="80" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ ]+" (input)="formatearTitular()" required />
           </label>
           <label>
             Fecha de expiración
@@ -93,18 +111,16 @@
           </label>
           <label>
             Código CVV
-            <input [(ngModel)]="tarjetaCvv" name="cvv" type="password" inputmode="numeric" maxlength="4" autocomplete="cc-csc" required />
-          </label>
-          <label class="metodo-pago__check metodo-pago__ancho-completo">
-            <input [(ngModel)]="tarjetaPredeterminada" name="predeterminada" type="checkbox" />
-            Usar esta tarjeta como método de pago automático
+            <input [(ngModel)]="tarjetaCvv" name="cvv" type="password" inputmode="numeric" maxlength="4" autocomplete="cc-csc" [required]="!editandoTarjeta" />
           </label>
           <div class="metodo-pago__acciones metodo-pago__ancho-completo">
             <button type="button" class="metodo-pago__secundario" (click)="cancelarFormularioTarjeta()" [disabled]="procesando">Cancelar</button>
-            <button type="submit" class="metodo-pago__principal" [disabled]="procesando">Guardar y cifrar</button>
+            <button type="submit" class="metodo-pago__principal" [disabled]="procesando">{{ editandoTarjeta ? 'Guardar cambios' : 'Guardar' }}</button>
           </div>
-        </form>
-      }
+            </form>
+          </div>
+        </ng-template>
+      </ion-modal>
     </section>
 
     <section class="mi-plan__grilla" aria-label="Planes disponibles">
@@ -122,13 +138,16 @@
         <h2>Adulto mayor sin cuidador</h2>
         <p class="plan__intro">Funciones disponibles para el adulto mayor sin cuidador asociado.</p>
 
-        <ul class="plan__beneficios">
-          <li>Podrá utilizar las funcionalidades disponibles para su usuario.</li>
-          <li>Podrá comunicarse directamente con servicios de emergencia.</li>
-          <li>Podrá utilizar el botón de emergencia para solicitar ayuda.</li>
-          <li>Podrá recibir notificaciones relacionadas con alertas y emergencias.</li>
-          <li>Podrá visualizar su ubicación y estado dentro de la aplicación.</li>
-        </ul>
+        <details class="plan__detalles" (toggle)="cerrarOtrosDetalles($event)">
+          <summary>Ver más</summary>
+          <ul class="plan__beneficios">
+            <li>Podrá utilizar las funcionalidades disponibles para su usuario.</li>
+            <li>Podrá comunicarse directamente con servicios de emergencia.</li>
+            <li>Podrá utilizar el botón de emergencia para solicitar ayuda.</li>
+            <li>Podrá recibir notificaciones relacionadas con alertas y emergencias.</li>
+            <li>Podrá visualizar su ubicación y estado dentro de la aplicación.</li>
+          </ul>
+        </details>
 
         <div class="plan__precio plan__precio--principal">Plan gratuito</div>
       </article>
@@ -149,15 +168,18 @@
         <h2>Plan mensual</h2>
         <p class="plan__intro">Herramientas de seguimiento y cuidado para familias.</p>
 
-        <ul class="plan__beneficios">
-          <li>Visualización de ubicación del adulto mayor.</li>
-          <li>Actualización de ubicación con una frecuencia limitada.</li>
-          <li>Notificaciones de alertas.</li>
-          <li>Botón de emergencia que contactará a todos los cuidadores asociados.</li>
-          <li>Llamada rápida al adulto mayor.</li>
-          <li>Historial de alertas correspondiente a la última semana.</li>
-          <li>Hasta 2 adultos mayores y 2 cuidadores por familia.</li>
-        </ul>
+        <details class="plan__detalles" (toggle)="cerrarOtrosDetalles($event)">
+          <summary>Ver más</summary>
+          <ul class="plan__beneficios">
+            <li>Visualización de ubicación del adulto mayor.</li>
+            <li>Actualización de ubicación con una frecuencia limitada.</li>
+            <li>Notificaciones de alertas.</li>
+            <li>Botón de emergencia que contactará a todos los cuidadores asociados.</li>
+            <li>Llamada rápida al adulto mayor.</li>
+            <li>Historial de alertas correspondiente a la última semana.</li>
+            <li>Hasta 2 adultos mayores y 2 cuidadores por familia.</li>
+          </ul>
+        </details>
 
         <button
           class="plan__precio plan__precio--pagable"
@@ -185,17 +207,20 @@
         <h2>Plan anual</h2>
         <p class="plan__intro">El acompañamiento más completo para familias y cuidadores.</p>
 
-        <ul class="plan__beneficios">
-          <li>Visualización y actualización de la ubicación.</li>
-          <li>Notificaciones de alertas y emergencias.</li>
-          <li>Alertas mediante llamada, vibración y sonido.</li>
-          <li>Botón de emergencia que contactará a todos los cuidadores asociados.</li>
-          <li>Llamada rápida al adulto mayor.</li>
-          <li>Historial completo de alertas.</li>
-          <li>Hasta 4 adultos mayores y 4 cuidadores por familia.</li>
-          <li>Monitoreo de signos vitales mediante reloj.</li>
-          <li>Historial de signos vitales.</li>
-        </ul>
+        <details class="plan__detalles" (toggle)="cerrarOtrosDetalles($event)">
+          <summary>Ver más</summary>
+          <ul class="plan__beneficios">
+            <li>Visualización y actualización de la ubicación.</li>
+            <li>Notificaciones de alertas y emergencias.</li>
+            <li>Alertas mediante llamada, vibración y sonido.</li>
+            <li>Botón de emergencia que contactará a todos los cuidadores asociados.</li>
+            <li>Llamada rápida al adulto mayor.</li>
+            <li>Historial completo de alertas.</li>
+            <li>Hasta 4 adultos mayores y 4 cuidadores por familia.</li>
+            <li>Monitoreo de signos vitales mediante reloj.</li>
+            <li>Historial de signos vitales.</li>
+          </ul>
+        </details>
 
         <button
           class="plan__precio plan__precio--pagable"

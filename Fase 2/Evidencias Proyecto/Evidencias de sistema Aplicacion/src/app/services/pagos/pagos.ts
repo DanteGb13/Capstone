@@ -32,6 +32,7 @@ export class PagosService {
   private readonly supabase: SupabaseClient;
   private readonly claveCache = 'siempre_cerca_plan_actual';
   private readonly claveCacheDetalles = 'siempre_cerca_plan_detalles';
+  private readonly claveCacheMetodoPago = 'siempre_cerca_metodo_pago';
 
   constructor(cliente: SupabaseClientProvider) {
     this.supabase = cliente.get();
@@ -142,7 +143,9 @@ export class PagosService {
       body: { accion: 'consultar' },
     });
     if (error) throw new Error(error.message || 'No se pudo consultar el método de pago');
-    return (data?.metodo ?? null) as MetodoPagoTarjeta | null;
+    const metodo = (data?.metodo ?? null) as MetodoPagoTarjeta | null;
+    this.guardarMetodoPagoCacheado(metodo);
+    return metodo;
   }
 
   async guardarMetodoPago(datos: {
@@ -152,6 +155,7 @@ export class PagosService {
     ano_expiracion: number;
     cvv: string;
     predeterminado: boolean;
+    editar?: boolean;
   }): Promise<MetodoPagoTarjeta> {
     const { data, error } = await this.supabase.functions.invoke('metodo-pago', {
       body: { accion: 'guardar', ...datos },
@@ -159,7 +163,9 @@ export class PagosService {
     if (error || !data?.metodo) {
       throw new Error(error?.message || 'No se pudo guardar el método de pago');
     }
-    return data.metodo as MetodoPagoTarjeta;
+    const metodo = data.metodo as MetodoPagoTarjeta;
+    this.guardarMetodoPagoCacheado(metodo);
+    return metodo;
   }
 
   async eliminarMetodoPago(): Promise<void> {
@@ -167,6 +173,26 @@ export class PagosService {
       body: { accion: 'eliminar' },
     });
     if (error) throw new Error(error.message || 'No se pudo eliminar el método de pago');
+    this.guardarMetodoPagoCacheado(null);
+  }
+
+  obtenerMetodoPagoCacheado(): MetodoPagoTarjeta | null {
+    const usuarioId = this.obtenerUsuarioIdGuardado();
+    if (!usuarioId) return null;
+    try {
+      const metodo = JSON.parse(localStorage.getItem(`${this.claveCacheMetodoPago}_${usuarioId}`) || 'null');
+      return metodo && typeof metodo.marca === 'string' ? metodo as MetodoPagoTarjeta : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private guardarMetodoPagoCacheado(metodo: MetodoPagoTarjeta | null): void {
+    const usuarioId = this.obtenerUsuarioIdGuardado();
+    if (!usuarioId) return;
+    const clave = `${this.claveCacheMetodoPago}_${usuarioId}`;
+    if (metodo) localStorage.setItem(clave, JSON.stringify(metodo));
+    else localStorage.removeItem(clave);
   }
 
   obtenerPlanActualCacheado(): CodigoPlan {
