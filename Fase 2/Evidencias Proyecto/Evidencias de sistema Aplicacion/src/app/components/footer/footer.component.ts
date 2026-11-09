@@ -1,7 +1,7 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { IonIcon } from '@ionic/angular';
+import { IonIcon, ToastController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import * as icons from 'ionicons/icons';
 import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-rol';
@@ -16,6 +16,8 @@ import { NavegacionRolService } from '../../services/navegacion-rol/navegacion-r
 export class FooterComponent {
 
   @Input() tipo: 'adulto-mayor' | 'cuidador' = 'adulto-mayor';
+
+  private toastCtrl = inject(ToastController);
 
   constructor(
     private router: Router,
@@ -34,6 +36,27 @@ export class FooterComponent {
 
   async irInicio() {
     await this.navRol.irAPanelPrincipal();
+    await this.avisarMenuPrincipal();
+  }
+
+  /**
+   * Avisa que la casa deja a la persona en el menú principal.
+   *
+   * El ícono de la casa solo se entiende si ya se sabe qué significa; para las
+   * personas mayores el aviso aclara dónde están, incluso si ya estaban en el
+   * menú. Se muestra arriba para no tapar el propio menú de abajo.
+   */
+  private async avisarMenuPrincipal(): Promise<void> {
+    try {
+      const aviso = await this.toastCtrl.create({
+        message: 'Estás en el menú principal',
+        duration: 3000,
+        position: 'top'
+      });
+      await aviso.present();
+    } catch {
+      /* sin UI disponible */
+    }
   }
 
   irAjustes() {

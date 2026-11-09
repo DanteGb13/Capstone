@@ -35,22 +35,6 @@
       }
     </div>
 
-    <!-- Marcador de partidas -->
-    <div class="estadisticas">
-      <div class="stat">
-        <span>Ganadas</span>
-        <strong>{{ victorias }}</strong>
-      </div>
-      <div class="stat">
-        <span>Empates</span>
-        <strong>{{ empates }}</strong>
-      </div>
-      <div class="stat">
-        <span>Perdidas</span>
-        <strong>{{ derrotas }}</strong>
-      </div>
-    </div>
-
     <p class="estado-msg">{{ mensaje }}</p>
 
     <p class="partidas-contador">Partidas jugadas: {{ victorias + derrotas + empates }}</p>
@@ -77,11 +61,6 @@
       <ion-button expand="block" class="btn-primario" (click)="reiniciarPartida()">
         <ion-icon name="refresh-outline" slot="start"></ion-icon>
         Reiniciar partida
-      </ion-button>
-
-      <ion-button expand="block" fill="outline" class="btn-secundario" (click)="reiniciarEstadisticas()">
-        <ion-icon name="trash-outline" slot="start"></ion-icon>
-        Reiniciar estadísticas
       </ion-button>
     </div>
 

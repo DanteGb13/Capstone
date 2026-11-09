@@ -75,7 +75,7 @@ ion-content {
     }
 }
 
-/* Selector de ventana (7 / 15 / 30 días).
+/* Selector de ventana (7 / 15 días).
    Vive dentro de la píldora azul del período para no sumar una fila más, y los
    botones se distinguen del texto con fondo propio: si sólo cambiaran de color
    el cuidador no los reconocería como algo pulsable. */
@@ -467,6 +467,19 @@ ion-content {
     position: relative;
 }
 
+/* Modo denso (15 días).
+   Las etiquetas de valor se van: sobre una barra de ~10 px no caben, y sin
+   recorte se escribian encima de la columna de al lado. Los mismos numeros
+   siguen disponibles en el titulo de cada columna y en la lista de trayectos
+   de abajo, que es donde el cuidador mira el detalle de todas formas. */
+.pa-grafico.denso {
+    gap: 2px;
+
+    .pa-valores {
+        display: none;
+    }
+}
+
 .pa-col {
     flex: 1;
     display: flex;
@@ -475,6 +488,11 @@ ion-content {
     justify-content: flex-end;
     height: 100%;
     min-width: 0;
+
+    // El eje se posiciona contra SU columna y no contra el grafico: asi cada
+    // fecha queda centrada bajo su barra. Sin esto, con `left: auto` todas
+    // caian por el borde izquierdo y se pisaban entre si.
+    position: relative;
 
     // Dia sin registro: se marca para que se lea como ausencia de dato y no
     // como un dia tranquilo.
@@ -553,9 +571,12 @@ ion-content {
 .pa-eje {
     position: absolute;
     bottom: 0;
+    left: 50%;
     font-size: 9px;
+    font-weight: 600;
     color: var(--pa-tenue);
-    transform: translateY(20px);
+    white-space: nowrap;
+    transform: translateX(-50%) translateY(20px);
 }
 
 // Centrada, y no pegada a la izquierda: la tarjeta tiene ~160 px de aire a la

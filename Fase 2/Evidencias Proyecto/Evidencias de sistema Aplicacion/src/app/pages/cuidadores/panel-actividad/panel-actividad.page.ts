@@ -26,10 +26,10 @@ declare const L: any;
  * Antes eran 7 días fijos y no había forma de ampliarla. Eso dejó un problema
  * concreto: el panel queda vacío con la misma exactitud si la persona no se
  * movió hoy como si su último rastro fuera de hace un mes, y el cuidador no
- * tenía cómo distinguirlo. Con 7 / 15 / 30 se ve de un vistazo: si en 7 no hay
- * nada y en 30 sí, el dato existe y está más atrás.
+ * tenía cómo distinguirlo. Con 7 / 15 se ve de un vistazo: si en 7 no hay
+ * nada y en 15 sí, el dato existe y está más atrás.
  */
-const RANGOS: number[] = [7, 15, 30];
+const RANGOS: number[] = [7, 15];
 
 const DIAS = 7;
 
@@ -227,7 +227,7 @@ export class PanelActividadPage implements OnDestroy {
    * Cambia la ventana de tiempo y vuelve a pedir los datos.
    *
    * Se recarga todo y no sólo el encabezado porque el gráfico por día, los
-   * lugares frecuentes y los trayectos dependen del rango: un eje de 30 días con
+   * lugares frecuentes y los trayectos dependen del rango: un eje de 15 días con
    * barras calculadas para 7 sería peor que un panel vacío.
    */
   cambiarRango(dias: number) {
@@ -683,6 +683,33 @@ export class PanelActividadPage implements OnDestroy {
    */
   diasGrafico(): ResumenDia[] {
     return this.dias();
+  }
+
+  /**
+   * True cuando son demasiadas columnas para las etiquetas de valor.
+   *
+   * Con 15 días cada barra mide poco más de 10 px: un "1,2 km" sobre ella
+   * no cabe, y sin recorte se escribe encima de la columna de al lado. En ese
+   * modo las etiquetas se esconden; los mismos números están en el título de
+   * cada columna y en la lista de trayectos de abajo, con su fecha.
+   */
+  get denso(): boolean {
+    return this.diasGrafico().length > 7;
+  }
+
+  /**
+   * Qué días llevan su fecha en el eje.
+   *
+   * Una fecha por día solo cabe cuando son 7. Con 15, escribirlas todas las
+   * monta unas sobre otras y no se lee ninguna: se muestra una de cada dos, y
+   * siempre la última, que es la de hoy y la primera que se busca.
+   */
+  mostrarEje(indice: number): boolean {
+    const total = this.diasGrafico().length;
+    if (total <= 7) {
+      return true;
+    }
+    return indice % 2 === 0 || indice === total - 1;
   }
 
   /**

@@ -105,7 +105,7 @@ const PERMISOS_DEFINICION: DefinicionPermiso[] = [
   },
   {
     id: 'ubicacion-fondo',
-    nombre: 'Ubicación en segundo plano',
+    nombre: 'Ubicación en segundo plano (Batería)',
     descripcion: 'Seguir cuidándote con la app cerrada',
     paraQue:
       'Con la app cerrada, esta app sigue avisando a tu cuidador si sales de ' +

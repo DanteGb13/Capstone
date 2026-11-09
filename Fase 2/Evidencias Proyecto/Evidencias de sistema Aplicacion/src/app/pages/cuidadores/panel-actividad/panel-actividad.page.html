@@ -42,7 +42,7 @@
       <div class="pa-periodo">
         <ion-icon name="calendar"></ion-icon>
 
-        <!-- Selector de ventana: 7 / 15 / 30 días. Antes eran 7 fijos y no había
+        <!-- Selector de ventana: 7 / 15 días. Antes eran 7 fijos y no había
              forma de ampliar, así que un panel vacío no distinguía entre "hoy no
              se movió" y "el último rastro es de hace un mes". -->
         <span>Últimos</span>
@@ -162,9 +162,9 @@
           <span class="pa-card-sub">Minutos de desplazamiento y quieto</span>
         </div>
 
-        <div class="pa-grafico" role="img"
+        <div class="pa-grafico" [class.denso]="denso" role="img"
              aria-label="Trayectos por día: desplazamiento y tiempo quieto">
-          @for (d of diasGrafico(); track d.fecha) {
+          @for (d of diasGrafico(); track d.fecha; let i = $index) {
             <div class="pa-col"
                  [class.vacio]="!diaTieneGrafico(d)"
                  [title]="d.etiqueta + ': ' + formatoDistancia(d.distanciaM) + ', quieto ' + quieto(d)">
@@ -182,7 +182,7 @@
                 <div class="pa-seg quieto" [style.height.%]="alturaSegmentoDia(d, 'quieto')"></div>
                 <div class="pa-seg mov" [style.height.%]="alturaSegmentoDia(d, 'movimiento')"></div>
               </div>
-              <span class="pa-eje">{{ d.etiqueta }}</span>
+              <span class="pa-eje">@if (mostrarEje(i)) { {{ d.etiqueta }} }</span>
             </div>
           }
         </div>

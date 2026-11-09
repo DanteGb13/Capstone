@@ -10,7 +10,7 @@ import {
   IonIcon
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { arrowBack, helpCircleOutline, refreshOutline, trashOutline } from 'ionicons/icons';
+import { arrowBack, helpCircleOutline, refreshOutline } from 'ionicons/icons';
 import { TutorialJuegoComponent } from '../../components/tutorial-juego/tutorial-juego.component';
 import { TUTORIAL_TRES_EN_LINEA } from '../juegos/tutoriales';
 import { suspenderZoomJuego, reanudarZoomJuego } from '../../services/font-size/font-size';
@@ -87,7 +87,7 @@ export class TicTacToePage implements OnDestroy {
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {
-    addIcons({ arrowBack, helpCircleOutline, refreshOutline, trashOutline });
+    addIcons({ arrowBack, helpCircleOutline, refreshOutline });
     suspenderZoomJuego();
     this.cargarStats();
   }
@@ -348,15 +348,6 @@ export class TicTacToePage implements OnDestroy {
     this.lineaGanadora = null;
     this.empate = false;
     this.pensando = false;
-  }
-
-  /** Borra el marcador de victorias, derrotas y empates. */
-  reiniciarEstadisticas(): void {
-    this.victorias = 0;
-    this.derrotas = 0;
-    this.empates = 0;
-    this.guardarStats();
-    this.reiniciarPartida();
   }
 
   /** Guarda el marcador en el dispositivo. */
