@@ -25,7 +25,8 @@ interface PuntoIngreso {
   etiqueta: string;
 }
 
-const RANGOS = [7, 30, 90];
+/** 0 = todos los tiempos; el resto, la ventana en días. */
+const RANGOS = [0, 7, 30, 90];
 
 @Component({
   selector: 'app-panel-control',
@@ -44,13 +45,13 @@ export class PanelControlPage implements OnInit {
 
   kpis: Kpi[] = [];
   readonly rangos = RANGOS;
-  dias = 30;
+  /** Por defecto, todo el historial. */
+  dias = 0;
   filtroRol = '';
 
   totalUsuarios = 0;
   adultosMayores = 0;
   cuidadores = 0;
-  otrosUsuarios = 0;
   licenciasActivas = 0;
   usuariosActivos = 0;
   ingresos = 0;
@@ -78,34 +79,26 @@ export class PanelControlPage implements OnInit {
     return Math.max(this.adultosMayores - this.adultosVinculados, 0);
   }
 
-  /** Promedio de ingreso por día del periodo elegido. */
-  get ingresoPromedioDia(): number {
-    return this.dias > 0 ? this.ingresos / this.dias : 0;
-  }
-
   /** Cuidadores que todavía no pagan: la oportunidad comercial más directa. */
   get cuidadoresSinLicencia(): number {
     return Math.max(this.cuidadores - this.licenciasActivas, 0);
   }
 
+  /** Alertas que se clasifican por tipo en el ranking: SOS y de zona. */
   get alertasTotales(): number {
-    return this.alertasSos + this.alertasZona + this.alertasSinSenal;
+    return this.alertasSos + this.alertasZona;
   }
 
-  get porcentajeCuidadores(): number {
-    return this.totalUsuarios ? Math.round(this.cuidadores * 100 / this.totalUsuarios) : 0;
+  /** Adultos y cuidadores: lo que muestra el donut, ni más ni menos. */
+  get adultosYCuidadores(): number {
+    return this.adultosMayores + this.cuidadores;
   }
 
-  get porcentajeAdultos(): number {
-    return this.totalUsuarios ? Math.round(this.adultosMayores * 100 / this.totalUsuarios) : 0;
-  }
-
-  /** Mezcla de cuentas para el donut: adultos / cuidadores / otras. */
+  /** Mezcla para el donut, en dos franjas: adultos y cuidadores. */
   get mezclaUsuarios(): string {
-    const total = this.totalUsuarios || 1;
+    const total = this.adultosYCuidadores || 1;
     const adulto = this.adultosMayores * 100 / total;
-    const cuidador = adulto + this.cuidadores * 100 / total;
-    return `conic-gradient(#7c3aed 0 ${adulto}%, #2dd4bf ${adulto}% ${cuidador}%, #cbd5e1 ${cuidador}% 100%)`;
+    return `conic-gradient(#7c3aed 0 ${adulto}%, #2dd4bf ${adulto}% 100%)`;
   }
 
   /** Polilínea del uso diario, en coordenadas de un SVG de 100×40. */
@@ -148,7 +141,7 @@ export class PanelControlPage implements OnInit {
 
   /** ¿Hay algo que limpiar? Si no, el botón no se muestra. */
   get filtrosActivos(): boolean {
-    return this.dias !== 30 || !!this.filtroRol || !!this.filtroLicencia || !!this.filtroVinculacion;
+    return this.dias !== 0 || !!this.filtroRol || !!this.filtroLicencia || !!this.filtroVinculacion;
   }
 
   /** Host de Supabase, sin la URL completa: alcanza para saber a qué base
@@ -166,7 +159,7 @@ export class PanelControlPage implements OnInit {
     const params = this.route.snapshot.queryParamMap;
     if (params.get('volverDescargar') === '1') {
       const dias = Number(params.get('dias'));
-      if ([7, 30, 90].includes(dias)) this.dias = dias;
+      if (RANGOS.includes(dias)) this.dias = dias;
       this.filtroRol = params.get('rol') ?? '';
       this.filtroLicencia = params.get('licencia') ?? '';
       this.filtroVinculacion = params.get('vinculacion') ?? '';
@@ -203,7 +196,6 @@ export class PanelControlPage implements OnInit {
       this.totalUsuarios = Number(panel.total_usuarios ?? 0);
       this.adultosMayores = Number(panel.adultos_mayores ?? 0);
       this.cuidadores = Number(panel.cuidadores ?? 0);
-      this.otrosUsuarios = Math.max(this.totalUsuarios - this.adultosMayores - this.cuidadores, 0);
       this.licenciasActivas = Number(panel.licencias_activas ?? 0);
       this.usuariosActivos = Number(panel.usuarios_activos ?? 0);
       this.ingresos = Number(panel.ingresos ?? 0);
@@ -226,8 +218,7 @@ export class PanelControlPage implements OnInit {
           icono: '$',
           etiqueta: 'Ingresos del periodo',
           valor: this.formatearDinero(this.ingresos),
-          destacado: true,
-          descripcion: `Promedio de ${this.formatearDinero(this.ingresoPromedioDia)} al día`
+          destacado: true
         },
         {
           icono: 'L',
@@ -244,8 +235,7 @@ export class PanelControlPage implements OnInit {
         {
           icono: 'S',
           etiqueta: 'Alertas SOS',
-          valor: this.formatear(this.alertasSos),
-          descripcion: `${this.formatear(this.alertasZona)} de zona · ${this.formatear(this.alertasSinSenal)} sin señal`
+          valor: this.formatear(this.alertasSos)
         }
       ];
     } catch (e: any) {
@@ -307,16 +297,33 @@ export class PanelControlPage implements OnInit {
   }
 
   private crearSerieMensual(filas: any[]) {
-    const maximo = Math.max(...filas.map(fila => Number(fila.monto ?? 0)), 1);
-    this.serieIngresosMensuales = filas.map(fila => {
-      const partes = String(fila.mes).split('-');
+    // La consulta sólo trae los meses que tuvieron pagos: sin rellenar, un mes
+    // sin plata desaparecía del gráfico y parecía que el anterior era el
+    // último. Se completa el año con los meses vacíos, igual que la serie de
+    // alertas SOS.
+    const porMes = new Map(
+      filas.map(fila => [String(fila.mes ?? ''), Number(fila.monto ?? 0)])
+    );
+    const ahora = new Date();
+    const serieCompleta = [];
+
+    for (let indice = 11; indice >= 0; indice--) {
+      const fecha = new Date(ahora.getFullYear(), ahora.getMonth() - indice, 1);
+      const mes = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
+      serieCompleta.push({ mes, monto: porMes.get(mes) ?? 0 });
+    }
+
+    const maximo = Math.max(...serieCompleta.map(fila => fila.monto), 1);
+    this.serieIngresosMensuales = serieCompleta.map(fila => {
+      const partes = String(fila.mes ?? '').split('-');
       const fecha = partes.length === 2
         ? new Date(Number(partes[0]), Number(partes[1]) - 1, 1).toLocaleDateString('es-CL', { month: 'short', year: '2-digit' })
-        : String(fila.mes);
+        : String(fila.mes ?? '');
       const valor = Number(fila.monto ?? 0);
       return {
         fecha,
         valor,
+        // Mes vacío: una rayita sobre la línea, para que se vea el hueco.
         altura: valor ? Math.max(valor * 100 / maximo, 8) : 3,
         etiqueta: `${this.formatearDinero(valor)} - ${fecha}`
       };
@@ -398,7 +405,10 @@ export class PanelControlPage implements OnInit {
 
   alCambiarRol(evento: Event) {
     const valor = String((evento.target as HTMLSelectElement | null)?.value ?? '');
-    this.filtroRol = valor === 'adulto mayor' || valor === 'cuidador' ? valor : '';
+    // Los valores son los nombres reales de los roles: 'Usuario' (adulto
+    // mayor) y 'Familiar' (cuidador). Con etiquetas como "adulto mayor" el
+    // LIKE de la consulta no coincidía con ningún rol y no filtraba nada.
+    this.filtroRol = valor === 'Usuario' || valor === 'Familiar' ? valor : '';
     void this.cargarKpis();
     this.refrescar();
   }
@@ -417,10 +427,10 @@ export class PanelControlPage implements OnInit {
     this.refrescar();
   }
 
-  /** Vuelve todo a "últimos 30 días, sin filtrar" y recarga. */
+  /** Vuelve todo a "todos los tiempos, sin filtrar" y recarga. */
   limpiarFiltros(): void {
     if (!this.filtrosActivos) return;
-    this.dias = 30;
+    this.dias = 0;
     this.filtroRol = '';
     this.filtroLicencia = '';
     this.filtroVinculacion = '';
@@ -465,7 +475,7 @@ export class PanelControlPage implements OnInit {
       }
     }
 
-    pdf.save(`panel-control-${this.dias}-dias.pdf`);
+    pdf.save(`panel-control-${this.dias === 0 ? 'todos' : this.dias + '-dias'}.pdf`);
     await this.registrarDescarga('Panel de control', 8);
   }
 

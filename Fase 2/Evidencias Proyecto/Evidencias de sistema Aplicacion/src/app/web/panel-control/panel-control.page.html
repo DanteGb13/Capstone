@@ -8,7 +8,7 @@
           <label for="filtro-periodo">Periodo</label>
           <select id="filtro-periodo" [value]="dias" (change)="alCambiarRango($event)">
             @for (rango of rangos; track rango) {
-              <option [value]="rango">Últimos {{ rango }} días</option>
+              <option [value]="rango">{{ rango === 0 ? 'Todos' : 'Últimos ' + rango + ' días' }}</option>
             }
           </select>
         </div>
@@ -17,8 +17,8 @@
           <label for="filtro-rol">Tipo de usuario</label>
           <select id="filtro-rol" [value]="filtroRol" (change)="alCambiarRol($event)">
             <option value="">Todos los perfiles</option>
-            <option value="adulto mayor">Adultos mayores</option>
-            <option value="cuidador">Cuidadores</option>
+            <option value="Usuario">Adultos mayores</option>
+            <option value="Familiar">Cuidadores</option>
           </select>
         </div>
 
@@ -32,11 +32,11 @@
         </div>
 
         <div class="panel-filtros__campo">
-          <label for="filtro-vinculacion">Estado de vinculación</label>
+          <label for="filtro-vinculacion">Vinculación</label>
           <select id="filtro-vinculacion" [value]="filtroVinculacion" (change)="alCambiarVinculacion($event)">
             <option value="">Todos</option>
-            <option value="vinculados">Con cuidador</option>
-            <option value="sin_cuidador">Sin cuidador</option>
+            <option value="vinculados">Con vínculo</option>
+            <option value="sin_cuidador">Sin vínculo</option>
           </select>
         </div>
 
@@ -83,7 +83,7 @@
             <div class="panel-grafico__cabecera">
               <div>
                 <h2>Ingresos por mes</h2>
-                <p>Pagos autorizados, mes a mes</p>
+                <p>Pagos autorizados de los últimos 12 meses</p>
               </div>
               <strong>{{ ingresosFormateados }}</strong>
             </div>
@@ -149,14 +149,6 @@
                 </span>
                 <strong>{{ alertasZona }}</strong>
               </div>
-              <div class="panel-ranking__fila">
-                <span class="panel-ranking__etiqueta">Sin señal</span>
-                <span class="panel-ranking__pista">
-                  <span class="panel-ranking__barra panel-ranking__barra--senal"
-                    [style.width.%]="alertasTotales ? alertasSinSenal * 100 / alertasTotales : 0"></span>
-                </span>
-                <strong>{{ alertasSinSenal }}</strong>
-              </div>
             </div>
           </section>
 
@@ -165,20 +157,19 @@
             <div class="panel-grafico__cabecera">
               <div>
                 <h2>Composición de cuentas</h2>
-                <p>Cómo se reparten los {{ totalUsuarios }} usuarios</p>
+                <p>Adultos mayores y cuidadores del sistema</p>
               </div>
             </div>
             <div class="panel-dona">
               <div class="panel-dona__circulo" [style.background]="mezclaUsuarios">
                 <div class="panel-dona__hueco">
-                  <strong>{{ totalUsuarios }}</strong>
+                  <strong>{{ adultosYCuidadores }}</strong>
                   <span>cuentas</span>
                 </div>
               </div>
               <ul class="panel-dona__leyenda">
                 <li><i class="adulto"></i><span>Adultos mayores</span><strong>{{ adultosMayores }}</strong></li>
                 <li><i class="cuidador"></i><span>Cuidadores</span><strong>{{ cuidadores }}</strong></li>
-                <li><i class="otros"></i><span>Otras cuentas</span><strong>{{ otrosUsuarios }}</strong></li>
               </ul>
             </div>
           </section>

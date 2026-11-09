@@ -336,7 +336,6 @@
 
 .panel-ranking__barra--sos { background: #ef4444; }
 .panel-ranking__barra--zona { background: #f59e0b; }
-.panel-ranking__barra--senal { background: #64748b; }
 
 .panel-ranking__fila strong {
   color: #241b38;
@@ -348,7 +347,8 @@
 .panel-dona {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  justify-content: center;
+  gap: 1.75rem;
   padding-top: 0.5rem;
 }
 
@@ -412,7 +412,6 @@
 
 .panel-dona__leyenda i.adulto { background: #7c3aed; }
 .panel-dona__leyenda i.cuidador { background: #2dd4bf; }
-.panel-dona__leyenda i.otros { background: #cbd5e1; }
 
 /* ---- Medidor de tiempo de respuesta ---- */
 .panel-gauge {
