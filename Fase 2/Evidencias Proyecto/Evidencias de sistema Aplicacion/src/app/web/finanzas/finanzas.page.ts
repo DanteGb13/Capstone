@@ -2,7 +2,8 @@ import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AlertController, IonContent, IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { createOutline, downloadOutline } from 'ionicons/icons';
+import { closeOutline, createOutline, downloadOutline, eyeOutline } from 'ionicons/icons';
+import { jsPDF } from 'jspdf';
 import { WebNav } from '../web-nav/web-nav';
 import { SupabaseClientProvider } from '../../core/supabase-client';
 
@@ -18,6 +19,22 @@ interface SuscripcionAdministrada {
   vence_en: string | null;
   mejora_en: string | null;
   plan_anterior_codigo: string | null;
+}
+
+/** Un pago de `transaccion_pago`, tal como lo devuelve la acción `pagos`. */
+interface PagoHistorial {
+  usuario_id: string;
+  nombre: string;
+  correo: string;
+  plan_codigo: string;
+  monto: number;
+  monto_original_clp: number | null;
+  credito_prorrateado_clp: number | null;
+  tipo: string;
+  estado: string;
+  buy_order: string;
+  creada_en: string;
+  respuesta_transbank: unknown;
 }
 
 @Component({
@@ -45,15 +62,47 @@ export class FinanzasPage implements OnInit {
   private clienteSupabase = inject(SupabaseClientProvider).get();
 
   constructor() {
-    addIcons({ createOutline, downloadOutline });
+    addIcons({ closeOutline, createOutline, downloadOutline, eyeOutline });
   }
 
   get suscripcionesFiltradas(): SuscripcionAdministrada[] {
-    const texto = this.normalizar(this.busqueda);
     return this.suscripciones.filter(suscripcion =>
-      (!texto || this.normalizar(suscripcion.nombre).includes(texto) || this.normalizar(suscripcion.correo).includes(texto))
-      && this.coincideConSuscripcion(suscripcion)
-      && this.coincideConPlan(suscripcion));
+      this.coincide(suscripcion, this.normalizar(this.busqueda), this.filtroSuscripcion, this.filtroPlan));
+  }
+
+  /**
+   * Cuidadores que entran en la descarga según los filtros de la ventana.
+   * La misma lógica de la tabla, sin el buscador: acá sólo se filtra por
+   * suscripción y plan.
+   */
+  get cuidadoresDescarga(): SuscripcionAdministrada[] {
+    return this.suscripciones.filter(suscripcion =>
+      this.coincide(suscripcion, '', this.descargaSuscripcion, this.descargaPlan));
+  }
+
+  /** ¿Esta fila pasa el buscador y los dos filtros? */
+  private coincide(
+    suscripcion: SuscripcionAdministrada,
+    texto: string,
+    filtroSuscripcion: string,
+    filtroPlan: string
+  ): boolean {
+    const coincideBusqueda = !texto
+      || this.normalizar(suscripcion.nombre).includes(texto)
+      || this.normalizar(suscripcion.correo).includes(texto);
+
+    // Las categorías no se pisan: "Con suscripción" excluye a las canceladas
+    // para que "Canceladas" muestre sólo esas y no se repitan en ambas.
+    const coincideSuscripcion = !filtroSuscripcion
+      || (filtroSuscripcion === 'con'
+        && suscripcion.estado !== 'sin_suscripcion'
+        && suscripcion.estado !== 'cancelada')
+      || (filtroSuscripcion === 'sin' && suscripcion.estado === 'sin_suscripcion')
+      || (filtroSuscripcion === 'cancelada' && suscripcion.estado === 'cancelada');
+
+    const coincidePlan = !filtroPlan || suscripcion.plan_codigo === filtroPlan;
+
+    return coincideBusqueda && coincideSuscripcion && coincidePlan;
   }
 
   get suscripcionesPagina(): SuscripcionAdministrada[] {
@@ -110,56 +159,296 @@ export class FinanzasPage implements OnInit {
     this.refrescar();
   }
 
-  /** Descarga en CSV todos los cuidadores que pasan el buscador y los filtros
-   * (no sólo la página visible). */
-  descargarCsv(): void {
-    const filas = this.suscripcionesFiltradas;
-    if (!filas.length) return;
+  /**
+   * Abre la ventana de descarga con los filtros que la tabla tenga puestos,
+   * para que lo que se baja sea lo mismo que se está viendo.
+   */
+  abrirDescarga(): void {
+    this.descargaSuscripcion = this.filtroSuscripcion;
+    this.descargaPlan = this.filtroPlan;
+    this.descargaAbierta = true;
+    this.refrescar();
+  }
+
+  cerrarDescarga(): void {
+    this.descargaAbierta = false;
+    this.refrescar();
+  }
+
+  /**
+   * CSV general del botón Descargar: los pagos de los cuidadores que pasan
+   * los filtros de la ventana. Los que nunca pagaron también entran, con
+   * "Sin registro" en la fila, para que el archivo cubra a todos.
+   */
+  async descargarCsv(): Promise<void> {
+    const seleccionados = this.cuidadoresDescarga;
+    if (!seleccionados.length) {
+      this.mensajeSuscripciones = 'Ningún cuidador coincide con los filtros de la descarga.';
+      this.cerrarDescarga();
+      this.refrescar();
+      return;
+    }
+
+    this.descargandoPagos = true;
+    this.mensajeSuscripciones = '';
+    this.refrescar();
+
+    const { data, error } = await this.clienteSupabase.functions.invoke('admin-suscripciones', {
+      body: {
+        accion: 'pagos',
+        usuario_ids: seleccionados.map(suscripcion => suscripcion.usuario_id),
+        plan_codigo: this.descargaPlan,
+      },
+    });
+    this.descargandoPagos = false;
+    this.descargaAbierta = false;
+
+    const pagos: PagoHistorial[] = Array.isArray(data?.pagos) ? data.pagos : [];
+    const sinPagos: Array<{ nombre: string; correo: string }> = Array.isArray(data?.sinPagos) ? data.sinPagos : [];
+    if (error || (!pagos.length && !sinPagos.length)) {
+      this.mensajeSuscripciones = 'No se pudieron descargar los pagos.';
+      this.refrescar();
+      return;
+    }
 
     const contenido = [
-      ['Cuidador', 'Correo', 'Plan', 'Estado', 'Inicio', 'Vencimiento'],
-      ...filas.map(suscripcion => [
-        suscripcion.nombre || 'Sin nombre',
-        suscripcion.correo,
-        this.nombrePlan(suscripcion.plan_codigo),
-        this.textoEstado(suscripcion.estado),
-        this.formatoCsvFecha(suscripcion.inicia_en),
-        this.formatoCsvFecha(suscripcion.vence_en),
+      ['Cuidador', 'Correo', 'Fecha', 'Plan', 'Monto', 'Estado', 'Código de compra'],
+      ...pagos.map(pago => [
+        pago.nombre || 'Sin nombre',
+        pago.correo || 'Sin registro',
+        this.formatearFecha(pago.creada_en),
+        this.nombrePlan(pago.plan_codigo),
+        String(pago.monto),
+        this.textoEstadoPago(pago.estado),
+        pago.buy_order || 'Sin registro',
+      ]),
+      // Sin compras: una fila por cuidador con "Sin registro" donde no hay
+      // dato, para que el CSV no lleve celdas vacías.
+      ...sinPagos.map(cuidador => [
+        cuidador.nombre || 'Sin nombre',
+        cuidador.correo || 'Sin registro',
+        'Sin registro',
+        'Sin registro',
+        'Sin registro',
+        'Sin pagos',
+        'Sin registro',
       ]),
     ]
       .map(fila => fila.map(valor => `"${String(valor).replaceAll('"', '""')}"`).join(','))
       .join('\r\n');
 
-    const archivo = new Blob(['\ufeff', contenido], { type: 'text/csv;charset=utf-8' });
-    const enlace = document.createElement('a');
-    enlace.href = URL.createObjectURL(archivo);
-    enlace.download = `finanzas_suscripciones_${new Date().toISOString().slice(0, 10)}.csv`;
-    enlace.click();
-    URL.revokeObjectURL(enlace.href);
+    this.descargarArchivo(contenido, `finanzas_pagos_${new Date().toISOString().slice(0, 10)}.csv`);
+    this.refrescar();
   }
 
-  private coincideConSuscripcion(suscripcion: SuscripcionAdministrada): boolean {
-    // Las categorías no se pisan: "Con suscripción" excluye a las canceladas
-    // para que "Canceladas" muestre sólo esas y no se repitan en ambas.
-    switch (this.filtroSuscripcion) {
-      case 'con':
-        return suscripcion.estado !== 'sin_suscripcion' && suscripcion.estado !== 'cancelada';
-      case 'sin':
-        return suscripcion.estado === 'sin_suscripcion';
-      case 'cancelada':
-        return suscripcion.estado === 'cancelada';
-      default:
-        return true;
+  /** CSV con todos los pagos del cuidador que está abierto en el historial. */
+  descargarHistorialCsv(): void {
+    if (!this.pagosHistorial.length) return;
+
+    const contenido = [
+      ['Fecha', 'Plan', 'Monto', 'Estado', 'Código de compra'],
+      ...this.pagosHistorial.map(pago => [
+        this.formatearFecha(pago.creada_en),
+        this.nombrePlan(pago.plan_codigo),
+        String(pago.monto),
+        this.textoEstadoPago(pago.estado),
+        pago.buy_order,
+      ]),
+    ]
+      .map(fila => fila.map(valor => `"${String(valor).replaceAll('"', '""')}"`).join(','))
+      .join('\r\n');
+
+    const nombre = (this.historialTitulo || 'cuidador').replace(/\s+/g, '_').toLowerCase();
+    this.descargarArchivo(contenido, `pagos_${nombre}_${new Date().toISOString().slice(0, 10)}.csv`);
+  }
+
+  /**
+   * Comprobante en PDF de UN pago. Mismo diseño que el comprobante que la
+   * app muestra en su historial, con el nombre del cuidador agregado porque
+   * éste lo emite el administrador.
+   */
+  async descargarComprobante(pago: PagoHistorial): Promise<void> {
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+    const violeta = '#7738d9';
+    const azulNoche = '#202b4d';
+    const moradoTexto = '#3f4fb7';
+    const codigoTransbank = this.valorTransbank(pago.respuesta_transbank, 'authorization_code');
+    const formaPago = this.formaPago(this.valorTransbank(pago.respuesta_transbank, 'payment_type_code'));
+    const cuenta = this.valorTransbank(pago.respuesta_transbank, 'card_detail', 'card_number') || 'No disponible';
+
+    pdf.setFillColor(violeta);
+    pdf.roundedRect(15, 12, 180, 24, 4, 4, 'F');
+    try {
+      const logo = await this.imagenComoDataUrl('/assets/logo/logo-128.png');
+      pdf.setFillColor(255, 255, 255);
+      pdf.roundedRect(17.5, 13.5, 21, 21, 3, 3, 'F');
+      pdf.addImage(logo, 'PNG', 18.5, 14.5, 19, 19);
+    } catch {
+      // El comprobante sigue disponible aunque el logo aún no esté cargado.
+    }
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.text('Siempre Cerca', 42, 27);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text('Comprobante de pago', 145, 27);
+
+    pdf.setTextColor(azulNoche);
+    pdf.setFontSize(11);
+    const etiquetas = [
+      ['Código Transacción:', 52],
+      ['Cuidador:', 64],
+      ['Monto:', 76],
+      ['Forma de pago:', 88],
+      ['Cuenta:', 100],
+      ['Comercio:', 112],
+      ['Fecha:', 124],
+    ] as const;
+    const valores = [
+      pago.buy_order || 'No disponible',
+      this.historialTitulo || 'No disponible',
+      `$ ${new Intl.NumberFormat('es-CL').format(pago.monto)}`,
+      formaPago || 'Débito',
+      cuenta,
+      'SiempreCerca',
+      this.formatearFecha(pago.creada_en),
+    ];
+
+    etiquetas.forEach(([etiqueta, y], indice) => {
+      pdf.setFont('helvetica', 'bold');
+      pdf.setTextColor(moradoTexto);
+      pdf.text(etiqueta, 86, y, { align: 'right' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(35, 38, 48);
+      pdf.setFontSize(indice === 0 ? 8.5 : 10);
+      const lineas = pdf.splitTextToSize(valores[indice], 98);
+      pdf.text(lineas, 92, y);
+      pdf.setFontSize(11);
+    });
+
+    // Etiqueta con el estado real del pago: no todos los pagos quedaron
+    // autorizados (también hay rechazados y anulados).
+    const autorizado = pago.estado === 'autorizada';
+    const colorEstado: [number, number, number] = autorizado ? [52, 168, 83] : [220, 38, 38];
+    pdf.setFillColor(...colorEstado);
+    pdf.roundedRect(73, 163, 64, 12, 3, 3, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(12);
+    pdf.text(this.textoEstadoPago(pago.estado).toUpperCase(), 105, 171, { align: 'center' });
+
+    pdf.setTextColor(102, 95, 120);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.text('Comprobante de pago', 105, 272, { align: 'center' });
+    pdf.save(`comprobante-${pago.buy_order || 'transaccion'}.pdf`);
+
+    if (codigoTransbank) {
+      // El código de autorización de Transbank no cabe en la etiqueta grande.
+      pdf.setTextColor(102, 95, 120);
+      pdf.setFontSize(8);
+      pdf.text(`Autorización Transbank: ${codigoTransbank}`, 105, 278, { align: 'center' });
     }
   }
 
-  private coincideConPlan(suscripcion: SuscripcionAdministrada): boolean {
-    return !this.filtroPlan || suscripcion.plan_codigo === this.filtroPlan;
+  private descargarArchivo(contenido: string, nombre: string): void {
+    const blob = new Blob(['\ufeff', contenido], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement('a');
+    enlace.href = url;
+    enlace.download = nombre;
+    enlace.click();
+    URL.revokeObjectURL(url);
   }
 
-  private formatoCsvFecha(fecha: string | null): string {
-    return fecha ? this.formatearFecha(fecha) : '';
+  private async imagenComoDataUrl(ruta: string): Promise<string> {
+    const respuesta = await fetch(ruta);
+    const blob = await respuesta.blob();
+    return await new Promise<string>((resolver, rechazar) => {
+      const lector = new FileReader();
+      lector.onload = () => resolver(String(lector.result));
+      lector.onerror = () => rechazar(lector.error);
+      lector.readAsDataURL(blob);
+    });
   }
+
+  private valorTransbank(respuesta: unknown, campo: string, subcampo?: string): string {
+    if (!respuesta || typeof respuesta !== 'object') return '';
+    const objeto = respuesta as Record<string, unknown>;
+    const valor = subcampo && objeto[campo] && typeof objeto[campo] === 'object'
+      ? (objeto[campo] as Record<string, unknown>)[subcampo]
+      : objeto[campo];
+    return valor === undefined || valor === null ? '' : String(valor);
+  }
+
+  private formaPago(codigo: string): string {
+    if (codigo === 'VN' || codigo === 'VC') return 'Crédito';
+    return codigo ? `Débito (${codigo})` : 'Débito';
+  }
+
+  /** Abre el mini panel de historial de pagos del cuidador (el ojito). */
+  async verHistorial(suscripcion: SuscripcionAdministrada): Promise<void> {
+    this.historialAbierto = true;
+    this.historialTitulo = suscripcion.nombre || suscripcion.correo || 'Sin nombre';
+    this.historialCargando = true;
+    this.historialMensaje = '';
+    this.pagosHistorial = [];
+    this.refrescar();
+
+    const { data, error } = await this.clienteSupabase.functions.invoke('admin-suscripciones', {
+      body: { accion: 'pagos', usuario_id: suscripcion.usuario_id },
+    });
+    this.historialCargando = false;
+    if (error) {
+      this.historialMensaje = 'No se pudieron cargar los pagos de este cuidador.';
+    } else {
+      this.pagosHistorial = Array.isArray(data?.pagos) ? data.pagos : [];
+    }
+    this.refrescar();
+  }
+
+  cerrarHistorial(): void {
+    this.historialAbierto = false;
+    this.pagosHistorial = [];
+    this.historialMensaje = '';
+    this.refrescar();
+  }
+
+  /** Precio en pesos chilenos, con el formato del resto de la app. */
+  formatearMonto(monto: number): string {
+    return `$ ${new Intl.NumberFormat('es-CL').format(monto)}`;
+  }
+
+  textoTipoPago(tipo: string): string {
+    return tipo === 'mejora' ? 'Mejora' : tipo === 'nueva' ? 'Nueva' : tipo;
+  }
+
+  textoEstadoPago(estado: string): string {
+    switch (estado) {
+      case 'autorizada': return 'Autorizado';
+      case 'rechazada': return 'Rechazado';
+      case 'anulada': return 'Anulado';
+      case 'procesando': return 'Procesando';
+      case 'creada': return 'Creado';
+      default: return estado;
+    }
+  }
+
+  /** Estado del mini panel de historial de pagos (lo abre el ojito). */
+  historialAbierto = false;
+  historialTitulo = '';
+  historialCargando = false;
+  historialMensaje = '';
+  pagosHistorial: PagoHistorial[] = [];
+
+  /** Mientras se baja el CSV general de todos los pagos. */
+  descargandoPagos = false;
+
+  /** Filtros de la ventana de descarga: arrancan con los de la tabla. */
+  descargaAbierta = false;
+  descargaSuscripcion = '';
+  descargaPlan = '';
 
   async ngOnInit() {
     await this.cargarSuscripciones();

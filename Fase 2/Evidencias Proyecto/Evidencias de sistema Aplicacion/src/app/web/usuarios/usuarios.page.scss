@@ -857,6 +857,8 @@
   }
 }
 
+/* Estados como texto de color, sin burbuja: las pastillas se veían mal y
+   ensuciaban la tabla. */
 .panel-estado {
   display: inline-block;
   color: #166534;
@@ -865,6 +867,5 @@
 }
 
 .panel-estado--inactivo {
-  background-color: #fdecec;
   color: #991b1b;
 }

@@ -39,54 +39,51 @@
             <option value="sin_cuidador">Sin cuidador</option>
           </select>
         </div>
-        <button class="panel-descargar" type="button" [disabled]="cargando" (click)="descargarPdf()">
-          Descargar PDF
-        </button>
+
+        <div class="panel-filtros__acciones">
+          @if (filtrosActivos) {
+            <button type="button" class="panel-limpiar" (click)="limpiarFiltros()">
+              <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+              Limpiar filtros
+            </button>
+          }
+          <button class="panel-descargar" type="button" [disabled]="cargando" (click)="descargarPdf()">
+            Descargar PDF
+          </button>
+        </div>
       </div>
 
       @if (cargando) {
         <p class="panel-vacio">Cargando…</p>
       } @else {
 
-        <section class="panel-kpis-grupo panel-kpis-grupo--comercial">
-          <h2>Comercial</h2>
-          <div class="panel-kpis panel-kpis--comercial">
-            @for (kpi of kpis; track kpi.etiqueta) {
-              @if (kpi.grupo === 'comercial') {
-                <div class="panel-kpi" [class.panel-kpi--destacado]="kpi.etiqueta === 'Ingresos del periodo'">
-                  <span class="panel-kpi__valor">{{ kpi.valor }}</span>
-                  <span class="panel-kpi__etiqueta">{{ kpi.etiqueta }}</span>
-                  @if (kpi.descripcion) {
-                    <span class="panel-kpi__descripcion">{{ kpi.descripcion }}</span>
-                  }
-                </div>
+        <!-- ---------------- 4 indicadores ---------------- -->
+        <section class="panel-kpis" aria-label="Indicadores del periodo">
+          @for (kpi of kpis; track kpi.etiqueta) {
+            <div class="panel-kpi" [class.panel-kpi--destacado]="kpi.destacado">
+              <span class="panel-kpi__valor">{{ kpi.valor }}</span>
+              <span class="panel-kpi__etiqueta">{{ kpi.etiqueta }}</span>
+              @if (kpi.descripcion) {
+                <span class="panel-kpi__descripcion">{{ kpi.descripcion }}</span>
               }
-            }
+              <!-- Sparkline: minigráfico dentro de la tarjeta, sólo donde hay
+                   serie diaria que justifique dibujarlo. -->
+              @if (kpi.etiqueta === 'Ingresos del periodo' && sparklineIngresos) {
+                <svg class="panel-sparkline" viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline [attr.points]="sparklineIngresos"></polyline>
+                </svg>
+              }
             </div>
-        </section>
-
-        <section class="panel-kpis-grupo panel-kpis-grupo--operativa">
-          <h2>Actividad operativa</h2>
-          <div class="panel-kpis panel-kpis--operativa">
-            @for (kpi of kpis; track kpi.etiqueta) {
-              @if (kpi.grupo === 'operativa') {
-                <div class="panel-kpi">
-                  <span class="panel-kpi__valor">{{ kpi.valor }}</span>
-                  <span class="panel-kpi__etiqueta">{{ kpi.etiqueta }}</span>
-                  @if (kpi.descripcion) {
-                    <span class="panel-kpi__descripcion">{{ kpi.descripcion }}</span>
-                  }
-                </div>
-              }
-            }
-          </div>
+          }
         </section>
 
         <div class="panel-graficos">
+          <!-- 1. COLUMNAS: comparación mes a mes del dinero -->
           <section class="panel-grafico">
             <div class="panel-grafico__cabecera">
               <div>
-                <h2>Ingresos</h2>
+                <h2>Ingresos por mes</h2>
+                <p>Pagos autorizados, mes a mes</p>
               </div>
               <strong>{{ ingresosFormateados }}</strong>
             </div>
@@ -101,76 +98,97 @@
             </div>
           </section>
 
+          <!-- 2. ÁREA: volumen de uso acumulado día a día -->
           <section class="panel-grafico">
             <div class="panel-grafico__cabecera">
               <div>
-                <h2>Cobertura de vinculación</h2>
+                <h2>Actividad diaria</h2>
+                <p>Cuentas distintas con actividad cada día</p>
               </div>
-              <strong>{{ porcentajeAdultosVinculados }}%</strong>
+              <strong>{{ usuariosActivos }}</strong>
             </div>
-            <div class="panel-vinculacion">
-              <div class="panel-vinculacion__resumen">
-                <strong>{{ adultosVinculados }}</strong>
-                <span>de {{ adultosMayores }} adultos mayores tienen cuidador</span>
-              </div>
-              <div class="panel-vinculacion__barra">
-                <span [style.width.%]="porcentajeAdultosVinculados"></span>
-              </div>
-              <div class="panel-vinculacion__detalle">
-                <div><i class="vinculado"></i><span>Con cuidador</span><strong>{{ adultosVinculados }}</strong></div>
-                <div><i class="sin-vincular"></i><span>Sin cuidador</span><strong>{{ adultosMayoresSinCuidador }}</strong></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel-grafico">
-            <div class="panel-grafico__cabecera">
-              <div>
-                <h2>Uso de funcionalidades clave</h2>
-              </div>
-            </div>
-            <div class="panel-uso">
-              <div class="panel-uso__principal">
-                <strong>{{ porcentajeFuncionalidades }}%</strong>
-                <span>{{ usuariosFuncionalidades }} de {{ totalUsuarios }} usuarios</span>
-              </div>
-              <div class="panel-uso__progreso" role="progressbar"
-                aria-label="Porcentaje de usuarios que utilizaron funcionalidades clave"
-                [attr.aria-valuenow]="porcentajeFuncionalidades" aria-valuemin="0" aria-valuemax="100">
-                <span [style.width.%]="porcentajeFuncionalidades"></span>
-                <span class="panel-uso__no-uso" [style.width.%]="100 - porcentajeFuncionalidades"></span>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel-grafico">
-            <div class="panel-grafico__cabecera">
-              <div>
-                <h2>Conversión de licencias</h2>
-              </div>
-              <strong>{{ porcentajeLicencias }}%</strong>
-            </div>
-            <div class="panel-licencias">
-              <div class="panel-licencias__circulo">
-                <svg viewBox="0 0 150 150" aria-hidden="true">
-                  <circle class="panel-licencias__base" cx="75" cy="75" r="56"></circle>
-                  <circle class="panel-licencias__avance" cx="75" cy="75" r="56"
-                    [attr.stroke-dasharray]="351.86"
-                    [attr.stroke-dashoffset]="351.86 * (1 - porcentajeLicencias / 100)"></circle>
+            @if (areaActividad) {
+              <div class="panel-area">
+                <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+                  <polygon class="panel-area__relleno" [attr.points]="areaActividad"></polygon>
+                  <polyline class="panel-area__trazo" [attr.points]="lineaActividad"></polyline>
                 </svg>
-                <div><strong>{{ licenciasActivas }}</strong><span>pagadas</span></div>
+                <div class="panel-area__eje">
+                  <span>{{ primerDiaActividad }}</span>
+                  <span>hoy</span>
+                </div>
               </div>
+            } @else {
+              <p class="panel-vacio">Sin actividad registrada en el periodo.</p>
+            }
+          </section>
+
+          <!-- 3. BARRAS HORIZONTALES: ranking de tipos de alerta -->
+          <section class="panel-grafico">
+            <div class="panel-grafico__cabecera">
               <div>
-                <strong>{{ licenciasActivas }} de {{ totalUsuarios }}</strong>
-                <span>cuentas con licencia activa</span>
+                <h2>Alertas por tipo</h2>
+                <p>Cuáles dominan en el periodo</p>
+              </div>
+              <strong>{{ alertasTotales }}</strong>
+            </div>
+            <div class="panel-ranking">
+              <div class="panel-ranking__fila">
+                <span class="panel-ranking__etiqueta">SOS</span>
+                <span class="panel-ranking__pista">
+                  <span class="panel-ranking__barra panel-ranking__barra--sos"
+                    [style.width.%]="alertasTotales ? alertasSos * 100 / alertasTotales : 0"></span>
+                </span>
+                <strong>{{ alertasSos }}</strong>
+              </div>
+              <div class="panel-ranking__fila">
+                <span class="panel-ranking__etiqueta">Zonas seguras</span>
+                <span class="panel-ranking__pista">
+                  <span class="panel-ranking__barra panel-ranking__barra--zona"
+                    [style.width.%]="alertasTotales ? alertasZona * 100 / alertasTotales : 0"></span>
+                </span>
+                <strong>{{ alertasZona }}</strong>
+              </div>
+              <div class="panel-ranking__fila">
+                <span class="panel-ranking__etiqueta">Sin señal</span>
+                <span class="panel-ranking__pista">
+                  <span class="panel-ranking__barra panel-ranking__barra--senal"
+                    [style.width.%]="alertasTotales ? alertasSinSenal * 100 / alertasTotales : 0"></span>
+                </span>
+                <strong>{{ alertasSinSenal }}</strong>
               </div>
             </div>
           </section>
 
-          <section class="panel-grafico panel-grafico--operacion">
+          <!-- 4. DONUT: composición de cuentas -->
+          <section class="panel-grafico">
+            <div class="panel-grafico__cabecera">
+              <div>
+                <h2>Composición de cuentas</h2>
+                <p>Cómo se reparten los {{ totalUsuarios }} usuarios</p>
+              </div>
+            </div>
+            <div class="panel-dona">
+              <div class="panel-dona__circulo" [style.background]="mezclaUsuarios">
+                <div class="panel-dona__hueco">
+                  <strong>{{ totalUsuarios }}</strong>
+                  <span>cuentas</span>
+                </div>
+              </div>
+              <ul class="panel-dona__leyenda">
+                <li><i class="adulto"></i><span>Adultos mayores</span><strong>{{ adultosMayores }}</strong></li>
+                <li><i class="cuidador"></i><span>Cuidadores</span><strong>{{ cuidadores }}</strong></li>
+                <li><i class="otros"></i><span>Otras cuentas</span><strong>{{ otrosUsuarios }}</strong></li>
+              </ul>
+            </div>
+          </section>
+
+          <!-- 5. MEDIDOR: tiempo de respuesta contra el objetivo -->
+          <section class="panel-grafico">
             <div class="panel-grafico__cabecera">
               <div>
                 <h2>Tiempo de respuesta SOS</h2>
+                <p>Objetivo: menos de 3 minutos</p>
               </div>
             </div>
             <div class="panel-gauge" [class]="'panel-gauge panel-gauge--' + claseMttr">
@@ -189,75 +207,34 @@
             </div>
           </section>
 
-          <section class="panel-grafico panel-grafico--operacion">
+          <!-- 6. SEMÁFORO: cobertura de vinculación -->
+          <section class="panel-grafico">
             <div class="panel-grafico__cabecera">
               <div>
-                <h2>Alertas SOS por mes</h2>
+                <h2>Cobertura de vinculación</h2>
+                <p>Adultos mayores que tienen un cuidador</p>
               </div>
-              <strong>{{ alertasSos }}</strong>
+              <strong>{{ porcentajeAdultosVinculados }}%</strong>
             </div>
-            <div class="panel-barras panel-barras--sos" aria-label="Alertas SOS mensuales">
-              @for (punto of serieSosMensuales; track punto.fecha) {
-                <div class="panel-barras__item" [title]="punto.etiqueta">
-                  <span class="panel-barras__valor">{{ punto.valor > 0 ? punto.valor : '' }}</span>
-                  <span class="panel-barras__barra" [style.height.%]="punto.altura"></span>
-                  <span class="panel-barras__fecha">{{ punto.fecha }}</span>
-                </div>
-              }
+            <div class="panel-semaforo"
+              [class]="'panel-semaforo panel-semaforo--' + claseCobertura"
+              role="progressbar"
+              aria-label="Adultos mayores con cuidador"
+              [attr.aria-valuenow]="porcentajeAdultosVinculados"
+              aria-valuemin="0" aria-valuemax="100">
+              <span [style.width.%]="porcentajeAdultosVinculados"></span>
             </div>
-          </section>
-
-          <section class="panel-grafico panel-grafico--operacion">
-            <div class="panel-grafico__cabecera">
+            <div class="panel-semaforo__detalle">
               <div>
-                <h2>Alertas críticas</h2>
+                <span>Con cuidador</span>
+                <strong>{{ adultosVinculados }}</strong>
               </div>
-              <strong>{{ alertasSos + alertasZona + alertasSinSenal }}</strong>
-            </div>
-            <div class="panel-alertas">
-              <div class="panel-alertas__barra">
-                <span class="sos" [style.width.%]="(alertasSos * 100) / (alertasSos + alertasZona + alertasSinSenal || 1)"></span>
-                <span class="zona" [style.width.%]="(alertasZona * 100) / (alertasSos + alertasZona + alertasSinSenal || 1)"></span>
-                <span class="senal" [style.width.%]="(alertasSinSenal * 100) / (alertasSos + alertasZona + alertasSinSenal || 1)"></span>
-              </div>
-              <div class="panel-alertas__detalle">
-                <div><i class="sos"></i><span>SOS</span><strong>{{ alertasSos }}</strong></div>
-                <div><i class="zona"></i><span>Zonas seguras</span><strong>{{ alertasZona }}</strong></div>
-                <div><i class="senal"></i><span>Sin señal</span><strong>{{ alertasSinSenal }}</strong></div>
+              <div>
+                <span>Sin cuidador</span>
+                <strong>{{ adultosMayoresSinCuidador }}</strong>
               </div>
             </div>
           </section>
-
-          <section class="panel-grafico panel-grafico--operacion">
-            <div class="panel-grafico__cabecera">
-              <div>
-                <h2>Actividad de usuarios</h2>
-              </div>
-              <strong>{{ porcentajeUso }}%</strong>
-            </div>
-            <div class="panel-actividad">
-              <div class="panel-actividad__principal">
-                <strong>{{ usuariosActivos }}</strong>
-                <span>usuarios activos del período</span>
-              </div>
-              <div class="panel-actividad__barra" role="progressbar"
-                aria-label="Porcentaje de usuarios activos"
-                [attr.aria-valuenow]="porcentajeUso" aria-valuemin="0" aria-valuemax="100">
-                <span [style.width.%]="porcentajeUso"></span>
-              </div>
-              <div class="panel-actividad__detalle">
-                <div>
-                  <span>Adultos mayores activos</span>
-                  <strong>{{ adultosActivos }}</strong>
-                </div>
-                <div>
-                  <span>Cuidadores activos</span>
-                  <strong>{{ cuidadoresActivos }}</strong>
-                </div>
-              </div>
-            </div>
-          </section>
-
         </div>
 
         @if (error) {

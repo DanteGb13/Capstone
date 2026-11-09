@@ -132,13 +132,10 @@
   background: #f1e8fb;
 }
 
-/* Estados de la suscripción. `.panel-estado` vive acá y no en el scss de
-   Usuarios porque los estilos de Angular son por componente. */
+/* Estados como texto de color, sin burbuja: las pastillas se veían mal y
+   ensuciaban la tabla y la ventana de historial. */
 .panel-estado {
   display: inline-block;
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  background-color: #e7f6ec;
   color: #166534;
   font-size: 0.78rem;
   font-weight: 700;
@@ -146,14 +143,12 @@
 }
 
 .panel-estado--inactivo {
-  background-color: #fdecec;
   color: #991b1b;
 }
 
 /* Ámbar: todavía no compró licencia (antes también marcaba 'pendiente',
    estado que se retiró del panel). */
 .panel-estado--aviso {
-  background-color: #fdf3e0;
   color: #92400e;
 }
 
@@ -231,6 +226,245 @@
   place-items: center;
   min-width: 24px;
   height: 34px;
+}
+
+/* =====================================================
+   PANEL DE HISTORIAL DE PAGOS
+
+   Panel propio y no alerta de Ionic: es una lista con tabla y scroll, y las
+   alertas no dan para eso. Mismo lenguaje que los modales de Usuarios.
+   ===================================================== */
+.finanzas-modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(26, 22, 40, 0.45);
+}
+
+.finanzas-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(680px, 100%);
+  max-height: min(640px, calc(100vh - 40px));
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(26, 22, 40, 0.3);
+  overflow: hidden;
+}
+
+.finanzas-modal-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.3rem 0.9rem;
+  border-bottom: 1px solid #f0edf8;
+}
+
+.finanzas-modal-etiqueta {
+  display: block;
+  color: #7715c7;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.finanzas-modal-cabecera h2 {
+  margin: 0.2rem 0 0;
+  color: #241b38;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.finanzas-modal-cerrar {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: #f5f3fa;
+  color: #6b7280;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.finanzas-modal-cerrar:hover {
+  background: #ede8f7;
+  color: #7715c7;
+}
+
+.finanzas-modal-cuerpo {
+  flex: 1 1 auto;
+  padding: 1rem 1.3rem;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+/* Ventana de descarga: angosta y minimalista, como la de Usuarios. */
+.finanzas-modal--descarga {
+  width: min(460px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+}
+
+/* Sin línea debajo del título: con tan poco contenido estorba. */
+.finanzas-modal--descarga .finanzas-modal-cabecera {
+  padding: 1rem 1.25rem 0.35rem;
+  border-bottom: 0;
+}
+
+.finanzas-descarga-contenido {
+  display: grid;
+  gap: 1rem;
+  padding: 0 1.25rem 1rem;
+}
+
+/* Los dos filtros, uno al lado del otro. */
+.finanzas-descarga-filtros {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.finanzas-descarga-contenido label {
+  display: grid;
+  gap: 0.35rem;
+  color: #777084;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.finanzas-descarga-contenido .finanzas-filtro {
+  height: 42px;
+  min-width: 0;
+  font-weight: 400;
+}
+
+.finanzas-descarga-cantidad {
+  margin: 0;
+  color: #5f566d;
+  font-size: 0.82rem;
+}
+
+.finanzas-modal-pie {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 0.8rem 1.3rem;
+  border-top: 1px solid #f0edf8;
+}
+
+.finanzas-historial-csv {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0 1.1rem;
+  border: 0;
+  border-radius: 10px;
+  background: #7715c7;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.finanzas-historial-csv:hover:not(:disabled) {
+  background: #6611ab;
+}
+
+.finanzas-historial-csv:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.finanzas-historial-cerrar {
+  min-height: 42px;
+  padding: 0 1.4rem;
+  border: 1px solid #d8d1e7;
+  border-radius: 10px;
+  background: #fff;
+  color: #241b38;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.finanzas-historial-cerrar:hover {
+  background: #f8f7fc;
+}
+
+.finanzas-historial-envoltura {
+  border: 1px solid #e2ddf2;
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.finanzas-historial {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.finanzas-historial th {
+  padding: 0.7rem 0.9rem;
+  background-color: #f8f7fc;
+  box-shadow: 0 1px 0 #e2ddf2;
+  color: #4b3f66;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+.finanzas-historial td {
+  padding: 0.7rem 0.9rem;
+  border-top: 1px solid #f0edf8;
+  color: #443c56;
+  white-space: nowrap;
+}
+
+.finanzas-historial__monto {
+  font-weight: 700;
+  text-align: right;
+}
+
+/* El crédito prorrateado es un detalle del monto, no otra columna. */
+.finanzas-historial__monto small {
+  display: block;
+  margin-top: 0.15rem;
+  color: #6b7280;
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+/* Comprobante en PDF de UN pago: una por fila. */
+.finanzas-historial__comprobante {
+  text-align: center;
+}
+
+.finanzas-comprobante {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #ddc4f5;
+  border-radius: 9px;
+  background: #f3e8fd;
+  color: #5b1fa6;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+
+.finanzas-comprobante:hover {
+  background: #e9d8fb;
 }
 
 /* =====================================================
@@ -358,6 +592,25 @@
     width: 40px;
     height: 40px;
     font-size: 1.3rem;
+  }
+
+  /* El historial ocupa toda la pantalla del celular. */
+  .finanzas-modal-fondo {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .finanzas-modal {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  /* Los dos filtros se apilan: en 360px no caben cómodos al lado. */
+  .finanzas-descarga-filtros {
+    grid-template-columns: 1fr;
   }
 }
 

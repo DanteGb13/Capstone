@@ -371,5 +371,93 @@ Deno.serve(async request => {
     return respuesta(200, { ok: true });
   }
 
+  if (accion === "pagos") {
+    // Historial de pagos.
+    //
+    // · Con `usuario_id`: los de un cuidador (lo abre el ojito).
+    // · Con `usuario_ids`: los de esos cuidadores, que son los que pasan los
+    //   filtros de la ventana de descarga (los arma la página con los mismos
+    //   filtros que usa la tabla).
+    //
+    // Corre con service role a propósito: la política de `transaccion_pago`
+    // sólo deja ver las filas propias, y el panel necesita verlas todas.
+    const usuarioId = String(datos.usuario_id ?? "");
+    const ids = Array.isArray(datos.usuario_ids)
+      ? [...new Set((datos.usuario_ids as unknown[]).map(valor => String(valor)).filter(Boolean))]
+      : [];
+    const plan = String(datos.plan_codigo ?? "");
+
+    // Sin a quién buscar no se devuelve nada: mejor eso que confundirse y
+    // soltar los pagos de todos.
+    if (!usuarioId && !ids.length) return respuesta(200, { pagos: [], sinPagos: [] });
+
+    let consulta = admin
+      .from("transaccion_pago")
+      .select("usuario_id, plan_codigo, monto, monto_original_clp, credito_prorrateado_clp, tipo, estado, buy_order, creada_en, respuesta_transbank")
+      // 'creada' es un checkout que se abandonó antes de pagar: no es un
+      // pago, no se muestra en el historial ni en la descarga general.
+      .neq("estado", "creada")
+      .order("creada_en", { ascending: false });
+    if (usuarioId) consulta = consulta.eq("usuario_id", usuarioId);
+    else consulta = consulta.in("usuario_id", ids);
+    if (plan) consulta = consulta.eq("plan_codigo", plan);
+
+    const { data: pagos, error: errorPagos } = await consulta;
+    if (errorPagos) {
+      console.error("admin-suscripciones listar pagos:", errorPagos);
+      return respuesta(500, { error: "No se pudieron cargar los pagos", detalle: errorPagos.message });
+    }
+
+    // Nombre y correo de quien pagó: el nombre está en `usuario` y el correo
+    // solamente en `auth.users`.
+    const buscados = usuarioId ? [usuarioId] : ids;
+    const nombres = new Map<string, string>();
+    const correos = new Map<string, string>();
+
+    if (buscados.length) {
+      const { data: perfiles } = await admin
+        .from("usuario")
+        .select("id, nombre, apellidopa")
+        .in("id", buscados);
+      for (const perfil of perfiles ?? []) {
+        nombres.set(perfil.id, [perfil.nombre, perfil.apellidopa].filter(Boolean).join(" ").trim());
+      }
+
+      const listado = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (!listado.error) {
+        for (const cuenta of listado.data?.users ?? []) {
+          if (buscados.includes(cuenta.id)) correos.set(cuenta.id, cuenta.email ?? "");
+        }
+      }
+    }
+
+    const conPagos = new Set((pagos ?? []).map((fila) => fila.usuario_id));
+
+    return respuesta(200, {
+      pagos: (pagos ?? []).map(fila => ({
+        usuario_id: fila.usuario_id,
+        nombre: nombres.get(fila.usuario_id) ?? "",
+        correo: correos.get(fila.usuario_id) ?? "",
+        plan_codigo: fila.plan_codigo,
+        monto: fila.monto,
+        monto_original_clp: fila.monto_original_clp,
+        credito_prorrateado_clp: fila.credito_prorrateado_clp,
+        tipo: fila.tipo,
+        estado: fila.estado,
+        buy_order: fila.buy_order,
+        creada_en: fila.creada_en,
+        respuesta_transbank: fila.respuesta_transbank ?? null,
+      })),
+      // Cuidadores sin ningún pago: la descarga general los incluye igual.
+      sinPagos: ids
+        .filter(id => !conPagos.has(id))
+        .map(id => ({
+          usuario_id: id,
+          nombre: nombres.get(id) ?? "",
+          correo: correos.get(id) ?? "",
+        })),
+    });
+  }
+
   return respuesta(400, { error: "Acción inválida" });
 });

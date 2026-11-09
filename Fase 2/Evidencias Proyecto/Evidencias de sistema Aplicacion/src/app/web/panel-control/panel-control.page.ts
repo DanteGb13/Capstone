@@ -1,6 +1,8 @@
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { IonContent } from '@ionic/angular';
+import { IonContent, IonIcon } from '@ionic/angular';
+import { addIcons } from 'ionicons';
+import { closeOutline } from 'ionicons/icons';
 import { Capacitor } from '@capacitor/core';
 import { environment } from '../../../environments/environment';
 import { SupabaseService } from '../../services/supabase/supabase';
@@ -12,7 +14,6 @@ interface Kpi {
   etiqueta: string;
   valor: string;
   icono: string;
-  grupo?: 'comercial' | 'operativa';
   descripcion?: string;
   destacado?: boolean;
 }
@@ -24,30 +25,22 @@ interface PuntoIngreso {
   etiqueta: string;
 }
 
-interface PuntoRetencion {
-  fecha: string;
-  parejas: number;
-}
-
-interface PuntoAlertas {
-  fecha: string;
-  sos: number;
-  zona: number;
-  senal: number;
-}
-
 const RANGOS = [7, 30, 90];
 
 @Component({
   selector: 'app-panel-control',
   templateUrl: 'panel-control.page.html',
   styleUrls: ['panel-control.page.scss'],
-  imports: [WebNav, DecimalPipe, IonContent],
+  imports: [WebNav, DecimalPipe, IonContent, IonIcon],
 })
 export class PanelControlPage implements OnInit {
 
   cargando = true;
   error = '';
+
+  constructor() {
+    addIcons({ closeOutline });
+  }
 
   kpis: Kpi[] = [];
   readonly rangos = RANGOS;
@@ -60,30 +53,21 @@ export class PanelControlPage implements OnInit {
   otrosUsuarios = 0;
   licenciasActivas = 0;
   usuariosActivos = 0;
-  adultosActivos = 0;
-  cuidadoresActivos = 0;
-  eventosPeriodos = 0;
   ingresos = 0;
   serieIngresos: PuntoIngreso[] = [];
   serieIngresosMensuales: PuntoIngreso[] = [];
   serieSosMensuales: PuntoIngreso[] = [];
   serieActividadDiaria: PuntoIngreso[] = [];
   mttrMinutos = 0;
-  adultosOnline = 0;
-  adultosSinSenal = 0;
   alertasSos = 0;
   alertasZona = 0;
   alertasSinSenal = 0;
-  adultosTotales = 0;
-  cuidadoresVinculados = 0;
   adultosVinculados = 0;
-  invitados = 0;
   usuariosFuncionalidades = 0;
   filtroLicencia = '';
   filtroVinculacion = '';
-  serieRetencion: PuntoRetencion[] = [];
-  serieAlertas: PuntoAlertas[] = [];
 
+  /** Adultos mayores que tienen al menos un cuidador vinculado. */
   get porcentajeAdultosVinculados(): number {
     return this.adultosMayores > 0
       ? Math.round(this.adultosVinculados * 100 / this.adultosMayores)
@@ -92,6 +76,79 @@ export class PanelControlPage implements OnInit {
 
   get adultosMayoresSinCuidador(): number {
     return Math.max(this.adultosMayores - this.adultosVinculados, 0);
+  }
+
+  /** Promedio de ingreso por día del periodo elegido. */
+  get ingresoPromedioDia(): number {
+    return this.dias > 0 ? this.ingresos / this.dias : 0;
+  }
+
+  /** Cuidadores que todavía no pagan: la oportunidad comercial más directa. */
+  get cuidadoresSinLicencia(): number {
+    return Math.max(this.cuidadores - this.licenciasActivas, 0);
+  }
+
+  get alertasTotales(): number {
+    return this.alertasSos + this.alertasZona + this.alertasSinSenal;
+  }
+
+  get porcentajeCuidadores(): number {
+    return this.totalUsuarios ? Math.round(this.cuidadores * 100 / this.totalUsuarios) : 0;
+  }
+
+  get porcentajeAdultos(): number {
+    return this.totalUsuarios ? Math.round(this.adultosMayores * 100 / this.totalUsuarios) : 0;
+  }
+
+  /** Mezcla de cuentas para el donut: adultos / cuidadores / otras. */
+  get mezclaUsuarios(): string {
+    const total = this.totalUsuarios || 1;
+    const adulto = this.adultosMayores * 100 / total;
+    const cuidador = adulto + this.cuidadores * 100 / total;
+    return `conic-gradient(#7c3aed 0 ${adulto}%, #2dd4bf ${adulto}% ${cuidador}%, #cbd5e1 ${cuidador}% 100%)`;
+  }
+
+  /** Polilínea del uso diario, en coordenadas de un SVG de 100×40. */
+  get lineaActividad(): string {
+    const puntos = this.serieActividadDiaria;
+    if (puntos.length < 2) return '';
+    const maximo = Math.max(...puntos.map(punto => punto.valor), 1);
+    return puntos.map((punto, indice) => {
+      const x = indice * 100 / (puntos.length - 1);
+      const y = 38 - punto.valor * 36 / maximo;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    }).join(' ');
+  }
+
+  /** La misma polilínea cerrada abajo, para rellenar el área bajo la curva. */
+  get areaActividad(): string {
+    const linea = this.lineaActividad;
+    return linea ? `0,40 ${linea} 100,40` : '';
+  }
+
+  /** Sparkline de ingresos diarios, minúscula, para la tarjeta del KPI. */
+  get sparklineIngresos(): string {
+    const puntos = this.serieIngresos;
+    if (puntos.length < 2) return '';
+    const maximo = Math.max(...puntos.map(punto => punto.valor), 1);
+    return puntos.map((punto, indice) => {
+      const x = indice * 100 / (puntos.length - 1);
+      const y = 22 - punto.valor * 20 / maximo;
+      return `${x.toFixed(2)},${y.toFixed(2)}`;
+    }).join(' ');
+  }
+
+  get primerDiaActividad(): string {
+    return this.serieActividadDiaria[0]?.fecha ?? '';
+  }
+
+  get ultimoDiaActividad(): string {
+    return this.serieActividadDiaria[this.serieActividadDiaria.length - 1]?.fecha ?? '';
+  }
+
+  /** ¿Hay algo que limpiar? Si no, el botón no se muestra. */
+  get filtrosActivos(): boolean {
+    return this.dias !== 30 || !!this.filtroRol || !!this.filtroLicencia || !!this.filtroVinculacion;
   }
 
   /** Host de Supabase, sin la URL completa: alcanza para saber a qué base
@@ -149,53 +206,56 @@ export class PanelControlPage implements OnInit {
       this.otrosUsuarios = Math.max(this.totalUsuarios - this.adultosMayores - this.cuidadores, 0);
       this.licenciasActivas = Number(panel.licencias_activas ?? 0);
       this.usuariosActivos = Number(panel.usuarios_activos ?? 0);
-      this.adultosActivos = Number(panel.adultos_activos ?? 0);
-      this.cuidadoresActivos = Number(panel.cuidadores_activos ?? 0);
-      this.eventosPeriodos = Number(panel.eventos ?? 0);
       this.ingresos = Number(panel.ingresos ?? 0);
       this.mttrMinutos = Number(panel.mttr_minutos ?? 0);
-      this.adultosOnline = Number(panel.adultos_online ?? 0);
-      this.adultosSinSenal = Number(panel.adultos_sin_senal ?? 0);
       this.alertasSos = Number(panel.alertas_sos ?? 0);
       this.alertasZona = Number(panel.alertas_zona ?? 0);
       this.alertasSinSenal = Number(panel.alertas_sin_senal ?? 0);
-      this.adultosTotales = Number(panel.adultos_total ?? 0);
-      this.cuidadoresVinculados = Number(panel.cuidadores_vinculados ?? 0);
       this.adultosVinculados = Number(panel.adultos_vinculados ?? 0);
       this.usuariosFuncionalidades = Number(panel.uso_funcionalidades ?? 0);
-      this.invitados = Number(panel.invitados ?? 0);
       this.crearSerieIngresos(Array.isArray(panel.ingresos_por_dia) ? panel.ingresos_por_dia : []);
       this.crearSerieMensual(Array.isArray(panel.ingresos_mensuales) ? panel.ingresos_mensuales : []);
       this.crearSerieSosMensual(Array.isArray(panel.alertas_sos_mensuales) ? panel.alertas_sos_mensuales : []);
       this.crearSerieActividad(Array.isArray(panel.actividad_por_dia) ? panel.actividad_por_dia : []);
 
       const activos = Number(panel.usuarios_activos ?? 0);
+      // Cuatro indicadores, no más: cada uno responde una sola pregunta y
+      // el detalle está en los gráficos de abajo.
       this.kpis = [
-        { icono: '$', etiqueta: 'Ingresos del periodo', valor: this.formatearDinero(this.ingresos), grupo: 'comercial', destacado: true },
-        { icono: 'L', etiqueta: 'Licencias pagadas', valor: this.formatear(this.licenciasActivas), grupo: 'comercial' },
-        { icono: 'U', etiqueta: 'Usuarios totales', valor: this.formatear(this.totalUsuarios), grupo: 'comercial' },
-        { icono: 'AM', etiqueta: 'Adultos mayores', valor: this.formatear(this.adultosMayores), grupo: 'operativa' },
-        { icono: 'C', etiqueta: 'Cuidadores', valor: this.formatear(this.cuidadores), grupo: 'operativa' },
-        { icono: '✓', etiqueta: 'Usuarios activos', valor: this.formatear(activos), grupo: 'operativa' },
         {
-          icono: 'F',
-          etiqueta: 'Uso funciones clave',
-          valor: `${this.porcentajeFuncionalidades}%`,
-          grupo: 'operativa',
-          descripcion: 'Acciones de SOS, avisos o recordatorios en el periodo'
+          icono: '$',
+          etiqueta: 'Ingresos del periodo',
+          valor: this.formatearDinero(this.ingresos),
+          destacado: true,
+          descripcion: `Promedio de ${this.formatearDinero(this.ingresoPromedioDia)} al día`
+        },
+        {
+          icono: 'L',
+          etiqueta: 'Licencias activas',
+          valor: this.formatear(this.licenciasActivas),
+          descripcion: `${this.porcentajeLicencias}% de conversión · ${this.formatear(this.cuidadoresSinLicencia)} cuidadores sin licencia`
+        },
+        {
+          icono: '✓',
+          etiqueta: 'Usuarios activos',
+          valor: this.formatear(activos),
+          descripcion: `${this.porcentajeUso}% del total usó la app`
+        },
+        {
+          icono: 'S',
+          etiqueta: 'Alertas SOS',
+          valor: this.formatear(this.alertasSos),
+          descripcion: `${this.formatear(this.alertasZona)} de zona · ${this.formatear(this.alertasSinSenal)} sin señal`
         }
       ];
     } catch (e: any) {
       if (cargaId !== this.cargaId) return;
       this.error = e?.message || '';
       this.kpis = [
-        { icono: '$', etiqueta: 'Ingresos del periodo', valor: '—' },
-        { icono: 'U', etiqueta: 'Usuarios totales', valor: '—' },
-        { icono: 'AM', etiqueta: 'Adultos mayores', valor: '—' },
-        { icono: 'C', etiqueta: 'Cuidadores', valor: '—' },
-        { icono: 'L', etiqueta: 'Licencias pagadas', valor: '—' },
-        { icono: 'F', etiqueta: 'Uso funciones clave', valor: '—' },
-        { icono: '✓', etiqueta: 'Usuarios activos', valor: '—' }
+        { icono: '$', etiqueta: 'Ingresos del periodo', valor: '—', destacado: true },
+        { icono: 'L', etiqueta: 'Licencias activas', valor: '—' },
+        { icono: '✓', etiqueta: 'Usuarios activos', valor: '—' },
+        { icono: 'S', etiqueta: 'Alertas SOS', valor: '—' }
       ];
     }
     this.refrescar();
@@ -235,25 +295,15 @@ export class PanelControlPage implements OnInit {
     return 'bajo';
   }
 
+  /** Semáforo de la cobertura: rojo, ámbar o verde según el umbral. */
+  get claseCobertura(): string {
+    if (this.porcentajeAdultosVinculados >= 80) return 'verde';
+    if (this.porcentajeAdultosVinculados >= 50) return 'ambar';
+    return 'rojo';
+  }
+
   get porcentajeUso(): number {
     return this.totalUsuarios ? Math.min(100, Math.round(this.usuariosActivos * 100 / this.totalUsuarios)) : 0;
-  }
-
-  get anchoAdultosActivos(): number {
-    const total = Math.max(this.adultosMayores, 1);
-    return Math.min(100, Math.round(this.adultosActivos * 100 / total));
-  }
-
-  get anchoCuidadoresActivos(): number {
-    const total = Math.max(this.cuidadores, 1);
-    return Math.min(100, Math.round(this.cuidadoresActivos * 100 / total));
-  }
-
-  get donaUsuarios(): string {
-    const total = this.totalUsuarios || 1;
-    const adulto = this.adultosMayores * 100 / total;
-    const cuidadorFin = adulto + this.cuidadoresVinculados * 100 / total;
-    return `conic-gradient(#7c3aed 0 ${adulto}%, #2dd4bf ${adulto}% ${cuidadorFin}%, #e7e5eb ${cuidadorFin}% 100%)`;
   }
 
   private crearSerieMensual(filas: any[]) {
@@ -323,6 +373,7 @@ export class PanelControlPage implements OnInit {
     return String(valor);
   }
 
+  /** Ingresos de cada día del periodo: alimenta el sparkline del KPI. */
   private crearSerieIngresos(filas: any[]) {
     const maximo = Math.max(...filas.map(fila => Number(fila.monto ?? 0)), 1);
     this.serieIngresos = filas.map(fila => {
@@ -362,6 +413,17 @@ export class PanelControlPage implements OnInit {
   alCambiarVinculacion(evento: Event) {
     const valor = String((evento.target as HTMLSelectElement | null)?.value ?? '');
     this.filtroVinculacion = valor === 'vinculados' || valor === 'sin_cuidador' ? valor : '';
+    void this.cargarKpis();
+    this.refrescar();
+  }
+
+  /** Vuelve todo a "últimos 30 días, sin filtrar" y recarga. */
+  limpiarFiltros(): void {
+    if (!this.filtrosActivos) return;
+    this.dias = 30;
+    this.filtroRol = '';
+    this.filtroLicencia = '';
+    this.filtroVinculacion = '';
     void this.cargarKpis();
     this.refrescar();
   }

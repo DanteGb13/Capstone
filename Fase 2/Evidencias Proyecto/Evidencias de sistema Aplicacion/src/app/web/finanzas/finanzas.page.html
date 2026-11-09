@@ -39,7 +39,11 @@
           <option value="anual">Anual</option>
         </select>
 
-        <button type="button" class="finanzas-descargar" (click)="descargarCsv()">
+        <button
+          type="button"
+          class="finanzas-descargar"
+          (click)="abrirDescarga()"
+          title="Descargar los pagos en CSV">
           <ion-icon name="download-outline" aria-hidden="true"></ion-icon>
           Descargar
         </button>
@@ -87,6 +91,14 @@
                   {{ vigencia(suscripcion) }}
                 </span>
                 <span class="finanzas-celda finanzas-celda--acciones" data-etiqueta="Acciones">
+                  <button
+                    type="button"
+                    class="finanzas-accion-icono"
+                    (click)="verHistorial(suscripcion)"
+                    title="Ver historial de pagos de {{ suscripcion.nombre || suscripcion.correo }}"
+                    [attr.aria-label]="'Ver historial de pagos de ' + (suscripcion.nombre || suscripcion.correo)">
+                    <ion-icon name="eye-outline" aria-hidden="true"></ion-icon>
+                  </button>
                   <button
                     type="button"
                     class="finanzas-accion-icono"
@@ -140,4 +152,165 @@
       }
     }
   </div>
+
+  <!-- Ventana de descarga: mismos filtros que la tabla, para bajar sólo lo
+       que se está viendo. La abre el botón Descargar. -->
+  @if (descargaAbierta) {
+    <div class="finanzas-modal-fondo" role="presentation" (click)="cerrarDescarga()">
+      <section
+        class="finanzas-modal finanzas-modal--descarga"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="finanzas-descarga-titulo"
+        (click)="$event.stopPropagation()">
+        <header class="finanzas-modal-cabecera">
+          <div>
+            <h2 id="finanzas-descarga-titulo">Descargar pagos</h2>
+          </div>
+          <button
+            type="button"
+            class="finanzas-modal-cerrar"
+            aria-label="Cerrar opciones de descarga"
+            (click)="cerrarDescarga()">
+            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+          </button>
+        </header>
+
+        <div class="finanzas-modal-cuerpo finanzas-descarga-contenido">
+          <div class="finanzas-descarga-filtros">
+            <label>
+              Suscripción
+              <select class="finanzas-filtro" [(ngModel)]="descargaSuscripcion">
+                <option value="">Todas</option>
+                <option value="con">Con suscripción</option>
+                <option value="sin">Sin suscripción</option>
+                <option value="cancelada">Canceladas</option>
+              </select>
+            </label>
+
+            <label>
+              Plan
+              <select class="finanzas-filtro" [(ngModel)]="descargaPlan">
+                <option value="">Todos</option>
+                <option value="mensual">Mensual</option>
+                <option value="anual">Anual</option>
+              </select>
+            </label>
+          </div>
+
+          <p class="finanzas-descarga-cantidad">
+            {{ cuidadoresDescarga.length }} cuidador(es) seleccionado(s)
+          </p>
+        </div>
+
+        <footer class="finanzas-modal-pie">
+          <button
+            type="button"
+            class="finanzas-historial-csv"
+            [disabled]="descargandoPagos || !cuidadoresDescarga.length"
+            (click)="descargarCsv()">
+            <ion-icon name="download-outline" aria-hidden="true"></ion-icon>
+            {{ descargandoPagos ? 'Descargando…' : 'Descargar CSV' }}
+          </button>
+          <button type="button" class="finanzas-historial-cerrar" (click)="cerrarDescarga()">Cancelar</button>
+        </footer>
+      </section>
+    </div>
+  }
+
+  <!-- Historial de pagos: lo abre el ojito de la columna Acciones. Es un
+       panel propio y no una alerta porque es una lista: necesita tabla,
+       scroll y cabecera, cosas que una alerta no da. -->
+  @if (historialAbierto) {
+    <div class="finanzas-modal-fondo" role="presentation" (click)="cerrarHistorial()">
+      <section
+        class="finanzas-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="finanzas-historial-titulo"
+        (click)="$event.stopPropagation()">
+        <header class="finanzas-modal-cabecera">
+          <div>
+            <span class="finanzas-modal-etiqueta">Historial de pagos</span>
+            <h2 id="finanzas-historial-titulo">{{ historialTitulo }}</h2>
+          </div>
+          <button
+            type="button"
+            class="finanzas-modal-cerrar"
+            aria-label="Cerrar historial de pagos"
+            (click)="cerrarHistorial()">
+            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+          </button>
+        </header>
+
+        <div class="finanzas-modal-cuerpo">
+          @if (historialCargando) {
+            <p class="panel-vacio">Cargando pagos…</p>
+          } @else if (historialMensaje) {
+            <p class="panel-error">{{ historialMensaje }}</p>
+          } @else if (!pagosHistorial.length) {
+            <p class="panel-vacio">Este cuidador todavía no registra pagos.</p>
+          } @else {
+            <div class="finanzas-historial-envoltura">
+              <table class="finanzas-historial">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Plan</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                    <th>Comprobante</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (pago of pagosHistorial; track $index) {
+                    <tr>
+                      <td>{{ formatearFecha(pago.creada_en) }}</td>
+                      <td>{{ nombrePlan(pago.plan_codigo) }}</td>
+                      <td class="finanzas-historial__monto">
+                        {{ formatearMonto(pago.monto) }}
+                        @if (pago.credito_prorrateado_clp) {
+                          <small>con crédito de {{ formatearMonto(pago.credito_prorrateado_clp) }}</small>
+                        }
+                      </td>
+                      <td>
+                        <span
+                          class="panel-estado"
+                          [class.panel-estado--inactivo]="pago.estado === 'rechazada' || pago.estado === 'anulada'"
+                          [class.panel-estado--aviso]="pago.estado === 'creada' || pago.estado === 'procesando'">
+                          {{ textoEstadoPago(pago.estado) }}
+                        </span>
+                      </td>
+                      <td class="finanzas-historial__comprobante">
+                        <button
+                          type="button"
+                          class="finanzas-comprobante"
+                          (click)="descargarComprobante(pago)"
+                          title="Descargar comprobante de este pago"
+                          [attr.aria-label]="'Descargar comprobante del pago del ' + formatearFecha(pago.creada_en)">
+                          <ion-icon name="download-outline" aria-hidden="true"></ion-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+
+        <footer class="finanzas-modal-pie">
+          <button
+            type="button"
+            class="finanzas-historial-csv"
+            [disabled]="!pagosHistorial.length || historialCargando"
+            (click)="descargarHistorialCsv()">
+            <ion-icon name="download-outline" aria-hidden="true"></ion-icon>
+            Descargar CSV
+          </button>
+          <button type="button" class="finanzas-historial-cerrar" (click)="cerrarHistorial()">Cerrar</button>
+        </footer>
+      </section>
+    </div>
+  }
 </ion-content>
