@@ -1,91 +1,85 @@
 /* ------------------------------------------------------------------
    Analítica de la web (/admin/analitica)
 
-   Aviso, tarjetas de resumen, ranking de páginas y su ajuste para
-   pantalla chica. Nada de esto lo usa ninguna otra página, así que
-   se queda acá en vez de en global.scss.
+   Filtros, tarjetas de resumen y los dos rankings (web y app). Nada de
+   esto lo usa ninguna otra página, así que se queda acá en vez de en
+   global.scss.
 
    Lo que sí comparte con las otras secciones del panel
-   (`.panel-cabecera`, `.panel-tarjeta`, `.panel-vacio`, ...)
-   sigue en global.scss, que es donde está el comentario que lo
-   explica: duplicarlo cinco veces es cinco lugares que arreglar.
+   (`.panel-cabecera`, `.panel-tarjeta`, `.panel-vacio`, ...) sigue en
+   global.scss, que es donde está el comentario que lo explica:
+   duplicarlo cinco veces es cinco lugares que arreglar.
    ------------------------------------------------------------------ */
-/* Aviso secundario bajo la descripción. En Analítica explica por qué el
-   ranking no incluye el propio panel, que es justo lo que alguien va a
-   preguntarse al ver cifras más bajas de lo esperado. */
+/* ---------------- Filtros ---------------- */
 .analitica-filtros {
   display: grid;
-  grid-template-columns: repeat(3, minmax(150px, 1fr)) auto;
+  grid-template-columns: repeat(3, minmax(160px, 1fr)) auto;
   gap: 0.9rem;
   margin-bottom: 1.25rem;
 }
 
 .analitica-filtro {
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  padding: 0.65rem 0.85rem;
-  position: relative;
+  min-width: 0;
+  padding: 0.6rem 0.85rem;
   border: 1px solid #dfdae9;
   border-radius: 12px;
   background: #fff;
 }
 
-.analitica-filtro details {
-  width: 100%;
-  position: relative;
+.analitica-filtro label {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: #77727f;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
-.analitica-filtro summary {
+.analitica-filtro select {
+  width: 100%;
+  min-height: 34px;
+  padding: 0.25rem 1.6rem 0.25rem 0.5rem;
+  border: 0;
+  border-radius: 6px;
+  outline: none;
+  color: #29262d;
+  background-color: #f7f5fa;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.analitica-filtro:focus-within {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+}
+
+.analitica-filtros__acciones {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  color: #241b38;
+  gap: 0.6rem;
+}
+
+.analitica-limpiar {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 46px;
+  padding: 0 0.95rem;
+  border: 1px solid #ddd9e6;
+  border-radius: 10px;
+  background: #fff;
+  color: #5b5666;
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  list-style: none;
 }
 
-.analitica-filtro summary::-webkit-details-marker { display: none; }
-.analitica-filtro summary::after { content: '⌄'; color: #777386; font-size: 1rem; }
-
-.analitica-menu {
-  min-width: 190px;
-  position: absolute;
-  top: calc(100% + 0.65rem);
-  left: -0.85rem;
-  z-index: 20;
-  padding: 0.35rem;
-  border: 1px solid #c8c8c8;
-  border-radius: 0;
-  background: #fff;
-  box-shadow: 0 2px 8px rgba(36, 27, 56, 0.18);
-}
-
-.analitica-menu button {
-  width: 100%;
-  padding: 0.55rem 0.75rem;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #29262d;
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
-}
-
-.analitica-menu button:hover {
-  background: #edf4ff;
-  color: #174ea6;
-}
-
-.analitica-menu button.activo {
-  background: #1a73e8;
-  color: #fff;
+.analitica-limpiar:hover {
+  background: #f5f3fa;
+  color: #241b38;
 }
 
 .analitica-descarga {
@@ -105,15 +99,12 @@
 .analitica-descarga:hover { background: #6d28d9; }
 .analitica-descarga:disabled { opacity: 0.55; cursor: wait; }
 
-.analitica-filtro:focus-within {
-  border-color: #8b5cf6;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-}
-
+/* ---------------- Tarjetas de resumen ---------------- */
 .panel-tarjetas {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 0.9rem;
+  margin-bottom: 1.25rem;
 }
 
 .panel-tarjeta__valor {
@@ -132,54 +123,15 @@
   font-size: 0.85rem;
 }
 
-/* ---------------- Ranking de páginas ---------------- */
-.panel-ranking {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  border: 1px solid #e2ddf2;
-  border-radius: 12px;
-  background-color: #ffffff;
-  overflow: hidden;
-}
-
-.panel-ranking__fila {
+/* ---------------- Los dos rankings ---------------- */
+.analitica-rankings {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) 2fr auto;
-  align-items: center;
-  gap: 0.9rem;
-  padding: 0.75rem 1rem;
-}
-
-.panel-ranking__fila + .panel-ranking__fila {
-  border-top: 1px solid #f0edf8;
-}
-
-.panel-ranking__ruta {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #241b38;
-  overflow-wrap: anywhere;
-}
-
-.panel-ranking__barra {
-  display: block;
-  height: 9px;
-  border-radius: 999px;
-  background-color: #efeafb;
-  overflow: hidden;
-}
-
-.panel-ranking__relleno {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: #8b5cf6;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .analitica-ranking {
   min-height: 280px;
-  margin-top: 1rem;
   padding: 1.2rem;
   border: 1px solid #e2ddf2;
   border-radius: 14px;
@@ -210,9 +162,25 @@
   left: 0;
   top: 50%;
   border-radius: 999px;
-  background: #8b5cf6;
   transform: translateY(-50%);
 }
+
+.analitica-ranking--web .panel-grafico__cabecera h2::before { background: #7c3aed; }
+.analitica-ranking--app .panel-grafico__cabecera h2::before { background: #0ea5e9; }
+
+.analitica-ranking .panel-grafico__cabecera p {
+  margin: 0.2rem 0 0;
+  color: #777386;
+  font-size: 0.78rem;
+}
+
+.analitica-ranking .panel-grafico__cabecera strong {
+  color: #7c3aed;
+  font-size: 1.15rem;
+  white-space: nowrap;
+}
+
+.analitica-ranking--app .panel-grafico__cabecera strong { color: #0284c7; }
 
 .analitica-ranking__grafico {
   display: flex;
@@ -223,16 +191,18 @@
 
 .analitica-ranking__fila {
   display: grid;
-  grid-template-columns: minmax(120px, 0.9fr) minmax(180px, 2fr) 48px;
+  grid-template-columns: minmax(110px, 0.9fr) minmax(140px, 2fr) 48px;
   align-items: center;
   gap: 0.9rem;
 }
 
+/* El nombre de la pantalla manda; el slug queda como segundo plano para
+   quien quiera confirmar la ruta exacta. */
 .analitica-ranking__ruta {
   overflow-wrap: anywhere;
-  color: #4a4652;
-  font-size: 0.82rem;
-  font-weight: 600;
+  color: #241b38;
+  font-size: 0.84rem;
+  font-weight: 650;
 }
 
 .analitica-ranking__barra {
@@ -248,33 +218,52 @@
   min-width: 3px;
   border-radius: inherit;
   background: #8b5cf6;
+  transition: width 0.25s ease;
 }
+
+.analitica-ranking--app .analitica-ranking__barra span { background: #0ea5e9; }
 
 .analitica-ranking__fila strong {
   text-align: right;
   color: #241b38;
-  font-variant-numeric: tabular-nums;
-}
-
-.panel-ranking__valor {
-  min-width: 3.5ch;
-  text-align: right;
   font-size: 0.9rem;
-  font-weight: 700;
-  color: #443c56;
   font-variant-numeric: tabular-nums;
 }
 
+.analitica-ranking__mas {
+  margin: 1rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f0edf8;
+  color: #777386;
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+/* ---------------- Responsive ---------------- */
+@media (max-width: 900px) {
+  .analitica-rankings {
+    grid-template-columns: 1fr;
+  }
+}
 
 @media (max-width: 600px) {
   .analitica-filtros {
     grid-template-columns: 1fr;
   }
 
-  .analitica-descarga {
-    width: 100%;
+  .analitica-filtros__acciones {
+    flex-direction: column;
+    align-items: stretch;
   }
 
+  .analitica-descarga,
+  .analitica-limpiar {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* En pantalla chica la barra apretada no se lee: el nombre arriba y la
+     barra con su número abajo. */
   .analitica-ranking__fila {
     grid-template-columns: 1fr 48px;
     row-gap: 0.35rem;
@@ -283,15 +272,5 @@
   .analitica-ranking__barra {
     grid-column: 1 / -1;
     grid-row: 2;
-  }
-  /* En pantalla chica el ranking aprieta la barra hasta hacerla inútil: se
-     apila el nombre arriba y la barra con su número abajo. */
-  .panel-ranking__fila {
-    grid-template-columns: 1fr auto;
-    row-gap: 0.4rem;
-  }
-
-  .panel-ranking__barra {
-    grid-column: 1 / -1;
   }
 }

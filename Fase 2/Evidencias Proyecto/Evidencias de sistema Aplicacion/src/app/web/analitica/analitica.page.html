@@ -3,41 +3,48 @@
 <ion-content class="web-contenido">
   <div class="web-page">
 
+    <!-- Filtros: selects nativos en lugar de los <details> de antes. Se
+         comportaban distinto según el navegador (un clic los cerraba, otro
+         no) y en el celular no abrían el picker del sistema. -->
     <div class="analitica-filtros" aria-label="Filtros de analítica">
       <div class="analitica-filtro">
-        <details (toggle)="alAlternarMenu($event)">
-          <summary>Últimos {{ dias }} días</summary>
-          <div class="analitica-menu">
-            @for (rango of rangos; track rango) {
-              <button type="button" [class.activo]="dias === rango" (click)="alCambiarRango($event, rango)">Últimos {{ rango }} días</button>
-            }
-          </div>
-        </details>
+        <label for="filtro-periodo">Periodo</label>
+        <select id="filtro-periodo" [value]="dias" (change)="alCambiarRango($event)">
+          @for (rango of rangos; track rango) {
+            <option [value]="rango">Últimos {{ rango }} días</option>
+          }
+        </select>
       </div>
+
       <div class="analitica-filtro">
-        <details (toggle)="alAlternarMenu($event)">
-          <summary>{{ etiquetaPlataforma }}</summary>
-          <div class="analitica-menu">
-            <button type="button" [class.activo]="!filtroPlataforma" (click)="alCambiarPlataforma($event, '')">Todas</button>
-            <button type="button" [class.activo]="filtroPlataforma === 'web'" (click)="alCambiarPlataforma($event, 'web')">Web</button>
-            <button type="button" [class.activo]="filtroPlataforma === 'app'" (click)="alCambiarPlataforma($event, 'app')">Aplicación</button>
-          </div>
-        </details>
+        <label for="filtro-sesion">Sesión</label>
+        <select id="filtro-sesion" [value]="filtroSesion" (change)="alCambiarSesion($event)">
+          <option value="">Todas</option>
+          <option value="registrada">Con sesión</option>
+          <option value="anonima">Sin cuenta</option>
+        </select>
       </div>
+
       <div class="analitica-filtro">
-        <details (toggle)="alAlternarMenu($event)">
-          <summary>{{ etiquetaRol }}</summary>
-          <div class="analitica-menu">
-            <button type="button" [class.activo]="!filtroRol" (click)="alCambiarRol($event, '')">Todos</button>
-            <button type="button" [class.activo]="filtroRol === 'adulto mayor'" (click)="alCambiarRol($event, 'adulto mayor')">Adulto mayor</button>
-            <button type="button" [class.activo]="filtroRol === 'cuidador'" (click)="alCambiarRol($event, 'cuidador')">Cuidador</button>
-            <button type="button" [class.activo]="filtroRol === 'familia'" (click)="alCambiarRol($event, 'familia')">Familia</button>
-          </div>
-        </details>
+        <label for="filtro-rol">Tipo de usuario</label>
+        <select id="filtro-rol" [value]="filtroRol" (change)="alCambiarRol($event)">
+          <option value="">Todos</option>
+          <option value="Usuario">Adulto mayor</option>
+          <option value="Familiar">Cuidador</option>
+        </select>
       </div>
-      <button class="analitica-descarga" type="button" [disabled]="cargando" (click)="descargarPdf()">
-        Descargar PDF
-      </button>
+
+      <div class="analitica-filtros__acciones">
+        @if (filtrosActivos) {
+          <button type="button" class="analitica-limpiar" (click)="limpiarFiltros()">
+            <ion-icon name="close-outline" aria-hidden="true"></ion-icon>
+            Limpiar filtros
+          </button>
+        }
+        <button class="analitica-descarga" type="button" [disabled]="cargando" (click)="descargarPdf()">
+          Descargar PDF
+        </button>
+      </div>
     </div>
 
     @if (cargando) {
@@ -59,38 +66,76 @@
           <span class="panel-tarjeta__valor">{{ usuariosActivos }}</span>
           <span class="panel-tarjeta__etiqueta">Usuarios activos</span>
         </div>
-        <!-- Estos dos sólo tienen sentido cuando no hay plataforma filtrada:
-             con el filtro puesto, el que no corresponde queda siempre en 0. -->
-        @if (!filtroPlataforma) {
-          <div class="panel-tarjeta">
-            <span class="panel-tarjeta__valor">{{ visitasWeb }}</span>
-            <span class="panel-tarjeta__etiqueta">Desde la web</span>
-          </div>
-          <div class="panel-tarjeta">
-            <span class="panel-tarjeta__valor">{{ visitasApp }}</span>
-            <span class="panel-tarjeta__etiqueta">Desde la app</span>
-          </div>
-        }
+        <!-- Cuánto del tráfico llega sin cuenta: la migración de analítica
+             lo permite a propósito, y sin esta cifra "páginas más vistas"
+             se lee sólo con la mitad de la historia. -->
+        <div class="panel-tarjeta">
+          <span class="panel-tarjeta__valor">{{ visitasAnonimas }}</span>
+          <span class="panel-tarjeta__etiqueta">Visitas sin cuenta</span>
+        </div>
       </div>
 
-      @if (ranking.length) {
-        <section class="panel-grafico analitica-ranking">
-          <div class="panel-grafico__cabecera">
-            <h2>Páginas más usadas</h2>
-          </div>
-          <div class="analitica-ranking__grafico" aria-label="Ranking de páginas más usadas">
-            @for (fila of ranking; track fila.ruta) {
-              <div class="analitica-ranking__fila">
-                <span class="analitica-ranking__ruta">{{ rutaLegible(fila.ruta) }}</span>
-                <div class="analitica-ranking__barra">
-                  <span [style.width.%]="fila.proporcion * 100"></span>
-                </div>
-                <strong>{{ fila.vistas }}</strong>
+      <!-- Un ranking por plataforma: antes salían mezcladas y una pantalla de
+           la app competía en la misma lista con una del panel. -->
+      <div class="analitica-rankings">
+        <section class="panel-grafico analitica-ranking analitica-ranking--web">
+            <div class="panel-grafico__cabecera">
+              <div>
+                <h2>Web</h2>
+                <p>Sitio público y panel de administración</p>
               </div>
+              <strong>{{ visitasWeb }}</strong>
+            </div>
+            @if (rankingWeb.length) {
+              <div class="analitica-ranking__grafico" aria-label="Páginas web más usadas">
+                @for (fila of rankingWeb; track fila.ruta) {
+                  <div class="analitica-ranking__fila">
+                    <span class="analitica-ranking__ruta">{{ nombreLegible(fila.ruta) }}</span>
+                    <div class="analitica-ranking__barra">
+                      <span [style.width.%]="fila.proporcion * 100"></span>
+                    </div>
+                    <strong>{{ fila.vistas }}</strong>
+                  </div>
+                }
+              </div>
+              @if (restantesWeb) {
+                <p class="analitica-ranking__mas">y {{ restantesWeb }} páginas más</p>
+              }
+            } @else {
+              <p class="panel-vacio">Sin visitas desde la web en ese periodo.</p>
             }
-          </div>
         </section>
-      } @else {
+
+        <section class="panel-grafico analitica-ranking analitica-ranking--app">
+            <div class="panel-grafico__cabecera">
+              <div>
+                <h2>Aplicación</h2>
+                <p>Pantallas de la app móvil</p>
+              </div>
+              <strong>{{ visitasApp }}</strong>
+            </div>
+            @if (rankingApp.length) {
+              <div class="analitica-ranking__grafico" aria-label="Páginas de la app más usadas">
+                @for (fila of rankingApp; track fila.ruta) {
+                  <div class="analitica-ranking__fila">
+                    <span class="analitica-ranking__ruta">{{ nombreLegible(fila.ruta) }}</span>
+                    <div class="analitica-ranking__barra">
+                      <span [style.width.%]="fila.proporcion * 100"></span>
+                    </div>
+                    <strong>{{ fila.vistas }}</strong>
+                  </div>
+                }
+              </div>
+              @if (restantesApp) {
+                <p class="analitica-ranking__mas">y {{ restantesApp }} páginas más</p>
+              }
+            } @else {
+              <p class="panel-vacio">Sin visitas desde la app en ese periodo.</p>
+            }
+        </section>
+      </div>
+
+      @if (!rankingWeb.length && !rankingApp.length) {
         <p class="panel-vacio">
           No hay eventos registrados en ese rango. Entra a una página desde la
           web o desde la app y recarga.
