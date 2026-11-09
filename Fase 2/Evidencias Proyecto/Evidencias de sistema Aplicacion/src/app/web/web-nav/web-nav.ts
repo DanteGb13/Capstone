@@ -15,8 +15,8 @@ const ENLACES_ADMIN = [
   { ruta: '/panel-control', etiqueta: 'Panel' },
   { ruta: '/analitica', etiqueta: 'Analítica' },
   { ruta: '/usuarios', etiqueta: 'Usuarios' },
-  { ruta: '/reportes', etiqueta: 'Reportes' },
-  { ruta: '/finanzas', etiqueta: 'Finanzas' }
+  { ruta: '/finanzas', etiqueta: 'Finanzas' },
+  { ruta: '/reportes', etiqueta: 'Reportes' }
 ];
 
 const ENLACES_PUBLICOS = [

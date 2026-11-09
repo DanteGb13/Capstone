@@ -4,6 +4,7 @@
 
 .finanzas-filtros {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
@@ -29,7 +30,7 @@
   outline: 2px solid rgba(119, 21, 199, 0.2);
 }
 
-.finanzas-recargar {
+.finanzas-descargar {
   height: 42px;
   display: inline-flex;
   align-items: center;
@@ -44,66 +45,338 @@
   cursor: pointer;
 }
 
+/* Contenedor con scroll interno, igual que en Usuarios: con 25 o 50 filas
+   por página la tabla se desplaza dentro de su caja en vez de alargar la
+   página. `max-height` y no `height`: con pocas filas el recuadro se ajusta
+   al contenido en lugar de dejar un espacio vacío al final. */
 .panel-tabla-envoltura {
   border: 1px solid #e2ddf2;
   border-radius: 12px;
   background: #fff;
+  max-height: 690px;
   overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  isolation: isolate;
+  contain: paint;
 }
 
-.finanzas-tabla {
-  width: 100%;
-  table-layout: fixed;
+/* =====================================================
+   TABLA
+
+   Grid de divs en lugar de <table>. Dos razones: los divs se comportan
+   igual en cualquier navegador (incluidos WebView viejos de Android, donde
+   el modelo de tablas de CSS se vuelve impredecible al cambiarles el
+   `display`), y dejan convertir cada fila en tarjeta en el celular sin
+   wrappers anónimos de por medio. Los `role` del HTML mantienen la
+   semántica de tabla para los lectores de pantalla.
+   ===================================================== */
+.finanzas-fila {
+  display: grid;
+  grid-template-columns: 20% 24% 13% 12% 21% 10%;
+  align-items: center;
 }
 
-.finanzas-tabla th:nth-child(1),
-.finanzas-tabla td:nth-child(1) { width: 20%; }
-.finanzas-tabla th:nth-child(2),
-.finanzas-tabla td:nth-child(2) { width: 24%; }
-.finanzas-tabla th:nth-child(3),
-.finanzas-tabla td:nth-child(3) { width: 14%; }
-.finanzas-tabla th:nth-child(4),
-.finanzas-tabla td:nth-child(4) { width: 12%; }
-.finanzas-tabla th:nth-child(5),
-.finanzas-tabla td:nth-child(5) { width: 18%; }
-.finanzas-tabla th:nth-child(6),
-.finanzas-tabla td:nth-child(6) { width: 12%; }
-
-.finanzas-tabla td {
-  white-space: normal;
-}
-
-.finanzas-accion {
-  min-height: 32px;
-  padding: 0.35rem 0.65rem;
-  border: 0;
-  border-radius: 7px;
-  background: #7715c7;
-  color: #fff;
+.finanzas-cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #f8f7fc;
+  box-shadow: 0 1px 0 #e2ddf2;
+  color: #4b3f66;
+  font-size: 0.8rem;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.finanzas-cabecera span {
+  padding: 0.8rem 1rem;
+  white-space: nowrap;
+}
+
+.finanzas-fila:not(.finanzas-cabecera) {
+  border-top: 1px solid #f0edf8;
+}
+
+.finanzas-celda {
+  padding: 0.75rem 0.7rem;
+  color: #443c56;
+  font-size: 0.9rem;
+  overflow-wrap: break-word;
+}
+
+.finanzas-celda--fuerte {
+  font-weight: 600;
+  color: #241b38;
+}
+
+.finanzas-celda--acciones {
+  text-align: center;
+}
+
+.finanzas-accion-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #7715c7;
+  font-size: 1.15rem;
   cursor: pointer;
 }
 
-.finanzas-accion--secundaria {
-  margin-left: 0.35rem;
-  border: 1px solid #7715c7;
+.finanzas-accion-icono:hover {
+  background: #f1e8fb;
+}
+
+/* Estados de la suscripción. `.panel-estado` vive acá y no en el scss de
+   Usuarios porque los estilos de Angular son por componente. */
+.panel-estado {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background-color: #e7f6ec;
+  color: #166534;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.panel-estado--inactivo {
+  background-color: #fdecec;
+  color: #991b1b;
+}
+
+/* Ámbar: todavía no compró licencia (antes también marcaba 'pendiente',
+   estado que se retiró del panel). */
+.panel-estado--aviso {
+  background-color: #fdf3e0;
+  color: #92400e;
+}
+
+/* Barra de paginación, igual que la de Usuarios. */
+.finanzas-paginacion {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto minmax(260px, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  color: #5f566e;
+  font-size: 0.86rem;
+}
+
+.finanzas-paginacion__tamano {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.finanzas-paginacion__tamano select {
+  height: 36px;
+  border: 1px solid #d8d1e7;
+  border-radius: 7px;
+  padding: 0 2rem 0 0.65rem;
   background: #fff;
+  color: #443c56;
+  font: inherit;
+}
+
+.finanzas-paginacion__resumen {
+  text-align: center;
+  white-space: nowrap;
+}
+
+.finanzas-paginacion__controles {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.finanzas-paginacion__controles button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #443c56;
+  font: inherit;
+  cursor: pointer;
+}
+
+.finanzas-paginacion__controles button:hover:not(:disabled):not(.finanzas-paginacion__activa) {
+  background: #f1e8fb;
   color: #7715c7;
 }
 
-.finanzas-accion:disabled {
-  opacity: 0.45;
+.finanzas-paginacion__controles button:disabled {
+  color: #aaa5b2;
   cursor: default;
 }
 
-@media (max-width: 800px) {
+.finanzas-paginacion__controles .finanzas-paginacion__activa {
+  background: #7715c7;
+  color: #fff;
+  font-weight: 700;
+}
+
+.finanzas-paginacion__separador {
+  display: inline-grid;
+  place-items: center;
+  min-width: 24px;
+  height: 34px;
+}
+
+/* =====================================================
+   AJUSTES RESPONSIVOS
+
+   Van al final del archivo a propósito: las consultas de medio no ganan
+   por especificidad, ganan por orden de origen, así que si quedaran antes
+   de las reglas base éstas las pisarían y el diseño de tarjetas no se
+   aplicaría.
+   ===================================================== */
+
+/* ---------- Tablet: los filtros se reparten en dos líneas ---------- */
+@media (max-width: 900px) {
   .finanzas-filtros {
-    align-items: stretch;
-    flex-direction: column;
+    flex-wrap: wrap;
   }
 
-  .finanzas-filtro,
-  .finanzas-recargar {
+  .finanzas-buscador {
+    flex-basis: 100%;
+  }
+
+  .finanzas-filtro:not(.finanzas-buscador) {
+    flex: 1 1 180px;
+  }
+
+  .finanzas-descargar {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+
+  .finanzas-paginacion {
+    grid-template-columns: 1fr auto;
+  }
+
+  .finanzas-paginacion__resumen {
+    text-align: right;
+  }
+
+  .finanzas-paginacion__controles {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+}
+
+/* ---------- Celular (y landscape/tablet chica): cada fila es una tarjeta ----------
+   Seis columnas en 360px de ancho son ilegibles, así que cada fila pasa a
+   ser una tarjeta con el nombre como título y el resto de los datos como
+   pares etiqueta/valor (las etiquetas salen de `data-etiqueta`). */
+@media (max-width: 860px) {
+  .panel-tabla-envoltura {
+    max-height: none;
+    height: auto;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .finanzas-cabecera {
+    display: none;
+  }
+
+  .finanzas-fila {
+    display: block;
+    margin-bottom: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid #e2ddf2;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(36, 27, 56, 0.06);
+  }
+
+  /* Etiqueta a la izquierda, valor a la derecha. `minmax(0, 1fr)` en la
+     segunda columna: es lo que evita que el valor se encoja a un carácter
+     por línea (pasaba con flex y `overflow-wrap: anywhere`). */
+  .finanzas-celda {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    justify-items: end;
+    gap: 0 0.75rem;
+    padding: 0.4rem 0;
+    border: 0;
+    text-align: right;
+    overflow-wrap: break-word;
+  }
+
+  .finanzas-celda::before {
+    content: attr(data-etiqueta);
+    justify-self: start;
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* El nombre hace de título de la tarjeta: bloque a lo ancho, sin etiqueta. */
+  .finanzas-celda--fuerte {
+    display: block;
+    margin-bottom: 0.35rem;
+    padding-top: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #f0edf8;
+    font-size: 1rem;
+  }
+
+  .finanzas-celda--fuerte::before {
+    display: none;
+  }
+
+  /* El lápiz queda en su propia línea, con la etiqueta al lado. */
+  .finanzas-celda--acciones {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding-top: 0.55rem;
+    border-top: 1px solid #f0edf8;
+    text-align: left;
+  }
+
+  .finanzas-celda--acciones .finanzas-accion-icono {
+    width: 40px;
+    height: 40px;
+    font-size: 1.3rem;
+  }
+}
+
+/* ---------- Celular chico: paginación apilada ---------- */
+@media (max-width: 600px) {
+  .finanzas-paginacion {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .finanzas-paginacion__tamano,
+  .finanzas-paginacion__resumen {
+    justify-self: center;
+    text-align: center;
+  }
+
+  .finanzas-paginacion__controles {
+    grid-column: 1;
     width: 100%;
+    flex-wrap: wrap;
   }
 }

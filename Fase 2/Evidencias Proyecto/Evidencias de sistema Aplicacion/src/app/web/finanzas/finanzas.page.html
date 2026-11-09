@@ -2,76 +2,140 @@
 
 <ion-content class="web-contenido">
   <div class="web-page">
+    @if (mensajeSuscripciones) {
+      <p class="panel-error">{{ mensajeSuscripciones }}</p>
+    }
+
     @if (cargandoSuscripciones) {
       <p class="panel-vacio">Cargando suscripciones…</p>
-    } @else if (mensajeSuscripciones) {
-      <p class="panel-error">{{ mensajeSuscripciones }}</p>
     } @else {
       <div class="finanzas-filtros">
         <input
           class="finanzas-filtro finanzas-buscador"
           type="search"
           [(ngModel)]="busqueda"
+          (ngModelChange)="alCambiarFiltros()"
           placeholder="Buscar cuidador por nombre o correo"
           aria-label="Buscar cuidador por nombre o correo" />
 
-        <select class="finanzas-filtro" [(ngModel)]="filtroEstado" aria-label="Filtrar por estado de suscripción">
-          <option value="">Todas las suscripciones</option>
-          <option value="activa">Activas</option>
+        <select
+          class="finanzas-filtro"
+          [(ngModel)]="filtroSuscripcion"
+          (ngModelChange)="alCambiarFiltros()"
+          aria-label="Filtrar por suscripción">
+          <option value="">Todos los cuidadores</option>
+          <option value="con">Con suscripción</option>
+          <option value="sin">Sin suscripción</option>
           <option value="cancelada">Canceladas</option>
         </select>
 
-        <button type="button" class="finanzas-recargar" (click)="cargarSuscripciones()">
-          <ion-icon name="refresh-outline" aria-hidden="true"></ion-icon>
-          Actualizar
+        <select
+          class="finanzas-filtro"
+          [(ngModel)]="filtroPlan"
+          (ngModelChange)="alCambiarFiltros()"
+          aria-label="Filtrar por plan">
+          <option value="">Todos los planes</option>
+          <option value="mensual">Mensual</option>
+          <option value="anual">Anual</option>
+        </select>
+
+        <button type="button" class="finanzas-descargar" (click)="descargarCsv()">
+          <ion-icon name="download-outline" aria-hidden="true"></ion-icon>
+          Descargar
         </button>
       </div>
 
-      @if (!suscripcionesFiltradas.length) {
-        <p class="panel-vacio">No hay cuidadores con suscripciones.</p>
+      @if (!suscripciones.length) {
+        <p class="panel-vacio">Todavía no hay cuidadores registrados.</p>
+      } @else if (!suscripcionesFiltradas.length) {
+        <p class="panel-vacio">Ningún cuidador coincide con los filtros.</p>
       } @else {
         <div class="panel-tabla-envoltura">
-          <table class="panel-tabla finanzas-tabla">
-            <thead>
-              <tr>
-                <th>Cuidador</th>
-                <th>Correo</th>
-                <th>Plan</th>
-                <th>Estado</th>
-                <th>Vigencia</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (suscripcion of suscripcionesFiltradas; track suscripcion.id) {
-                <tr>
-                  <td class="panel-tabla__fuerte">{{ suscripcion.nombre || 'Sin nombre' }}</td>
-                  <td>{{ suscripcion.correo || '—' }}</td>
-                  <td>{{ nombrePlan(suscripcion.plan_codigo) }}</td>
-                  <td>
-                    <span class="panel-estado" [class.panel-estado--inactivo]="suscripcion.estado !== 'activa'">
-                      {{ textoEstado(suscripcion.estado) }}
-                    </span>
-                  </td>
-                  <td>{{ vigencia(suscripcion) }}</td>
-                  <td>
-                    <button
-                      type="button"
-                      class="finanzas-accion"
-                      [disabled]="suscripcion.estado === 'activa'"
-                      (click)="activar(suscripcion)">
-                      Activar
-                    </button>
-                    @if (suscripcion.estado === 'activa') {
-                      <button type="button" class="finanzas-accion finanzas-accion--secundaria" (click)="cancelar(suscripcion)">
-                        Cancelar
-                      </button>
-                    }
-                  </td>
-                </tr>
+        <!-- Tabla como grid de divs y no como <table>: los divs se comportan
+             igual en todos los navegadores y permiten el modo tarjeta del
+             celular sin pelear con el modelo de tablas de CSS. -->
+          <div class="finanzas-tabla" role="table" aria-label="Suscripciones de los cuidadores">
+            <div class="finanzas-fila finanzas-cabecera" role="row">
+              <span role="columnheader">Cuidador</span>
+              <span role="columnheader">Correo</span>
+              <span role="columnheader">Plan</span>
+              <span role="columnheader">Estado</span>
+              <span role="columnheader">Vigencia</span>
+              <span role="columnheader">Acciones</span>
+            </div>
+
+            @for (suscripcion of suscripcionesPagina; track suscripcion.usuario_id) {
+              <div class="finanzas-fila" role="row">
+                <span class="finanzas-celda finanzas-celda--fuerte" data-etiqueta="Cuidador">
+                  {{ suscripcion.nombre || 'Sin nombre' }}
+                </span>
+                <span class="finanzas-celda" data-etiqueta="Correo">
+                  {{ suscripcion.correo || '—' }}
+                </span>
+                <span class="finanzas-celda" data-etiqueta="Plan">
+                  {{ nombrePlan(suscripcion.plan_codigo) }}
+                </span>
+                <span class="finanzas-celda" data-etiqueta="Estado">
+                  <span
+                    class="panel-estado"
+                    [class.panel-estado--inactivo]="suscripcion.estado === 'cancelada' || suscripcion.estado === 'vencida'"
+                    [class.panel-estado--aviso]="suscripcion.estado === 'sin_suscripcion'">
+                    {{ textoEstado(suscripcion.estado) }}
+                  </span>
+                </span>
+                <span class="finanzas-celda" data-etiqueta="Vigencia">
+                  {{ vigencia(suscripcion) }}
+                </span>
+                <span class="finanzas-celda finanzas-celda--acciones" data-etiqueta="Acciones">
+                  <button
+                    type="button"
+                    class="finanzas-accion-icono"
+                    (click)="abrirGestion(suscripcion)"
+                    title="Gestionar suscripción de {{ suscripcion.nombre || suscripcion.correo }}"
+                    [attr.aria-label]="'Gestionar suscripción de ' + (suscripcion.nombre || suscripcion.correo)">
+                    <ion-icon name="create-outline" aria-hidden="true"></ion-icon>
+                  </button>
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="finanzas-paginacion" aria-label="Paginación de cuidadores">
+          <label class="finanzas-paginacion__tamano">
+            Filas por página:
+            <select
+              [(ngModel)]="tamanoPagina"
+              (ngModelChange)="alCambiarTamanoPagina()">
+              <option [ngValue]="11">11</option>
+              <option [ngValue]="25">25</option>
+              <option [ngValue]="50">50</option>
+            </select>
+          </label>
+
+          <span class="finanzas-paginacion__resumen">
+            {{ numeroPrimerCuidador }}–{{ numeroUltimoCuidador }} de {{ suscripcionesFiltradas.length }} cuidadores
+          </span>
+
+          <div class="finanzas-paginacion__controles">
+            <button type="button" aria-label="Primera página" [disabled]="paginaActual === 1" (click)="irAPagina(1)">«</button>
+            <button type="button" aria-label="Página anterior" [disabled]="paginaActual === 1" (click)="irAPagina(paginaActual - 1)">‹</button>
+            @for (pagina of paginasVisibles; track pagina) {
+              @if (pagina === -1) {
+                <span class="finanzas-paginacion__separador">…</span>
+              } @else {
+                <button
+                  type="button"
+                  [class.finanzas-paginacion__activa]="paginaActual === pagina"
+                  [attr.aria-current]="paginaActual === pagina ? 'page' : null"
+                  (click)="irAPagina(pagina)">
+                  {{ pagina }}
+                </button>
               }
-            </tbody>
-          </table>
+            }
+            <button type="button" aria-label="Página siguiente" [disabled]="paginaActual === totalPaginas" (click)="irAPagina(paginaActual + 1)">›</button>
+            <button type="button" aria-label="Última página" [disabled]="paginaActual === totalPaginas" (click)="irAPagina(totalPaginas)">»</button>
+          </div>
         </div>
       }
     }

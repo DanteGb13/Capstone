@@ -16,6 +16,11 @@ function clienteFalso(opciones: { errorUpdate?: string | null } = {}) {
         actualizaciones.push(valores);
         return { error: opciones.errorUpdate ? { message: opciones.errorUpdate } : null };
       },
+      // El componente se suscribe desde el constructor para detectar la
+      // recuperación de contraseña: sin esto el fake cliente no sirve.
+      onAuthStateChange: (_cb: (evento: string) => void) => ({
+        data: { subscription: { unsubscribe() {} } },
+      }),
     },
     rpc: async (nombre: string, detalle: any) => {
       bitacora.push({ accion: nombre, detalle });

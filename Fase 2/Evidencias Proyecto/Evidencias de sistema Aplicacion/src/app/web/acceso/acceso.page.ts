@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { AlertController, IonContent, IonIcon, IonSpinner } from '@ionic/angular';
+import { IonContent, IonIcon, IonSpinner } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { lockClosedOutline, mailOutline, eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { Router, RouterLink } from '@angular/router';
@@ -41,7 +41,6 @@ export class AccesoPage {
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
   private acceso = inject(AccesoService);
-  private alertCtrl = inject(AlertController);
 
   constructor() {
     addIcons({ mailOutline, lockClosedOutline, eyeOutline, eyeOffOutline });
@@ -57,7 +56,7 @@ export class AccesoPage {
     this.refrescar();
 
     if (!this.correo.trim() || !this.contrasena) {
-      await this.mostrarAlerta('Datos incompletos', 'Escribe tu correo y tu contraseña para continuar.');
+      this.mensajeError = 'Escribe tu correo y tu contraseña.';
       this.refrescar();
       return;
     }
@@ -77,54 +76,44 @@ export class AccesoPage {
             this.router.navigate([destino], { replaceUrl: true });
             return;
           }
-          if (estado.rol === 'Usuario') {
-            await this.mostrarAlerta(
-              'Acceso exclusivo para Familias',
-              'El acceso web es exclusivo para Administradores y Familiares. Usa la aplicación móvil para continuar.'
-            );
-          } else {
-            await this.mostrarAlerta('No pudimos abrir tu cuenta', this.avisoDeRolDesconocido(estado.rol));
-          }
+          // Sin destino no hay a dónde mandarlo: se explica en el formulario.
+          this.mensajeError = estado.rol === 'Usuario'
+            ? 'El acceso web es exclusivo para Administradores y Familiares. Usa la aplicación móvil para continuar.'
+            : this.avisoDeRolDesconocido(estado.rol);
           break;
         }
 
         case 'perfil-incompleto':
           // En la app esto cae en `/elegir-tipo`, que en la web no existe:
           // no hay adónde mandar, sólo explicar dónde se termina.
-          await this.mostrarAlerta(
-            'Registro incompleto',
-            'Tu registro aún no está terminado. Complétalo desde la app móvil y vuelve a ingresar.'
-          );
+          this.mensajeError = 'Tu registro está incompleto. Complétalo desde la app móvil y vuelve a ingresar.';
           break;
 
         case 'sin-rol':
-          await this.mostrarAlerta('Cuenta no disponible', this.avisoDeRolDesconocido(null));
+          this.mensajeError = this.avisoDeRolDesconocido(null);
           break;
 
         case 'sin-sesion':
           // La sesión se borró entre el `signInWithPassword` y la lectura.
-          await this.mostrarAlerta('No se pudo iniciar sesión', 'No pudimos mantener tu sesión abierta. Inténtalo nuevamente.');
+          this.mensajeError = 'No pudimos mantener tu sesión abierta. Inténtalo nuevamente.';
           break;
 
         case 'cuenta-inactiva':
-          await this.mensajeCuentaDesactivada();
+          this.mensajeError = this.avisoCuentaDesactivada();
           break;
 
         case 'error':
           // La causa exacta ya está en la consola (la dejó `leerEstado`).
-          await this.mostrarAlerta(
-            'No pudimos verificar tu cuenta',
-            'Ocurrió un problema temporal al verificar tu cuenta. Inténtalo nuevamente.'
-          );
+          // Se distingue de `sin-rol`: acá no se pudo LEER la cuenta, no es
+          // que el rol leído no tenga destino.
+          this.mensajeError = 'No pudimos leer tu cuenta. Inténtalo nuevamente en unos minutos.';
           break;
       }
     } catch (e) {
       const mensaje = this.acceso.mensajeDeError(e);
-      if (mensaje.startsWith('Esta cuenta está desactivada.')) {
-        await this.mensajeCuentaDesactivada();
-      } else {
-        await this.mostrarAlerta('No pudimos iniciar sesión', mensaje);
-      }
+      this.mensajeError = mensaje.startsWith('Esta cuenta está desactivada.')
+        ? this.avisoCuentaDesactivada()
+        : mensaje;
     } finally {
       this.cargando = false;
       this.refrescar();
@@ -137,22 +126,8 @@ export class AccesoPage {
     return `No pudimos determinar el tipo de tu cuenta${detalle}. Escríbenos desde Contáctanos.`;
   }
 
-  private async mensajeCuentaDesactivada(): Promise<void> {
-    await this.mostrarAlerta(
-      'Cuenta desactivada',
-      'Esta cuenta está desactivada. Solicita ayuda a un administrador para volver a activarla.'
-    );
-  }
-
-  private async mostrarAlerta(header: string, message: string): Promise<void> {
-    const alert = await this.alertCtrl.create({
-      header,
-      message,
-      cssClass: 'alerta-acceso',
-      buttons: [{ text: 'Entendido', role: 'cancel' }]
-    });
-
-    await alert.present();
+  private avisoCuentaDesactivada(): string {
+    return 'Esta cuenta está desactivada. Solicita ayuda a un administrador para volver a activarla.';
   }
 
   // La app corre SIN zone.js (zoneless): cambiar el estado después de un

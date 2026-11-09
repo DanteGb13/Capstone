@@ -15,7 +15,6 @@ describe('AccesoPage', () => {
   const destinoPara = (rol: string) =>
     rol === 'Administrador' ? '/panel-control'
     : rol === 'Familiar' ? '/inicio'
-    : null
     : null;
 
   async function preparar(estado: EstadoAcceso) {

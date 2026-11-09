@@ -247,6 +247,132 @@ ion-app {
 }
 
 /* =====================================================
+   Alerta de gestión de un cuidador (Finanzas)
+
+   Mismo lenguaje que la alerta de opciones de adulto: cada acción es una
+   fila con fondo y borde propios, separadas entre sí, para que un dedo no
+   termine en la opción equivocada. La acción destructiva (Inhabilitar) va
+   resaltada en rojo y la de salir (Volver) queda sola, al final.
+   (Estilos globales porque el alert es un overlay)
+   ===================================================== */
+.finanzas-alerta {
+
+  --ion-color-primary: #7715c7;
+
+  /* Ancho fijo: sin esto la alerta se auto-dimensiona al contenido y queda
+     angosta. */
+  --width: min(320px, calc(100vw - 32px));
+  --max-width: 320px;
+
+  .alert-wrapper {
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(119, 21, 199, 0.22);
+    overflow: hidden;
+  }
+
+  .alert-head {
+    padding-top: 22px;
+  }
+
+  /* El nombre del cuidador es el título; debajo, su plan y estado. */
+  .alert-title {
+    color: #7715c7;
+    font-weight: 800;
+    font-size: 19px;
+    text-align: center;
+  }
+
+  .alert-sub-title {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+  }
+
+  /* El mensaje llega con \n a propósito: `pre-line` es lo que hace que se
+     vean como líneas separadas. */
+  .alert-message {
+    padding-bottom: 4px;
+    color: #555;
+    font-size: 14px;
+    line-height: 1.65;
+    white-space: pre-line;
+    text-align: center;
+  }
+
+  .alert-button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px 14px;
+    /* El corte separa las acciones de los datos de arriba: sin esta línea,
+       la ventana se lee como un solo bloque de texto. */
+    border-top: 1px solid #eceff3;
+  }
+
+  .alert-button {
+    min-height: 46px;
+    border-radius: 14px;
+    color: #1a1d26;
+    background: #f5f6f8;
+    font-weight: 700;
+    font-size: 15px;
+    text-align: center;
+    text-transform: none;
+    letter-spacing: 0;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Ionic aplica `justify-content: flex-end` a los botones con un selector de
+     cuatro clases (`.alert-button-group.sc-ion-alert-md .alert-button-inner.
+     sc-ion-alert-md`), que le gana a cualquier selector normal: para centrar
+     el texto hay que subir la apuesta. */
+  .alert-button-group .alert-button-inner {
+    justify-content: center !important;
+  }
+
+  /* Acciones de plan (activar, mejorar, degradar): morado de la app, para
+     que se lean como la acción principal de la ventana. */
+  .alerta-btn-accion {
+    background: #f3e8fd;
+    color: #5b1fa6;
+    border: 1px solid #ddc4f5;
+  }
+
+  /* El `:host` de Ionic está `position: absolute`: la ventana se ancla a su
+     ancestro posicionado más cercano y, si ese no ocupa la pantalla completa,
+     se ve desplazada (a la izquierda, encima de la tabla). Con `fixed` se
+     ancla al viewport y queda al medio. La clase duplicada le gana la
+     especificidad a la regla de Ionic, que se inyecta al final. */
+  .finanzas-alerta.finanzas-alerta {
+    position: fixed;
+  }
+
+  /* Inhabilitar: rojo, resaltado y con más peso (Ionic agrega esta clase
+     sola por el role="destructive"). */
+  .alert-button-role-destructive {
+    background: #fdecec;
+    color: #c62828;
+    border: 1px solid #f2bdbd;
+    font-weight: 800;
+  }
+
+  /* Volver: neutro, con borde, la última y la más alta. */
+  .alert-button-role-cancel {
+    margin-top: 2px;
+    min-height: 50px;
+    background: #ffffff;
+    color: #000000;
+    font-weight: 800;
+    border: 1px solid #d4d7dd;
+    box-shadow: 0 2px 6px rgba(26, 29, 38, 0.06);
+  }
+}
+
+/* =====================================================
    Alerta de detalle de un evento del historial
    (Estilos globales porque el alert es un overlay)
    ===================================================== */

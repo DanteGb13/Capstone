@@ -9,6 +9,7 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:ui": "ng test --ui",
     "lint": "ng lint",
     "android": "node scripts/android.mjs run",
     "android:apk": "node scripts/android.mjs apk"
@@ -61,6 +62,7 @@
     "@angular/language-service": "22.2.3",
     "@capacitor/cli": "8.5.0",
     "@ionic/angular-toolkit": "^13.0.0",
+    "@vitest/ui": "^4.1.12",
     "angular-eslint": "22.0.0",
     "eslint": "^9.16.0",
     "jsdom": "^26.0.0",
