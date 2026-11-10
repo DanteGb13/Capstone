@@ -36,6 +36,11 @@
                 "glob": "privacypolicy.html",
                 "input": "src/assets",
                 "output": "."
+              },
+              {
+                "glob": "manifest.webmanifest",
+                "input": "src",
+                "output": "."
               }
             ],
             "styles": ["src/global.scss", "src/theme/variables.scss","node_modules/bootstrap/dist/css/bootstrap.min.css", "node_modules/leaflet/dist/leaflet.css"],

@@ -129,7 +129,7 @@ describe('PermisosPage', () => {
   it('no pide un permiso que no aplica en el dispositivo', async () => {
     const permiso = permisoBase({
       id: 'ubicacion-fondo',
-      nombre: 'Ubicación en segundo plano',
+      nombre: 'Ubicación en segundo plano (Batería)',
       estado: 'no-aplica',
       puedePedir: false
     });
@@ -146,7 +146,7 @@ describe('PermisosPage', () => {
     // persona en un lugar que no le servía.
     const permiso = permisoBase({
       id: 'ubicacion-fondo',
-      nombre: 'Ubicación en segundo plano',
+      nombre: 'Ubicación en segundo plano (Batería)',
       estado: 'bloqueado',
       puedePedir: false
     });

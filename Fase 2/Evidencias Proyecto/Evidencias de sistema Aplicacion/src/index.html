@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
   <meta charset="utf-8" />
-  <title>SiempreCerca</title>
+  <title>SiempreCerca · Cuida a los tuyos estés donde estés</title>
 
   <base href="/" />
 
   <meta name="color-scheme" content="light" />
   <meta name="theme-color" content="#7715c7" />
-  <meta name="description" content="Cuidado y protección para adultos mayores y sus cuidadores" />
+  <meta name="description" content="SiempreCerca: ubicación en tiempo real, zonas seguras, alertas SOS y recordatorios para cuidar a los adultos mayores de tu familia." />
   <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="format-detection" content="telephone=no" />
   <meta name="msapplication-tap-highlight" content="none" />
@@ -18,6 +18,11 @@
   <link rel="apple-touch-icon" href="assets/logo/logo-256.png" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin />
+
+  <!-- La portada muestra el póster del video de YouTube: sin esta conexión
+       adelantada la miniatura espera a que el navegador resuelva el
+       servidor, y ese ratito se ve como una imagen que no carga. -->
+  <link rel="preconnect" href="https://i.ytimg.com" crossorigin />
 
   <!-- Leaflet se empaqueta desde node_modules (src/main.ts): sin CDN en el head
        para no frenar el arranque de la app. -->

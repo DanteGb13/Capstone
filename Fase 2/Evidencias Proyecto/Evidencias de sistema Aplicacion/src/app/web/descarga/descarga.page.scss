@@ -1,7 +1,617 @@
 /* ------------------------------------------------------------------
    Descarga (/descarga)
 
-   Esta página no tiene reglas exclusivas en global.scss: todo lo que
-   usa son clases compartidas por varias páginas de la web y se
-   dejaron ahí para que haya un solo lugar donde corregirlas.
+   Misma familia que Inicio (/): tokens --sc-*, degradado de marca y las
+   mismas formas de botón y tarjeta, para que pasar de una a otra no se
+   sienta como cambiar de sitio. Es exclusivo de esta página, por eso
+   vive acá y no en global.scss.
    ------------------------------------------------------------------ */
+
+.descarga {
+  animation: web-pagina-entrada 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.descarga-ancho {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 22px;
+}
+
+
+/* =====================================================
+   HERO
+   ===================================================== */
+
+.descarga-hero {
+  padding: 58px 0 66px;
+  /* Mismo tratamiento que el hero de Inicio: la foto debajo de dos velos
+     morados (el de arriba oscurece para que el texto blanco se lea, el de
+     abajo funde con el fondo de la página) y el degradado de marca como
+     última capa, por si la foto no carga. */
+  background:
+    linear-gradient(180deg, rgba(38, 9, 74, 0.88) 0%, rgba(48, 11, 94, 0.8) 48%, rgba(38, 9, 74, 0.93) 100%),
+    url('/assets/img/descarga-portada.jpg') center 38% / cover no-repeat,
+    var(--sc-brand-gradient);
+  color: #ffffff;
+}
+
+.descarga-hero-interno {
+  display: grid;
+  grid-template-columns: 1.12fr 0.88fr;
+  gap: 46px;
+  align-items: center;
+}
+
+.descarga-insignia {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 14px;
+  margin-bottom: 18px;
+  border-radius: var(--sc-radius-pill);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.descarga-insignia ion-icon {
+  font-size: 16px;
+}
+
+.descarga-hero h1 {
+  margin: 0 0 16px;
+  font-size: clamp(30px, 4.6vw, 45px);
+  font-weight: 800;
+  line-height: 1.12;
+  letter-spacing: -0.5px;
+}
+
+.descarga-hero h1 em {
+  font-style: normal;
+  color: #e9d5ff;
+}
+
+.descarga-bajada {
+  max-width: 540px;
+  margin: 0 0 26px;
+  font-size: 16.5px;
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.descarga-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.descarga-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 26px;
+  border-radius: var(--sc-radius-pill);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.descarga-btn ion-icon {
+  font-size: 18px;
+}
+
+.descarga-btn--lleno {
+  background: #ffffff;
+  color: var(--sc-primary, #7715c7);
+  box-shadow: 0 8px 22px rgba(26, 29, 38, 0.2);
+}
+
+.descarga-btn--lleno:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 11px 26px rgba(26, 29, 38, 0.26);
+}
+
+.descarga-btn--borde {
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+}
+
+.descarga-btn--borde:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.descarga-btn--morado {
+  background: var(--sc-brand-gradient, linear-gradient(168deg, #813edc, #6c2dd4));
+  color: #ffffff;
+  box-shadow: var(--sc-shadow, 0 4px 14px rgba(119, 21, 199, 0.1));
+}
+
+.descarga-btn--morado:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(119, 21, 199, 0.28);
+}
+
+.descarga-btn--claro {
+  border: 1.5px solid var(--sc-border-strong, #c9bfe6);
+  background: var(--sc-surface, #ffffff);
+  color: var(--sc-primary, #7715c7);
+}
+
+.descarga-btn--claro:hover {
+  background: var(--sc-primary-soft, #ede9fe);
+}
+
+.descarga-puntos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.descarga-puntos li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+
+/* =====================================================
+   TARJETA DE REQUISITOS DEL HERO
+   ===================================================== */
+
+.descarga-hero-tarjeta {
+  padding: 22px;
+  border-radius: var(--sc-radius-xl);
+  background: var(--sc-surface, #ffffff);
+  border: 1px solid var(--sc-border, #e2ddf2);
+  box-shadow: 0 18px 44px rgba(26, 29, 38, 0.22);
+  color: var(--sc-ink, #1a1d26);
+}
+
+.descarga-tarjeta-titulo {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--sc-ink-muted, #6b6480);
+}
+
+.descarga-tarjeta-dato {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--sc-border, #e2ddf2);
+}
+
+.descarga-tarjeta-dato:last-child {
+  border-bottom: none;
+}
+
+.descarga-tarjeta-dato ion-icon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  padding: 9px;
+  border-radius: 10px;
+  background: var(--sc-primary-soft, #ede9fe);
+  color: var(--sc-primary, #7715c7);
+  font-size: 18px;
+}
+
+.descarga-tarjeta-dato div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.descarga-tarjeta-dato strong {
+  font-size: 14px;
+}
+
+.descarga-tarjeta-dato span {
+  font-size: 12.5px;
+  color: var(--sc-ink-muted, #6b6480);
+}
+
+
+/* =====================================================
+   SECCIONES
+   ===================================================== */
+
+.descarga-seccion {
+  padding: 56px 0;
+}
+
+.descarga-seccion--alt {
+  background: var(--sc-surface-alt, #f1effa);
+}
+
+.descarga-seccion-cab {
+  max-width: 620px;
+  margin: 0 auto 30px;
+  text-align: center;
+}
+
+.descarga-seccion-cab h2 {
+  margin: 0 0 10px;
+  font-size: clamp(23px, 3vw, 29px);
+  font-weight: 800;
+  color: var(--sc-ink, #1a1d26);
+  letter-spacing: -0.3px;
+}
+
+.descarga-seccion-cab p {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: var(--sc-ink-muted, #6b6480);
+}
+
+
+/* =====================================================
+   QR + PASOS
+   ===================================================== */
+
+.descarga-pasos-zona {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 26px;
+  align-items: start;
+}
+
+.descarga-qr {
+  margin: 0;
+  padding: 20px;
+  border-radius: var(--sc-radius-lg);
+  border: 1px solid var(--sc-border, #e2ddf2);
+  background: var(--sc-surface, #ffffff);
+  box-shadow: var(--sc-shadow, 0 4px 14px rgba(119, 21, 199, 0.1));
+  text-align: center;
+}
+
+.descarga-qr img {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 14px;
+  border-radius: 10px;
+}
+
+/* Mientras se genera (o si falla) queda un hueco con el mismo tamaño:
+   la tarjeta no debe saltar de lugar cuando aparezca la imagen. */
+.descarga-qr-vacio {
+  display: block;
+  width: 200px;
+  height: 200px;
+  margin: 0 auto 14px;
+  border-radius: 10px;
+  background: var(--sc-surface-alt, #f1effa);
+}
+
+.descarga-qr figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sc-ink-2, #443c56);
+}
+
+.descarga-qr figcaption ion-icon {
+  font-size: 16px;
+  color: var(--sc-primary, #7715c7);
+}
+
+.descarga-pasos {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: paso;
+}
+
+.descarga-paso {
+  display: flex;
+  gap: 16px;
+  padding: 18px 20px;
+  border-radius: var(--sc-radius-lg);
+  border: 1px solid var(--sc-border, #e2ddf2);
+  background: var(--sc-surface, #ffffff);
+  box-shadow: var(--sc-shadow-sm, 0 1px 3px rgba(26, 29, 38, 0.08));
+}
+
+.descarga-paso-num {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--sc-primary-soft, #ede9fe);
+  color: var(--sc-primary, #7715c7);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.descarga-paso h3 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--sc-ink, #1a1d26);
+}
+
+.descarga-paso p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--sc-ink-muted, #6b6480);
+}
+
+.descarga-paso strong {
+  color: var(--sc-ink-2, #443c56);
+}
+
+
+/* =====================================================
+   PANELES Y AYUDA
+   ===================================================== */
+
+.descarga-paneles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.descarga-panel {
+  padding: 26px 24px;
+  border-radius: var(--sc-radius-lg);
+  border: 1px solid var(--sc-border, #e2ddf2);
+  border-top: 3px solid var(--sc-primary, #7715c7);
+  background: var(--sc-surface, #ffffff);
+  box-shadow: var(--sc-shadow-sm, 0 1px 3px rgba(26, 29, 38, 0.08));
+}
+
+/* El segundo panel es del cuidador: se distingue por el color del borde,
+   igual que en la portada. */
+.descarga-panel:last-child {
+  border-top-color: var(--sc-info, #2563eb);
+}
+
+.descarga-panel-icono {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 14px;
+  border-radius: 13px;
+  background: var(--sc-primary-soft, #ede9fe);
+  color: var(--sc-primary, #7715c7);
+  font-size: 22px;
+}
+
+.descarga-panel:last-child .descarga-panel-icono {
+  background: var(--sc-info-soft, #e8effd);
+  color: var(--sc-info, #2563eb);
+}
+
+.descarga-panel h3 {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--sc-ink, #1a1d26);
+}
+
+.descarga-panel p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--sc-ink-muted, #6b6480);
+}
+
+.descarga-ayuda {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-radius: var(--sc-radius);
+  border-left: 4px solid var(--sc-warn, #e07b00);
+  background: var(--sc-warn-soft, #fdf2e0);
+}
+
+.descarga-ayuda ion-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 19px;
+  color: var(--sc-warn-dark, #b86300);
+}
+
+.descarga-ayuda strong {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 14.5px;
+  color: #6b4c00;
+}
+
+.descarga-ayuda p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #6b4c00;
+}
+
+.descarga-ayuda a {
+  color: var(--sc-primary, #7715c7);
+  font-weight: 700;
+}
+
+
+/* =====================================================
+   CIERRE
+   ===================================================== */
+
+.descarga-cta {
+  padding: 46px 28px;
+  border-radius: var(--sc-radius-xl);
+  background:
+    radial-gradient(700px 260px at 50% -30%, rgba(255, 255, 255, 0.2), transparent 70%),
+    var(--sc-brand-gradient, linear-gradient(168deg, #813edc, #6c2dd4));
+  text-align: center;
+  color: #ffffff;
+}
+
+.descarga-cta h2 {
+  margin: 0 0 10px;
+  font-size: clamp(23px, 3vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.descarga-cta p {
+  max-width: 520px;
+  margin: 0 auto 24px;
+  font-size: 15.5px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.descarga-acciones--centro {
+  justify-content: center;
+}
+
+
+/* =====================================================
+   PIE
+   ===================================================== */
+
+.descarga-pie {
+  padding: 26px 0 40px;
+  border-top: 1px solid var(--sc-border, #e2ddf2);
+}
+
+.descarga-pie-interno {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+}
+
+.descarga-pie-marca {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--sc-primary, #7715c7);
+}
+
+.descarga-pie-enlaces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+}
+
+.descarga-pie-enlaces a {
+  color: var(--sc-ink-2, #443c56);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.descarga-pie-enlaces a:hover {
+  color: var(--sc-primary, #7715c7);
+  text-decoration: underline;
+}
+
+.descarga-pie-nota {
+  font-size: 13px;
+  color: var(--sc-ink-muted, #6b6480);
+}
+
+
+/* =====================================================
+   ADAPTACIÓN A PANTALLAS CHICAS
+   ===================================================== */
+
+@media (max-width: 960px) {
+  .descarga-hero-interno {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+
+  .descarga-pasos-zona {
+    grid-template-columns: 1fr;
+  }
+
+  .descarga-paneles {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .descarga-hero {
+    padding: 42px 0 48px;
+  }
+
+  .descarga-seccion {
+    padding: 42px 0;
+  }
+
+  /* El QR se centra y los botones ocupan el ancho completo: en el celular
+     es más fácil acertarles y se leen como una sola decisión. */
+  .descarga-qr {
+    max-width: 260px;
+    margin: 0 auto;
+  }
+
+  .descarga-acciones .descarga-btn {
+    flex: 1 1 100%;
+  }
+
+  .descarga-pie-interno {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+/* Foco visible para quien navega con teclado. */
+.descarga-btn:focus-visible,
+.descarga-ayuda a:focus-visible,
+.descarga-pie-enlaces a:focus-visible {
+  outline: none;
+  box-shadow: var(--sc-focus-ring, 0 0 0 3px rgba(119, 21, 199, 0.35));
+}
+
+.descarga-hero .descarga-btn--lleno:focus-visible,
+.descarga-hero .descarga-btn--borde:focus-visible {
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.85);
+}
+
+/* Respetar a quien pidió menos movimiento en el sistema. */
+@media (prefers-reduced-motion: reduce) {
+  .descarga {
+    animation: none;
+  }
+
+  .descarga-btn {
+    transition: none;
+  }
+
+  .descarga-btn--lleno:hover,
+  .descarga-btn--morado:hover {
+    transform: none;
+  }
+}

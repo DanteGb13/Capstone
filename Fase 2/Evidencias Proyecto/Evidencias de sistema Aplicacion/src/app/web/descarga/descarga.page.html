@@ -1,9 +1,216 @@
 <app-web-nav />
 
 <ion-content class="web-contenido">
-  <div class="web-page">
-    <h1>Descarga</h1>
-    <p class="descripcion">Descarga la app de SiempreCerca para tu celular.</p>
-    <ion-button>Descargar para Android</ion-button>
+  <div class="descarga">
+
+    <!-- =====================================================
+         HERO
+
+         El botón principal baja el APK. Va como enlace normal y no como
+         `window.open`: así Android lo guarda en Descargas y aparece la
+         notificación de "descarga completa", que es lo que la gente espera.
+         ===================================================== -->
+    <section class="descarga-hero">
+      <div class="descarga-ancho descarga-hero-interno">
+        <div class="descarga-hero-texto">
+          <span class="descarga-insignia">
+            <ion-icon name="logo-android"></ion-icon>
+            Solo Android por ahora
+          </span>
+
+          <h1>Descarga <em>SiempreCerca</em> en tu celular</h1>
+
+          <p class="descarga-bajada">
+            La app con la que el adulto mayor pide ayuda con un toque y la familia
+            sabe cómo está, estés donde estés.
+          </p>
+
+          <div class="descarga-acciones">
+            <a class="descarga-btn descarga-btn--lleno" href="assets/siempre-cerca.apk" download>
+              <ion-icon name="download"></ion-icon>
+              Descargar para Android
+            </a>
+            <a class="descarga-btn descarga-btn--borde" routerLink="/planes">Ver planes</a>
+          </div>
+
+          <ul class="descarga-puntos">
+            <li>Android 8.0 o superior</li>
+            <li>Gratis para empezar</li>
+            <li>Al actualizar se conservan tus datos</li>
+          </ul>
+        </div>
+
+        <!-- Requisitos reales del proyecto (minSdk 26 de variables.gradle). -->
+        <aside class="descarga-hero-tarjeta">
+          <h2 class="descarga-tarjeta-titulo">Necesitas</h2>
+
+          <div class="descarga-tarjeta-dato">
+            <ion-icon name="logo-android"></ion-icon>
+            <div>
+              <strong>Android 8.0 o superior</strong>
+              <span>La mayoría de los celulares de los últimos 7 años</span>
+            </div>
+          </div>
+
+          <div class="descarga-tarjeta-dato">
+            <ion-icon name="phone-portrait"></ion-icon>
+            <div>
+              <strong>Un celular o tablet</strong>
+              <span>También funciona en tablet Android</span>
+            </div>
+          </div>
+
+          <div class="descarga-tarjeta-dato">
+            <ion-icon name="wifi"></ion-icon>
+            <div>
+              <strong>Conexión a internet</strong>
+              <span>Para los mapas y para que lleguen los avisos</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         QR + PASOS
+         ===================================================== -->
+    <section class="descarga-seccion">
+      <div class="descarga-ancho">
+        <header class="descarga-seccion-cab">
+          <h2>Instálala en tres pasos</h2>
+          <p>Desde el computador, escanea el código de al lado con la cámara de tu celular y la app baja directo.</p>
+        </header>
+
+        <div class="descarga-pasos-zona">
+          <!-- QR que apunta al APK: escanear con la cámara baja la app
+               directo al celular, sin pasar por esta página ni por
+               WhatsApp, que comprime el archivo y lo rompe. -->
+          <figure class="descarga-qr">
+            @if (qrUrl()) {
+              <img [src]="qrUrl()" alt="Código QR para descargar la app de SiempreCerca" />
+            } @else {
+              <span class="descarga-qr-vacio" aria-hidden="true"></span>
+            }
+            <figcaption>
+              <ion-icon name="qr-code"></ion-icon>
+              Escanéalo con la cámara: baja la app directo a tu celular
+            </figcaption>
+          </figure>
+
+          <ol class="descarga-pasos">
+            <li class="descarga-paso">
+              <span class="descarga-paso-num">1</span>
+              <div>
+                <h3>Descarga el archivo</h3>
+                <p>Toca <strong>Descargar para Android</strong>. El archivo es un APK: el formato normal de las apps Android que no vienen de Play Store.</p>
+              </div>
+            </li>
+
+            <li class="descarga-paso">
+              <span class="descarga-paso-num">2</span>
+              <div>
+                <h3>Permite la instalación</h3>
+                <p>Android pregunta si confías en el navegador que descargó el archivo. Acepta: es una pregunta de siempre, no un error.</p>
+              </div>
+            </li>
+
+            <li class="descarga-paso">
+              <span class="descarga-paso-num">3</span>
+              <div>
+                <h3>Ábrela e inicia sesión</h3>
+                <p>Crea tu cuenta, acepta los permisos que te pide y conecta con tu familiar con el código de vinculación.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         DESPUÉS DE INSTALAR
+         ===================================================== -->
+    <section class="descarga-seccion descarga-seccion--alt">
+      <div class="descarga-ancho">
+        <header class="descarga-seccion-cab">
+          <h2>Después de instalarla</h2>
+          <p>Dos cosas para que todo funcione desde el primer día.</p>
+        </header>
+
+        <div class="descarga-paneles">
+          <article class="descarga-panel">
+            <span class="descarga-panel-icono">
+              <ion-icon name="notifications"></ion-icon>
+            </span>
+            <h3>Acepta los permisos</h3>
+            <p>
+              Ubicación (para saber dónde está), notificaciones (avisos y alertas)
+              y batería (que Android no cierre la app). Sin ellos la app abre,
+              pero no avisa de nada.
+            </p>
+          </article>
+
+          <article class="descarga-panel">
+            <span class="descarga-panel-icono">
+              <ion-icon name="people"></ion-icon>
+            </span>
+            <h3>Conecta con tu cuidador</h3>
+            <p>
+              El adulto mayor genera un código en la app y se lo pasa a su
+              cuidador. El cuidador lo ingresa, envía la solicitud, y al
+              aceptarla quedan conectados.
+            </p>
+          </article>
+        </div>
+
+        <!-- Ayuda honesta: el APK fuera de Play Store es lo que más se traba. -->
+        <div class="descarga-ayuda">
+          <ion-icon name="information-circle"></ion-icon>
+          <div>
+            <strong>¿Se traba la instalación?</strong>
+            <p>
+              Algunos celulares bloquean la descarga de archivos que no vienen de
+              Play Store. Escríbenos por <a routerLink="/contactanos">Contáctanos</a>
+              y te ayudamos paso a paso.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         CIERRE
+         ===================================================== -->
+    <section class="descarga-seccion">
+      <div class="descarga-ancho">
+        <div class="descarga-cta">
+          <h2>Empieza a cuidar de cerca, hoy</h2>
+          <p>Instala la app, conecta con tu familiar y qué tranquilo: todo queda listo en minutos.</p>
+          <div class="descarga-acciones descarga-acciones--centro">
+            <a class="descarga-btn descarga-btn--morado" href="assets/siempre-cerca.apk" download>
+              <ion-icon name="download"></ion-icon>
+              Descargar la app
+            </a>
+            <a class="descarga-btn descarga-btn--claro" routerLink="/planes">Ver planes</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         PIE
+         ===================================================== -->
+    <footer class="descarga-pie">
+      <div class="descarga-ancho descarga-pie-interno">
+        <span class="descarga-pie-marca">SiempreCerca</span>
+        <nav class="descarga-pie-enlaces" aria-label="Enlaces del pie">
+          <a routerLink="/inicio">Inicio</a>
+          <a routerLink="/planes">Planes</a>
+          <a routerLink="/descarga">Descarga</a>
+          <a routerLink="/contactanos">Contáctanos</a>
+        </nav>
+        <span class="descarga-pie-nota">© 2026 SiempreCerca</span>
+      </div>
+    </footer>
+
   </div>
 </ion-content>

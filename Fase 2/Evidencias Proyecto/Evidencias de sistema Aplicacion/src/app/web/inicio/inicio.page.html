@@ -1,14 +1,506 @@
 <app-web-nav />
 
 <ion-content class="web-contenido">
-  <div class="web-page">
-    <h1>SiempreCerca</h1>
-    <p class="descripcion">Página de inicio de la web.</p>
-    <!--
-      La acción principal es conseguir la app: para quien todavía no tiene
-      cuenta no hay nada que hacer en la web. El "Entrar" de quien ya tiene
-      cuenta está en la barra de arriba, que se ve en todas las pantallas.
-    -->
-    <ion-button routerLink="/descarga">Descarga la app</ion-button>
+  <div class="inicio">
+
+    <!-- =====================================================
+         HERO
+
+         La acción principal es conseguir la app: para quien todavía no
+         tiene cuenta no hay nada que hacer en la web. El "Entrar" de quien
+         ya tiene cuenta está en la barra de arriba.
+         ===================================================== -->
+    <section class="inicio-hero">
+      <div class="inicio-ancho inicio-hero-interno">
+        <div class="inicio-hero-texto">
+          <!-- El nombre de la app, grande: es la marca, y va primero.
+               "Cerca" va en lila claro para que se lea como una unidad
+               con "Siempre" sin necesidad de colorines. -->
+          <span class="inicio-marca">Siempre<em>Cerca</em></span>
+
+          <span class="inicio-insignia">
+            Cuidado a distancia, cercanía de verdad
+          </span>
+
+          <h1>Cuida a quienes más quieres, <em>estés donde estés</em></h1>
+
+          <p class="inicio-bajada">
+            SiempreCerca mantiene conectada a la persona que cuidas con quien la cuida:
+            ubicación en tiempo real, avisos al salir de su zona segura y alertas SOS,
+            en una app simple pensada para adultos mayores.
+          </p>
+
+          <div class="inicio-acciones">
+            <a class="inicio-btn inicio-btn--lleno" routerLink="/descarga">
+              Descarga la app
+              <ion-icon name="arrow-forward"></ion-icon>
+            </a>
+            <a class="inicio-btn inicio-btn--borde" routerLink="/planes">Ver planes</a>
+          </div>
+
+          <ul class="inicio-puntos">
+            <li><ion-icon name="checkmark-circle"></ion-icon> Funciona con la app cerrada</li>
+            <li><ion-icon name="checkmark-circle"></ion-icon> Avisos al instante</li>
+            <li><ion-icon name="checkmark-circle"></ion-icon> Pensado para adultos mayores</li>
+          </ul>
+        </div>
+
+        <!-- Ejemplo de lo que ve el cuidador. Es una maqueta, no datos reales. -->
+        <aside class="inicio-hero-tarjeta">
+          <div class="inicio-tarjeta-cab">
+            <span class="inicio-tarjeta-avatar">MR</span>
+            <div class="inicio-tarjeta-quien">
+              <strong>Marta Ríos</strong>
+              <span>Mamá · 74 años</span>
+            </div>
+            <span class="inicio-tarjeta-estado"><i class="punto"></i> En casa</span>
+          </div>
+
+          <div class="inicio-tarjeta-dato">
+            <ion-icon name="location"></ion-icon>
+            <div>
+              <strong>Última ubicación</strong>
+              <span>Hoy, 12:40 · Barrio Los Aromos</span>
+            </div>
+          </div>
+
+          <div class="inicio-tarjeta-dato">
+            <ion-icon name="shield-checkmark"></ion-icon>
+            <div>
+              <strong>Zona segura</strong>
+              <span>Dentro del área · sin avisos hoy</span>
+            </div>
+          </div>
+
+          <div class="inicio-tarjeta-dato">
+            <ion-icon name="footsteps"></ion-icon>
+            <div>
+              <strong>Actividad de hoy</strong>
+              <span>1,4 km caminados · 3 salidas</span>
+            </div>
+          </div>
+
+          <p class="inicio-tarjeta-nota">Ejemplo de la información que ve el cuidador.</p>
+        </aside>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         CÓMO NACIÓ
+
+         Va antes del video a propósito: después de saber qué es la app, lo
+         siguiente que se pregunta cualquiera es "¿y esto quién lo hace?".
+         El video funciona mejor con esa respuesta ya dada.
+         ===================================================== -->
+    <section class="inicio-seccion inicio-historia">
+      <div class="inicio-ancho inicio-historia-interno">
+
+        <div class="inicio-historia-texto">
+          <span class="inicio-historia-etiqueta">
+            <ion-icon name="heart"></ion-icon>
+            Cómo nació SiempreCerca
+          </span>
+
+          <h2>De una preocupación familiar a una app que cuida a distancia</h2>
+
+          <p>
+            SiempreCerca empezó con una situación muy común: familias que viven
+            lejos de sus padres o abuelos y se preguntan todo el día si estarán
+            bien. Llamar y que no contesten, o enterarse tarde de que algo pasó,
+            es la angustia de miles de hogares.
+          </p>
+
+          <p>
+            Nació como proyecto final de carrera con una pregunta simple:
+            <strong>¿se puede cuidar a distancia sin quitarle autonomía a la persona
+            mayor?</strong> La respuesta fue esta app. El adulto usa una aplicación
+            grande, clara y sin configuraciones; la familia ve desde su propio
+            celular lo que de verdad necesita saber.
+          </p>
+
+          <blockquote class="inicio-historia-cita">
+            La tecnología no reemplaza la visita ni la llamada. Lo que hace es
+            que esa visita llegue cuando de verdad hace falta.
+          </blockquote>
+        </div>
+
+        <!-- Los tres momentos, del problema a lo que es hoy. -->
+        <ol class="inicio-historia-pasos">
+          <li class="inicio-historia-paso">
+            <span class="inicio-historia-paso-icono inicio-historia-paso-icono--problema">
+              <ion-icon name="warning"></ion-icon>
+            </span>
+            <div>
+              <h3>El problema</h3>
+              <p>
+                La distancia y la rutina hacen que un "¿cómo estás?" alcance cada
+                vez menos, y que un problema se sepa cuando ya es tarde.
+              </p>
+            </div>
+          </li>
+
+          <li class="inicio-historia-paso">
+            <span class="inicio-historia-paso-icono inicio-historia-paso-icono--idea">
+              <ion-icon name="bulb"></ion-icon>
+            </span>
+            <div>
+              <h3>La idea</h3>
+              <p>
+                Una app para el adulto que no le exija nada, y un panel para la
+                familia que responda de verdad: dónde está, si salió de su zona
+                segura y si pidió ayuda.
+              </p>
+            </div>
+          </li>
+
+          <li class="inicio-historia-paso">
+            <span class="inicio-historia-paso-icono inicio-historia-paso-icono--hoy">
+              <ion-icon name="heart"></ion-icon>
+            </span>
+            <div>
+              <h3>Hoy</h3>
+              <p>
+                Una app que crece con cada familia que la prueba: mapas, zonas
+                seguras, botón SOS, recordatorios y un panel de actividad para
+                el cuidador.
+              </p>
+            </div>
+          </li>
+        </ol>
+
+      </div>
+    </section>
+
+    <!-- =====================================================
+         DEMOSTRACIÓN: LOS DOS TELÉFONOS
+
+         Va después del relato y antes del video: con el "por qué" ya
+         contado, esto responde el "cómo se siente usarla" mejor que
+         cualquier texto. Es una simulación —no se envía ningún aviso
+         real— y lo dice el pie de la sección para que nadie se lleve
+         una sorpresa.
+         ===================================================== -->
+    <section class="inicio-seccion inicio-demo">
+      <div class="inicio-ancho">
+        <header class="inicio-seccion-cab">
+          <h2>Prueba tú mismo: así funciona un aviso</h2>
+          <p>Tocá el SOS en el teléfono de la izquierda, confirmá el aviso, y mirá qué le aparece al cuidador en el de la derecha.</p>
+        </header>
+
+        <div class="inicio-demo-zona">
+
+          <!-- El adulto mayor: un botón grande, claro y sin letra chica. -->
+          <div class="demo-telefono">
+            <span class="demo-telefono-rotulo">El adulto mayor</span>
+
+            <div class="telefono">
+              <div class="telefono-marco">
+                <div class="telefono-pantalla">
+                  <div class="telefono-estado">
+                    <span>9:41</span>
+                    <span class="telefono-estado-iconos" aria-hidden="true">
+                      <i class="senal"></i><i class="wifi"></i><i class="bateria"></i>
+                    </span>
+                  </div>
+
+                  <div class="telefono-app">
+                    <header class="telefono-app-cab">
+                      <div class="telefono-app-cab-fila">
+                        <img
+                          class="telefono-app-logo"
+                          src="/assets/logo/logo-figura-256.png"
+                          alt=""
+                          width="24"
+                          height="24" />
+                        <div>
+                          <strong>Hola, Marta</strong>
+                          <span>¿Necesitas ayuda?</span>
+                        </div>
+                      </div>
+                    </header>
+
+                    @if (demostracion() === 'reposo') {
+                      <button
+                        type="button"
+                        class="demo-sos"
+                        (click)="abrirSosDemo()"
+                        aria-label="Probar el botón SOS (demostración)">
+                        <span class="demo-sos-texto">SOS</span>
+                        <span class="demo-sos-sub">Pedir ayuda</span>
+                      </button>
+                    } @else if (demostracion() === 'confirmando') {
+                      <!-- El cartel de confirmación, copiado del de la app:
+                           mismo título, misma pregunta y los mismos dos
+                           botones, para que lo que se ve acá sea lo que
+                           se van a encontrar en el celular. -->
+                      <div class="demo-modal-fondo">
+                        <div class="demo-modal" role="alertdialog" aria-label="Confirmar aviso de emergencia">
+                          <strong class="demo-modal-titulo">S.O.S</strong>
+                          <p class="demo-modal-pregunta">¿Estás seguro de dar aviso a tu cuidador?</p>
+                          <div class="demo-modal-acciones">
+                            <button type="button" class="demo-modal-btn demo-modal-btn--alertar" (click)="confirmarSosDemo()">
+                              Alertar
+                            </button>
+                            <button type="button" class="demo-modal-btn demo-modal-btn--cancelar" (click)="cancelarSosDemo()">
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="demo-sos-enviado" role="status">
+                        <span class="demo-sos-check">
+                          <ion-icon name="checkmark-circle"></ion-icon>
+                        </span>
+                        <strong>Aviso enviado</strong>
+                        <p>Estamos avisando a tus contactos. No cierres la app.</p>
+                      </div>
+                    }
+
+                    <div class="telefono-app-pie" aria-hidden="true">
+                      <span><ion-icon name="location"></ion-icon></span>
+                      <span><ion-icon name="people"></ion-icon></span>
+                      <span><ion-icon name="shield-checkmark"></ion-icon></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- La conexión: la alerta viajando de un teléfono al otro. -->
+          <div class="demo-entre" aria-hidden="true">
+            <span class="demo-entre-linea"></span>
+            <span class="demo-entre-icono"><ion-icon name="arrow-forward"></ion-icon></span>
+          </div>
+
+          <!-- El cuidador: la alerta entra como notificación. -->
+          <div class="demo-telefono">
+            <span class="demo-telefono-rotulo">El cuidador</span>
+
+            <div class="telefono">
+              <div class="telefono-marco">
+                <div class="telefono-pantalla">
+                  <div class="telefono-estado">
+                    <span>9:41</span>
+                    <span class="telefono-estado-iconos" aria-hidden="true">
+                      <i class="senal"></i><i class="wifi"></i><i class="bateria"></i>
+                    </span>
+                  </div>
+
+                  <div class="telefono-app telefono-app--cuidador">
+                    @if (demostracion() === 'sos') {
+                      <div class="demo-tranquilo">
+                        <span class="demo-tranquilo-punto"></span>
+                        <strong>Marta está en casa</strong>
+                        <p>Última ubicación: hoy 12:40</p>
+                        <span class="demo-tranquilo-nota">Sin avisos por ahora</span>
+                      </div>
+                    } @else {
+                      <!-- La alerta entra desde arriba, como una notificación
+                           de verdad: si apareciera estática no se leería como
+                           "acaba de pasar algo". -->
+                      <div class="demo-alerta" role="status">
+                        <div class="demo-alerta-cab">
+                          <span class="demo-alerta-icono">
+                            <ion-icon name="warning"></ion-icon>
+                          </span>
+                          <div>
+                            <strong>Alerta SOS</strong>
+                            <span>Marta Ríos · hace 12 s</span>
+                          </div>
+                        </div>
+
+                        <div class="demo-alerta-lugar">
+                          <ion-icon name="location"></ion-icon>
+                          <span>Av. Los Aromos 1421, Depto. 4</span>
+                        </div>
+
+                        <div class="demo-alerta-acciones">
+                          <span class="demo-alerta-btn demo-alerta-btn--llamar">
+                            <ion-icon name="call"></ion-icon> Llamar
+                          </span>
+                          <span class="demo-alerta-btn">
+                            <ion-icon name="location"></ion-icon> Ver mapa
+                          </span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="demo-pie">
+          <button
+            type="button"
+            class="demo-reiniciar"
+            [disabled]="demostracion() === 'reposo'"
+            (click)="reiniciarDemo()">
+            <ion-icon name="refresh"></ion-icon>
+            Reiniciar la demostración
+          </button>
+          <p class="demo-aclaracion">
+            Demostración: los teléfonos y los datos son de ejemplo, y no se envía
+            ningún aviso real. En la app de verdad, el cuidador recibe la alerta
+            aunque tenga el teléfono en el bolsillo.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         VIDEO
+
+         El iframe se crea recién cuando se toca el póster: cargar YouTube
+         de entrada costaba medio segundo y medio mega en cada visita a la
+         portada, y la mayoría entra sin reproducir nada.
+         ===================================================== -->
+    <section class="inicio-seccion inicio-video">
+      <div class="inicio-ancho">
+        <header class="inicio-seccion-cab">
+          <h2>Mira cómo funciona</h2>
+          <p>Tres minutos para entender cómo SiempreCerca acompaña a tu familia.</p>
+        </header>
+
+        <figure class="inicio-video-caja">
+          @if (!videoActivo()) {
+            <button
+              type="button"
+              class="inicio-video-poster"
+              (click)="abrirVideo()"
+              aria-label="Reproducir el video de presentación de SiempreCerca">
+              <img
+                [src]="miniatura"
+                alt="Miniatura del video de presentación"
+                (error)="miniaturaAlterna()" />
+              <span class="inicio-video-play">
+                <ion-icon name="play"></ion-icon>
+              </span>
+            </button>
+          } @else {
+            <iframe
+              class="inicio-video-iframe"
+              src="https://www.youtube-nocookie.com/embed/8StE-gyXxBA?autoplay=1&rel=0"
+              title="Video de presentación de SiempreCerca"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowfullscreen
+              loading="lazy"></iframe>
+          }
+
+          <figcaption>
+            <a href="https://youtu.be/8StE-gyXxBA" target="_blank" rel="noopener">
+              Ver el video en YouTube
+            </a>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         QUÉ HACE
+         ===================================================== -->
+    <section class="inicio-seccion">
+      <div class="inicio-ancho">
+        <header class="inicio-seccion-cab">
+          <h2>Todo lo que hace falta para cuidar de cerca</h2>
+          <p>Cuatro funciones que trabajan juntas, sin que nadie tenga que configurar nada complicado.</p>
+        </header>
+
+        <div class="inicio-cards">
+          <article class="inicio-card">
+            <span class="inicio-card-icono"><ion-icon name="location"></ion-icon></span>
+            <h3>Ubicación en tiempo real</h3>
+            <p>Ve dónde está la persona en el mapa, con la hora del último punto para saber qué tan reciente es el dato.</p>
+          </article>
+
+          <article class="inicio-card">
+            <span class="inicio-card-icono"><ion-icon name="shield-checkmark"></ion-icon></span>
+            <h3>Zonas seguras</h3>
+            <p>Marca su casa o su barrio: si sale del área, el cuidador recibe un aviso de inmediato.</p>
+          </article>
+
+          <article class="inicio-card">
+            <span class="inicio-card-icono"><ion-icon name="notifications"></ion-icon></span>
+            <h3>Botón SOS</h3>
+            <p>Un botón grande y claro pide ayuda con un toque y avisa a los contactos de emergencia.</p>
+          </article>
+
+          <article class="inicio-card">
+            <span class="inicio-card-icono"><ion-icon name="people"></ion-icon></span>
+            <h3>Recordatorios y salud</h3>
+            <p>Medicinas, citas y consultas de salud al día, con avisos que suenan a la hora que toca.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         PARA QUIÉN ES
+         ===================================================== -->
+    <section class="inicio-seccion inicio-seccion--alt">
+      <div class="inicio-ancho">
+        <header class="inicio-seccion-cab">
+          <h2>Pensado para los dos lados</h2>
+          <p>La persona mayor usa una app grande y sencilla; el cuidador, un panel con todo el detalle.</p>
+        </header>
+
+        <div class="inicio-paneles">
+          <article class="inicio-panel">
+            <h3>Para el adulto mayor</h3>
+            <ul>
+              <li><ion-icon name="checkmark-circle"></ion-icon> Botones grandes y letra clara</li>
+              <li><ion-icon name="checkmark-circle"></ion-icon> Un toque para pedir ayuda</li>
+              <li><ion-icon name="checkmark-circle"></ion-icon> Nada que configurar: funciona al instalar</li>
+            </ul>
+          </article>
+
+          <article class="inicio-panel inicio-panel--cuidador">
+            <h3>Para el cuidador o la familia</h3>
+            <ul>
+              <li><ion-icon name="checkmark-circle"></ion-icon> Panel de actividad con gráficos por día</li>
+              <li><ion-icon name="checkmark-circle"></ion-icon> Historial de trayectos y lugares frecuentes</li>
+              <li><ion-icon name="checkmark-circle"></ion-icon> Avisos de zona segura y SOS al instante</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         CIERRE
+         ===================================================== -->
+    <section class="inicio-seccion">
+      <div class="inicio-ancho">
+        <div class="inicio-cta">
+          <h2>Empieza a cuidar de cerca, hoy</h2>
+          <p>Instala la app, invita a tu familiar y qué tranquilo: todo queda conectado en minutos.</p>
+          <div class="inicio-acciones inicio-acciones--centro">
+            <a class="inicio-btn inicio-btn--morado" routerLink="/descarga">Descarga la app</a>
+            <a class="inicio-btn inicio-btn--claro" routerLink="/planes">Ver planes</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================
+         PIE
+         ===================================================== -->
+    <footer class="inicio-pie">
+      <div class="inicio-ancho inicio-pie-interno">
+        <span class="inicio-pie-marca">SiempreCerca</span>
+        <nav class="inicio-pie-enlaces" aria-label="Enlaces del pie">
+          <a routerLink="/inicio">Inicio</a>
+          <a routerLink="/planes">Planes</a>
+          <a routerLink="/descarga">Descarga</a>
+          <a routerLink="/contactanos">Contáctanos</a>
+        </nav>
+        <span class="inicio-pie-nota">© 2026 SiempreCerca</span>
+      </div>
+    </footer>
+
   </div>
 </ion-content>
